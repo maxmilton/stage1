@@ -1,0 +1,47 @@
+{
+  "name": "stage1",
+  "version": "0.0.0",
+  "private": true,
+  "description": "WIP",
+  "license": "MIT",
+  "repository": "maxmilton/stage1",
+  "author": "Max Milton <max@happycode.ltd>",
+  "homepage": "https://github.com/MaxMilton/stage1",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "NODE_ENV=production node build.mjs",
+    "dev": "NODE_ENV=development node build.mjs",
+    "lint": "yarn lint:js && yarn lint:ts",
+    "lint:js": "eslint --ignore-path .gitignore --ext .ts,.js,.mjs,.cjs .",
+    "lint:ts": "tsc --noEmit",
+    "postbuild": "tsc --emitDeclarationOnly",
+    "prebuild": "rm -rf dist; mkdir dist",
+    "test": "c8 --all --include=src --reporter=text --reporter=lcovonly uvu -r esbuild-register test '\\.test\\.ts$'"
+  },
+  "devDependencies": {
+    "@types/jsdom": "16.2.10",
+    "@types/node": "15.0.2",
+    "@typescript-eslint/eslint-plugin": "4.22.1",
+    "@typescript-eslint/parser": "4.22.1",
+    "c8": "7.7.2",
+    "esbuild": "0.11.19",
+    "esbuild-register": "2.5.0",
+    "eslint": "7.25.0",
+    "eslint-config-airbnb-typescript": "12.3.1",
+    "eslint-plugin-import": "2.22.1",
+    "jsdom": "16.5.3",
+    "prettier": "2.2.1",
+    "typescript": "4.2.4",
+    "uvu": "0.5.1"
+  },
+  "prettier": {
+    "arrowParens": "always",
+    "endOfLine": "lf",
+    "singleQuote": true,
+    "trailingComma": "all"
+  }
+}
