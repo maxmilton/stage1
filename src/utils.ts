@@ -1,1 +1,1 @@
-export const noOpUpdate = (a, b): void => {};
+export const noOpUpdate = (_a: Node, _b: any): void => {};
