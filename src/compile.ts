@@ -91,18 +91,22 @@ export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
   //   .replace(/>\s+/g, '>')
   //   .replace(/\n\s+/g, '<!-- -->');
 
-  // in production it's required to use a template literal minifier but
-  // otherwise strip out leading whitespace so collector doesn't incorrectly
-  // think it's a TEXT_NODE
+  // production requires a template literal minifier!
   const template =
     process.env.NODE_ENV === 'production'
       ? String.raw(strings, ...args)
-      : String.raw(strings, ...args).replace(/^\s+</, '<');
+      : String.raw(strings, ...args)
+          // strip surrounding whitespace so collector doesn't incorrectly
+          // classify as a TEXT_NODE
+          .trim()
+          // remove whitespace around node ref tags
+          .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
 
   compilerTemplate.innerHTML = template;
   const content = compilerTemplate.content.firstChild!;
   // compile(content);
   content._refPaths = genPath(content);
   content.collect = walker;
+
   return content;
 }
