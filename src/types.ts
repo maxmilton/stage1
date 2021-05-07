@@ -2,14 +2,15 @@ declare class Ref {
   idx: number;
 
   ref: string | number;
+
   constructor(idx: number, ref: string | number);
 }
 
-interface RefObj<T extends Node> {
-  [key: string]: T;
+interface NodeRefs {
+  [key: string]: Node;
 }
 
-export interface Stage1Node<T extends Node = Node> extends T {
+export interface Stage1Node extends Node {
   _refPaths?: Ref[];
-  collect(node: Node): RefObj<T>;
+  collect<T extends NodeRefs>(node: Node): { [K in keyof T]: T[K] };
 }

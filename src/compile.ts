@@ -1,17 +1,16 @@
 import type { Stage1Node } from './types';
 
-export function charat(value: string, index: number): number {
-  // eslint-disable-next-line no-bitwise
-  return value.charCodeAt(index) | 0;
-}
+// 35 = #
+const isTag = (value: string) => value.charCodeAt(0) === 35;
 
 function collector(node: Node): string | 0 {
+  // 3 = Node.TEXT_NODE
   if (node.nodeType !== 3) {
     if (node.attributes !== undefined) {
       for (const attr of Array.from(node.attributes)) {
         const aname = attr.name;
         // if (aname[0] === '#') {
-        if (charat(aname, 0) === 35) {
+        if (isTag(aname)) {
           node.removeAttribute(aname);
           return aname.slice(1);
         }
@@ -19,9 +18,10 @@ function collector(node: Node): string | 0 {
     }
     return 0;
   }
-  const nodeData = node.nodeValue;
+
+  const nodeData = node.nodeValue!;
   // if (nodeData[0] === '#') {
-  if (charat(nodeData, 0) === 35) {
+  if (isTag(nodeData)) {
     node.nodeValue = '';
     return nodeData.slice(1);
   }
