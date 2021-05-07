@@ -1,4 +1,4 @@
-import type { Stage1Node } from './types';
+import type { S1Node } from './types';
 
 // 35 = #
 const isTag = (value: string) => value.charCodeAt(0) === 35;
@@ -77,14 +77,14 @@ function walker(node: Node) {
   return refs;
 }
 
-export function compile(node: Stage1Node): void {
+export function compile(node: S1Node): void {
   node._refPaths = genPath(node);
   node.collect = walker;
 }
 
 const compilerTemplate = document.createElement('template');
 
-export function h(strings: TemplateStringsArray, ...args: any[]): Stage1Node {
+export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
   const template = String.raw(strings, ...args);
   // .replace(/>\n+/g, '>')
   // .replace(/\s+</g, '<')
