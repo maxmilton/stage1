@@ -6,9 +6,13 @@
 
 # stage1 [WIP]
 
-> DANGER: This project is a work in progress and should not be used in production!
+> DANGER: `stage1` is a work in progress and should not be used in production!
 
-See: <https://github.com/Freak613/stage0>
+This is a hard fork of <https://github.com/Freak613/stage0>.
+
+## Changelog
+
+See [releases on GitHub](https://github.com/MaxMilton/stage1/releases).
 
 ## Licence
 
