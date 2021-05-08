@@ -1,16 +1,13 @@
-declare class Ref {
-  idx: number;
-
-  ref: string | number;
-
-  constructor(idx: number, ref: string | number);
+export interface _Ref {
+  readonly index: number;
+  readonly ref: string;
 }
 
-interface NodeRefs {
+export interface NodeRefs {
   [key: string]: Node;
 }
 
-export interface S1Node extends Node {
-  _refPaths?: Ref[];
-  collect<T extends NodeRefs>(node: Node): { [K in keyof T]: T[K] };
+export interface S1Node extends Element {
+  _refs: _Ref[];
+  collect<T extends NodeRefs>(node: Element): { [K in keyof T]: T[K] };
 }

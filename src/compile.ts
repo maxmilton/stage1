@@ -1,112 +1,100 @@
-import type { S1Node } from './types';
+import type { _Ref, S1Node, NodeRefs } from './types';
 
 // 35 = #
 const isRefTag = (value: string) => value.charCodeAt(0) === 35;
 
-function collector(node: Node): string | 0 {
+function collector(node: Element): string {
   // 3 = Node.TEXT_NODE
   if (node.nodeType !== 3) {
     if (node.attributes !== undefined) {
-      for (const attr of Array.from(node.attributes)) {
+      for (const attr of [...node.attributes]) {
         const aname = attr.name;
-        // if (aname[0] === '#') {
         if (isRefTag(aname)) {
           node.removeAttribute(aname);
           return aname.slice(1);
         }
       }
     }
-    return 0;
+    return '';
   }
 
-  const nodeData = node.nodeValue!;
-  // if (nodeData[0] === '#') {
-  if (isRefTag(nodeData)) {
+  const text = node.nodeValue!;
+  if (isRefTag(text)) {
     node.nodeValue = '';
-    return nodeData.slice(1);
+    return text.slice(1);
   }
-  return 0;
+  return '';
 }
 
 const TREE_WALKER = document.createTreeWalker(
   document,
-  NodeFilter.SHOW_ALL,
+  // -1 = NodeFilter.SHOW_ALL
+  -1,
   null,
   false,
 );
-TREE_WALKER.roll = function (n: number) {
-  while (--n) this.nextNode();
-  return this.currentNode;
-};
 
-class Ref {
-  constructor(idx: number, ref: Node) {
-    this.idx = idx;
+function roll(n: number) {
+  while (--n) TREE_WALKER.nextNode();
+  return TREE_WALKER.currentNode;
+}
+
+class Ref implements _Ref {
+  readonly index: number;
+  readonly ref: string;
+  constructor(index: number, ref: string) {
+    this.index = index;
     this.ref = ref;
   }
 }
 
-function genPath(node: Node) {
-  const w = TREE_WALKER;
-  w.currentNode = node;
-
+function genPath(node: Element) {
   const indices = [];
-  let ref;
-  let idx = 0;
+  let ref: string;
+  let index = 0;
+
+  TREE_WALKER.currentNode = node;
 
   do {
     if ((ref = collector(node))) {
-      indices.push(new Ref(idx + 1, ref));
-      idx = 1;
+      indices.push(new Ref(index + 1, ref));
+      index = 1;
     } else {
-      idx++;
+      index++;
     }
-  } while ((node = w.nextNode()));
+  } while ((node = TREE_WALKER.nextNode()));
 
   return indices;
 }
 
-function walker(node: Node) {
-  const refs = {};
+function collect<T extends NodeRefs = {}>(this: S1Node, node: Element): T {
+  const refs: NodeRefs = {};
 
-  const w = TREE_WALKER;
-  w.currentNode = node;
+  TREE_WALKER.currentNode = node;
 
-  this._refPaths.map((x) => (refs[x.ref] = w.roll(x.idx)));
+  this._refs.map((x) => (refs[x.ref] = roll(x.index)));
 
-  return refs;
+  return refs as T;
 }
-
-// export function compile(node: S1Node): void {
-//   node._refPaths = genPath(node);
-//   node.collect = walker;
-// }
 
 const compilerTemplate = document.createElement('template');
 
 export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
-  // const template = String.raw(strings, ...args)
-  //   .replace(/>\n+/g, '>')
-  //   .replace(/\s+</g, '<')
-  //   .replace(/>\s+/g, '>')
-  //   .replace(/\n\s+/g, '<!-- -->');
-
-  // production requires a template literal minifier!
+  // production mode requires a compatible template literal minifier!
   const template =
     process.env.NODE_ENV === 'production'
       ? String.raw(strings, ...args)
       : String.raw(strings, ...args)
-          // strip surrounding whitespace so collector doesn't incorrectly
-          // classify as a TEXT_NODE
+          // so collector doesn't incorrectly classify as TEXT_NODE
           .trim()
           // remove whitespace around node ref tags
           .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
 
   compilerTemplate.innerHTML = template;
-  const content = compilerTemplate.content.firstChild!;
-  // compile(content);
-  content._refPaths = genPath(content);
-  content.collect = walker;
 
-  return content;
+  const node = compilerTemplate.content.firstChild as S1Node;
+  node._refs = genPath(node);
+  node.collect = collect;
+
+  return node;
 }

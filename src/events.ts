@@ -1,11 +1,8 @@
-const CONFIGURED_SYNTHETIC_EVENTS: { [key: string]: boolean } = {};
+const CONFIGURED_EVENTS: { [key: string]: boolean } = {};
 
-const nativeToSyntheticEvent = (
-  event: Event & { target: Element | null },
-  name: string,
-) => {
+const nativeToSyntheticEvent = (event: Event, name: string) => {
   const eventKey = `__${name}`;
-  let dom = event.target;
+  let dom = event.target as Node | null;
 
   while (dom !== null) {
     const eventHandler = dom[eventKey];
@@ -19,8 +16,11 @@ const nativeToSyntheticEvent = (
 };
 
 export function setupSyntheticEvent(name: string): void {
-  if (CONFIGURED_SYNTHETIC_EVENTS[name]) return;
+  if (CONFIGURED_EVENTS[name]) return;
 
-  document.addEventListener(name, (event) => nativeToSyntheticEvent(event, name));
-  CONFIGURED_SYNTHETIC_EVENTS[name] = true;
+  document.addEventListener(name, (event) =>
+    nativeToSyntheticEvent(event, name),
+  );
+
+  CONFIGURED_EVENTS[name] = true;
 }
