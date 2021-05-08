@@ -1,4 +1,21 @@
-import type { _Ref, S1Node, NodeRefs } from './types';
+// TODO: Benchmark my changes vs original stage0:
+// - Object vs class for Ref in `indices`
+// - Direct reference vs this + TREE_WALKER.roll vs function roll
+// - `collector` returning '' vs 0
+// - isRefTag vs name[0] === '#'
+// - [...node.attributes] vs Array.from(node.attributes)
+
+import type { Ref, RefNodes, S1Node } from './types';
+
+const TREE_WALKER = document.createTreeWalker(
+  document,
+  // -1 = NodeFilter.SHOW_ALL
+  -1,
+  null,
+  false,
+);
+
+const compilerTemplate = document.createElement('template');
 
 // 35 = #
 const isRefTag = (value: string) => value.charCodeAt(0) === 35;
@@ -26,30 +43,13 @@ function collector(node: Element): string {
   return '';
 }
 
-const TREE_WALKER = document.createTreeWalker(
-  document,
-  // -1 = NodeFilter.SHOW_ALL
-  -1,
-  null,
-  false,
-);
-
 function roll(n: number) {
   while (--n) TREE_WALKER.nextNode();
   return TREE_WALKER.currentNode;
 }
 
-class Ref implements _Ref {
-  declare readonly index: number;
-  declare readonly ref: string;
-  constructor(index: number, ref: string) {
-    this.index = index;
-    this.ref = ref;
-  }
-}
-
 function genPath(node: Element) {
-  const indices = [];
+  const indices: Ref[] = [];
   let ref: string;
   let index = 0;
 
@@ -57,7 +57,7 @@ function genPath(node: Element) {
 
   do {
     if ((ref = collector(node))) {
-      indices.push(new Ref(index + 1, ref));
+      indices.push({ i: index + 1, ref });
       index = 1;
     } else {
       index++;
@@ -67,21 +67,19 @@ function genPath(node: Element) {
   return indices;
 }
 
-function collect<T extends NodeRefs = {}>(this: S1Node, node: Element): T {
-  const refs: NodeRefs = {};
+function collect<T extends RefNodes = {}>(this: S1Node, node: Element): T {
+  const refs: RefNodes = {};
 
   TREE_WALKER.currentNode = node;
 
-  this._refs.map((x) => (refs[x.ref] = roll(x.index)));
+  this._refs.map((x) => (refs[x.ref] = roll(x.i)));
 
   return refs as T;
 }
 
-const compilerTemplate = document.createElement('template');
-
 export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
   // production mode requires a compatible template literal minifier!
-  const template =
+  compilerTemplate.innerHTML =
     process.env.NODE_ENV === 'production'
       ? String.raw(strings, ...args)
       : String.raw(strings, ...args)
@@ -89,8 +87,6 @@ export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
           .trim()
           // remove whitespace around node ref tags
           .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
-
-  compilerTemplate.innerHTML = template;
 
   const node = compilerTemplate.content.firstChild as S1Node;
   node._refs = genPath(node);

@@ -1,7 +1,7 @@
 const CONFIGURED_EVENTS: { [key: string]: boolean } = {};
 
 const nativeToSyntheticEvent = (event: Event, name: string) => {
-  const eventKey = `__${name}`;
+  const eventKey = '__' + name;
   let dom = event.target as Node | null;
 
   while (dom !== null) {

@@ -1,13 +1,13 @@
-export interface _Ref {
-  readonly index: number;
+export interface Ref {
+  readonly i: number;
   readonly ref: string;
 }
 
-export interface NodeRefs {
+export interface RefNodes {
   [key: string]: Node;
 }
 
 export interface S1Node extends Element {
-  _refs: _Ref[];
-  collect<T extends NodeRefs>(node: Element): { [K in keyof T]: T[K] };
+  _refs: Ref[];
+  collect<T extends RefNodes = RefNodes>(node: Element): T;
 }
