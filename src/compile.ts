@@ -40,8 +40,8 @@ function roll(n: number) {
 }
 
 class Ref implements _Ref {
-  readonly index: number;
-  readonly ref: string;
+  declare readonly index: number;
+  declare readonly ref: string;
   constructor(index: number, ref: string) {
     this.index = index;
     this.ref = ref;
