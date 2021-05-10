@@ -10,11 +10,13 @@
 
 Originally based on the excellent <https://github.com/Freak613/stage0>.
 
-TODO: Add documentation about:
+## TODO
 
-- `process.env.NODE_ENV` must be defined
-- If `process.env.NODE_ENV === 'production` you must minify `h` tagged template literals with a compatible minifier
-- Add full example with `esbuild` + `esbuild-minify-templates`
+- Add documentation about:
+  - `process.env.NODE_ENV` must be defined
+  - If `process.env.NODE_ENV === 'production` you must minify `h` tagged template literals with a compatible minifier
+  - Add full example with `esbuild` + `esbuild-minify-templates`
+- Set up benchmarking
 
 ## Changelog
 
