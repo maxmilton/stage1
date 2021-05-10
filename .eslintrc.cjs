@@ -27,7 +27,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['.eslintrc.js'],
+      files: ['.eslintrc.cjs'],
       parserOptions: {
         createDefaultProgram: true,
       },
