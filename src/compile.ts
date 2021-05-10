@@ -80,9 +80,11 @@ export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
     process.env.NODE_ENV === 'production'
       ? String.raw(strings, ...args)
       : String.raw(strings, ...args)
-          // so collector doesn't incorrectly classify as TEXT_NODE
+          // so collector doesn't incorrectly classify first node as TEXT_NODE
           .trim()
-          // remove whitespace around node ref tags
+          // for better test snapshots
+          .replace(/\n\s+/g, '\n')
+          // remove whitespace around ref tags in Text nodes
           .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
 
   const node = compilerTemplate.content.firstChild as S1Node;
