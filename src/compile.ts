@@ -1,9 +1,9 @@
-// TODO: Benchmark my changes vs original stage0:
+// TODO: Benchmark my changes vs original stage0 (init + runtime speed and memory):
 // - Object vs class for Ref in `indices`
 // - Direct reference vs this + TREE_WALKER.roll vs function roll
 // - `collector` returning '' vs 0
-// - isRefTag vs name[0] === '#'
-// - [...node.attributes] vs Array.from(node.attributes)
+// - refTag vs name[0] === '#'
+// - for of node.attributes vs [...node.attributes] vs Array.from(node.attributes)
 
 import type { Ref, RefNodes, S1Node } from './types';
 
@@ -18,29 +18,26 @@ const TREE_WALKER = document.createTreeWalker(
 const compilerTemplate = document.createElement('template');
 
 // 35 = #
-const isRefTag = (value: string) => value.charCodeAt(0) === 35;
+const refTag = (value: string) => value.charCodeAt(0) === 35;
 
-function collector(node: Element): string {
-  // 3 = Node.TEXT_NODE
-  if (node.nodeType !== 3) {
-    if (node.attributes !== undefined) {
-      for (const attr of [...node.attributes]) {
-        const aname = attr.name;
-        if (isRefTag(aname)) {
-          node.removeAttribute(aname);
-          return aname.slice(1);
-        }
+function collector(node: Node): string | void {
+  // 1 = Node.ELEMENT_NODE
+  if (node.nodeType === 1) {
+    for (const attr of (node as Element).attributes) {
+      const aname = attr.name;
+      if (refTag(aname)) {
+        (node as Element).removeAttribute(aname);
+        return aname.slice(1);
       }
     }
-    return '';
+    return;
   }
 
-  const text = node.nodeValue!;
-  if (isRefTag(text)) {
+  const content = node.nodeValue;
+  if (content && refTag(content)) {
     node.nodeValue = '';
-    return text.slice(1);
+    return content.slice(1);
   }
-  return '';
 }
 
 function roll(n: number) {
@@ -48,9 +45,9 @@ function roll(n: number) {
   return TREE_WALKER.currentNode;
 }
 
-function genPath(node: Element) {
+function genPath(node: Node) {
   const indices: Ref[] = [];
-  let ref: string;
+  let ref: string | void;
   let index = 0;
 
   TREE_WALKER.currentNode = node;
