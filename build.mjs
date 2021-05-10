@@ -5,11 +5,6 @@ import esbuild from 'esbuild';
 const mode = process.env.NODE_ENV;
 const dev = mode === 'development';
 
-/** @param {Error|null} err */
-function handleErr(err) {
-  if (err) throw err;
-}
-
 esbuild
   .build({
     entryPoints: [
@@ -25,4 +20,6 @@ esbuild
     watch: dev,
     logLevel: 'debug',
   })
-  .catch(handleErr);
+  .catch((err) => {
+    throw err;
+  });
