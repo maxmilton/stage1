@@ -1,3 +1,5 @@
+/* eslint-disable consistent-return */
+
 // TODO: Benchmark my changes vs original stage0 (init + runtime speed and memory):
 // - Object vs class for Ref in `indices`
 // - Direct reference vs this + TREE_WALKER.roll vs function roll
@@ -7,14 +9,8 @@
 
 import type { Ref, RefNodes, S1Node } from './types';
 
-const TREE_WALKER = document.createTreeWalker(
-  document,
-  // -1 = NodeFilter.SHOW_ALL
-  -1,
-  null,
-  false,
-);
-
+// -1 = NodeFilter.SHOW_ALL
+const treeWalker = document.createTreeWalker(document, -1, null, false);
 const compilerTemplate = document.createElement('template');
 
 // 35 = #
@@ -41,8 +37,8 @@ function collector(node: Node): string | void {
 }
 
 function roll(n: number) {
-  while (--n) TREE_WALKER.nextNode();
-  return TREE_WALKER.currentNode;
+  while (--n) treeWalker.nextNode();
+  return treeWalker.currentNode;
 }
 
 function genPath(node: Node) {
@@ -50,7 +46,7 @@ function genPath(node: Node) {
   let ref: string | void;
   let index = 0;
 
-  TREE_WALKER.currentNode = node;
+  treeWalker.currentNode = node;
 
   do {
     if ((ref = collector(node))) {
@@ -59,15 +55,16 @@ function genPath(node: Node) {
     } else {
       index++;
     }
-  } while ((node = TREE_WALKER.nextNode()));
+  } while ((node = treeWalker.nextNode()));
 
   return indices;
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 function collect<T extends RefNodes = {}>(this: S1Node, node: Element): T {
   const refs: RefNodes = {};
 
-  TREE_WALKER.currentNode = node;
+  treeWalker.currentNode = node;
 
   this._refs.map((x) => (refs[x.ref] = roll(x.i)));
 
@@ -75,17 +72,16 @@ function collect<T extends RefNodes = {}>(this: S1Node, node: Element): T {
 }
 
 export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
-  // production mode requires a compatible template literal minifier!
-  compilerTemplate.innerHTML =
-    process.env.NODE_ENV === 'production'
-      ? String.raw(strings, ...args)
-      : String.raw(strings, ...args)
-          // so collector doesn't incorrectly classify first node as TEXT_NODE
-          .trim()
-          // for better test snapshots
-          .replace(/\n\s+/g, '\n')
-          // remove whitespace around ref tags in Text nodes
-          .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
+  // Compatible template literal minifier is mandatory for production consumers!
+  compilerTemplate.innerHTML = process.env.NODE_ENV === 'production'
+    ? String.raw(strings, ...args)
+    : String.raw(strings, ...args)
+      // to get the correct first node
+      .trim()
+      // faster genPath and cleaner test snapshots
+      .replace(/\n\s+/g, '\n')
+      // remove whitespace around ref tags in Text nodes
+      .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
 
   const node = compilerTemplate.content.firstChild as S1Node;
   node._refs = genPath(node);
