@@ -4,9 +4,9 @@
 [![NPM bundle size (minified + gzip)](https://img.shields.io/bundlephobia/minzip/stage1.svg)](https://bundlephobia.com/result?p=stage1)
 [![Licence](https://img.shields.io/github/license/MaxMilton/stage1.svg)](https://github.com/MaxMilton/stage1/blob/master/LICENSE)
 
-# stage1 [WIP]
+# stage1
 
-> DANGER: `stage1` is a work in progress and should not be used in production!
+> Warning: This is alpha software. Test thoroughly before using in production! Please report any bugs you find!
 
 Originally based on the excellent <https://github.com/Freak613/stage0>.
 
