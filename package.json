@@ -27,8 +27,8 @@
   "devDependencies": {
     "@types/jsdom": "16.2.12",
     "@types/node": "15.12.4",
-    "@typescript-eslint/eslint-plugin": "4.28.1",
-    "@typescript-eslint/parser": "4.28.1",
+    "@typescript-eslint/eslint-plugin": "4.28.2",
+    "@typescript-eslint/parser": "4.28.2",
     "c8": "7.7.3",
     "esbuild": "0.12.14",
     "esbuild-register": "2.6.0",
