@@ -4,7 +4,7 @@
 // - Object vs class for Ref in `indices`
 // - Direct reference vs this + TREE_WALKER.roll vs function roll
 // - `collector` returning '' vs 0
-// - refTag vs name[0] === '#'
+// - isRefTag vs name[0] === '#'
 // - for of node.attributes vs [...node.attributes] vs Array.from(node.attributes)
 
 import type { Ref, RefNodes, S1Node } from './types';
@@ -14,14 +14,14 @@ const treeWalker = document.createTreeWalker(document, -1, null, false);
 const compilerTemplate = document.createElement('template');
 
 // 35 = #
-const refTag = (value: string) => value.charCodeAt(0) === 35;
+const isRefTag = (value: string) => value.charCodeAt(0) === 35;
 
 function collector(node: Node): string | void {
   // 1 = Node.ELEMENT_NODE
   if (node.nodeType === 1) {
     for (const attr of (node as Element).attributes) {
       const aname = attr.name;
-      if (refTag(aname)) {
+      if (isRefTag(aname)) {
         (node as Element).removeAttribute(aname);
         return aname.slice(1);
       }
@@ -30,7 +30,7 @@ function collector(node: Node): string | void {
   }
 
   const content = node.nodeValue;
-  if (content && refTag(content)) {
+  if (content && isRefTag(content)) {
     node.nodeValue = '';
     return content.slice(1);
   }
