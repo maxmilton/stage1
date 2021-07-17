@@ -1,28 +1,28 @@
 const CONFIGURED_EVENTS: { [key: string]: boolean } = {};
 
-const nativeToSyntheticEvent = (event: Event, name: string) => {
+const nativeToSyntheticEvent = (event: Event) => {
   // eslint-disable-next-line prefer-template
-  const eventKey = '__' + name;
-  let dom = event.target as Node | null;
+  const eventKey = '__' + event.type;
+  let node = event.target as Node | null;
 
-  while (dom !== null) {
+  while (node !== null) {
     // @ts-expect-error - string indexing dom is unavoidable
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const eventHandler = dom[eventKey];
+    const eventHandler = node[eventKey];
 
     if (eventHandler) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       eventHandler(event);
       return;
     }
-    dom = dom.parentNode;
+    node = node.parentNode;
   }
 };
 
-export function setupSyntheticEvent(name: string): void {
-  if (CONFIGURED_EVENTS[name]) return;
+export function setupSyntheticEvent(type: string): void {
+  if (CONFIGURED_EVENTS[type]) return;
 
-  document.addEventListener(name, (event) => nativeToSyntheticEvent(event, name));
+  document.addEventListener(type, nativeToSyntheticEvent);
 
-  CONFIGURED_EVENTS[name] = true;
+  CONFIGURED_EVENTS[type] = true;
 }
