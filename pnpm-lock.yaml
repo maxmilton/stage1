@@ -11,7 +11,7 @@ specifiers:
   eslint: 7.32.0
   eslint-config-airbnb-typescript: 12.3.1
   eslint-plugin-import: 2.24.0
-  jsdom: 16.6.0
+  jsdom: 16.7.0
   prettier: 2.3.2
   typescript: 4.3.5
   uvu: 0.5.1
@@ -27,7 +27,7 @@ devDependencies:
   eslint: 7.32.0
   eslint-config-airbnb-typescript: 12.3.1_b78d56622185c270608ea85d5b4fefff
   eslint-plugin-import: 2.24.0_eslint@7.32.0
-  jsdom: 16.6.0
+  jsdom: 16.7.0
   prettier: 2.3.2
   typescript: 4.3.5
   uvu: 0.5.1
@@ -1362,8 +1362,8 @@ packages:
       esprima: 4.0.1
     dev: true
 
-  /jsdom/16.6.0:
-    resolution: {integrity: sha512-Ty1vmF4NHJkolaEmdjtxTfSfkdb8Ywarwf63f+F8/mDD1uLSSWDxDuMiZxiPhwunLrn9LOSVItWj4bLYsLN3Dg==}
+  /jsdom/16.7.0:
+    resolution: {integrity: sha512-u9Smc2G1USStM+s/x1ru5Sxrl6mPYCbByG1U/hUmqaVsm4tbNyS7CicOSRyuGQYZhTu0h84qkZZQ/I+dzizSVw==}
     engines: {node: '>=10'}
     peerDependencies:
       canvas: ^2.5.0
