@@ -1,4 +1,4 @@
-import { noOpUpdate } from '../utils';
+import { noop } from '../utils';
 
 // This is almost straightforward implementation of reconcillation algorithm
 // based on ivi documentation:
@@ -14,7 +14,7 @@ export function reconcile<T, N extends Node>(
   renderedValues: any[],
   data: any[],
   createFn: (...args: T) => N,
-  noOp: (node: N, ...args: T) => void = noOpUpdate,
+  updateFn: (node: N, ...args: T) => void = noop,
   beforeNode?: Node,
   afterNode?: Node,
 ): void {
@@ -66,7 +66,7 @@ export function reconcile<T, N extends Node>(
     // Skip prefix
     (a = renderedValues[prevStart]), (b = data[newStart]);
     while (a === b) {
-      noOp(prevStartNode, b);
+      updateFn(prevStartNode, b);
       prevStart++;
       newStart++;
       newStartNode = prevStartNode = prevStartNode.nextSibling;
@@ -78,7 +78,7 @@ export function reconcile<T, N extends Node>(
     // Skip suffix
     (a = renderedValues[prevEnd]), (b = data[newEnd]);
     while (a === b) {
-      noOp(prevEndNode, b);
+      updateFn(prevEndNode, b);
       prevEnd--;
       newEnd--;
       afterNode = prevEndNode;
@@ -92,7 +92,7 @@ export function reconcile<T, N extends Node>(
     (a = renderedValues[prevEnd]), (b = data[newStart]);
     while (a === b) {
       loop = true;
-      noOp(prevEndNode, b);
+      updateFn(prevEndNode, b);
       _node = prevEndNode.previousSibling;
       parent.insertBefore(prevEndNode, newStartNode);
       prevEndNode = _node;
@@ -107,7 +107,7 @@ export function reconcile<T, N extends Node>(
     (a = renderedValues[prevStart]), (b = data[newEnd]);
     while (a === b) {
       loop = true;
-      noOp(prevStartNode, b);
+      updateFn(prevStartNode, b);
       _node = prevStartNode.nextSibling;
       parent.insertBefore(prevStartNode, afterNode);
       prevStart++;
@@ -220,14 +220,14 @@ export function reconcile<T, N extends Node>(
   for (let i = newEnd; i >= newStart; i--) {
     if (longestSeq[lisIdx] === i) {
       afterNode = nodes[P[longestSeq[lisIdx]]];
-      noOp(afterNode, data[i]);
+      updateFn(afterNode, data[i]);
       lisIdx--;
     } else {
       if (P[i] === -1) {
         tmpD = createFn(data[i]);
       } else {
         tmpD = nodes[P[i]];
-        noOp(tmpD, data[i]);
+        updateFn(tmpD, data[i]);
       }
       parent.insertBefore(tmpD, afterNode);
       afterNode = tmpD;

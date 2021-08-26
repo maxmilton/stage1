@@ -1,11 +1,11 @@
-import { noOpUpdate } from '../utils';
+import { noop } from '../utils';
 
 export function reuseNodes<T, N extends Node>(
   parent: Element,
   renderedValues: any[],
   data: any[],
   createFn: (...args: T) => N,
-  noOp: (node: N, ...args: T) => void = noOpUpdate,
+  updateFn: (node: N, ...args: T) => void = noop,
   beforeNode?: Node,
   afterNode?: Node,
 ): void {
@@ -45,7 +45,7 @@ export function reuseNodes<T, N extends Node>(
   for (let i = 0, item, head = _head, mode = _mode; i < data.length; i++) {
     item = data[i];
     if (head) {
-      noOp(head, item);
+      updateFn(head, item);
     } else {
       head = createFn(item);
       mode ? parent.insertBefore(head, afterNode) : parent.appendChild(head);

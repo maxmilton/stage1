@@ -9,10 +9,11 @@
 // - Use of arrow functions instead of the function keyword
 
 import type { Ref, RefNodes, S1Node } from './types';
+import { create } from './utils';
 
 // -1 = NodeFilter.SHOW_ALL
 const treeWalker = document.createTreeWalker(document, -1, null, false);
-const compilerTemplate = document.createElement('template');
+const compilerTemplate = create('template');
 
 // 35 = #
 const isRefTag = (value: string) => value.charCodeAt(0) === 35;
