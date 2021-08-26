@@ -19,10 +19,10 @@ const nativeToSyntheticEvent = (event: Event) => {
   }
 };
 
-export function setupSyntheticEvent(type: keyof DocumentEventMap): void {
+export const setupSyntheticEvent = (type: keyof DocumentEventMap): void => {
   if (CONFIGURED_EVENTS[type]) return;
 
   document.addEventListener(type, nativeToSyntheticEvent);
 
   CONFIGURED_EVENTS[type] = true;
-}
+};

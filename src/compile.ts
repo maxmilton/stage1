@@ -6,6 +6,7 @@
 // - `collector` returning '' vs 0
 // - isRefTag vs name[0] === '#'
 // - for of node.attributes vs [...node.attributes] vs Array.from(node.attributes)
+// - Use of arrow functions instead of the function keyword
 
 import type { Ref, RefNodes, S1Node } from './types';
 
@@ -16,7 +17,7 @@ const compilerTemplate = document.createElement('template');
 // 35 = #
 const isRefTag = (value: string) => value.charCodeAt(0) === 35;
 
-function collector(node: Node): string | void {
+const collector = (node: Node): string | void => {
   // 1 = Node.ELEMENT_NODE
   if (node.nodeType === 1) {
     for (const attr of (node as Element).attributes) {
@@ -34,14 +35,14 @@ function collector(node: Node): string | void {
     node.nodeValue = '';
     return content.slice(1);
   }
-}
+};
 
-function roll(n: number) {
+const roll = (n: number) => {
   while (--n) treeWalker.nextNode();
   return treeWalker.currentNode;
-}
+};
 
-function genPath(node: Node) {
+const genPath = (node: Node) => {
   const indices: Ref[] = [];
   let ref: string | void;
   let index = 0;
@@ -58,20 +59,22 @@ function genPath(node: Node) {
   } while ((node = treeWalker.nextNode()));
 
   return indices;
-}
+};
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-function collect<T extends RefNodes = {}>(this: S1Node, node: Element): T {
+const collect = function <T extends RefNodes = {}>(
+  this: S1Node,
+  node: Element,
+): T {
   const refs: RefNodes = {};
 
   treeWalker.currentNode = node;
-
   this._refs.map((x) => (refs[x.ref] = roll(x.i)));
 
   return refs as T;
-}
+};
 
-export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
+export const h = (strings: TemplateStringsArray, ...args: any[]): S1Node => {
   // Compatible template literal minifier is mandatory for production consumers!
   compilerTemplate.innerHTML = process.env.NODE_ENV === 'production'
     ? String.raw(strings, ...args)
@@ -88,4 +91,4 @@ export function h(strings: TemplateStringsArray, ...args: any[]): S1Node {
   node.collect = collect;
 
   return node;
-}
+};
