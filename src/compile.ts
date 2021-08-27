@@ -12,7 +12,7 @@ import type { Ref, RefNodes, S1Node } from './types';
 import { create } from './utils';
 
 // -1 = NodeFilter.SHOW_ALL
-const treeWalker = document.createTreeWalker(document, -1, null, false);
+const treeWalker = document.createTreeWalker(document, -1, null);
 const compilerTemplate = create('template');
 
 // 35 = #
@@ -57,12 +57,13 @@ const genPath = (node: Node) => {
     } else {
       index++;
     }
+    // @ts-expect-error - null node used to end loop
   } while ((node = treeWalker.nextNode()));
 
   return indices;
 };
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/ban-types, func-names
 const collect = function <T extends RefNodes = {}>(
   this: S1Node,
   node: Element,

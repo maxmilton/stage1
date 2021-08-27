@@ -1,3 +1,5 @@
+/* eslint-disable no-labels */
+
 import { noop } from '../utils';
 
 // This is almost straightforward implementation of reconcillation algorithm
@@ -9,14 +11,14 @@ import { noop } from '../utils';
 // How this implementation differs from others, is that it's working with data directly,
 // without maintaining nodes arrays, and uses dom props firstChild/lastChild/nextSibling
 // for markers moving.
-export function reconcile<T, N extends Node>(
+export function reconcile<T extends any[], N extends Node>(
   parent: Element,
   renderedValues: any[],
   data: any[],
   createFn: (...args: T) => N,
   updateFn: (node: N, ...args: T) => void = noop,
   beforeNode?: Node,
-  afterNode?: Node,
+  afterNode?: Node | null,
 ): void {
   // Fast path for clear
   if (data.length === 0) {

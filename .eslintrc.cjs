@@ -20,6 +20,9 @@ module.exports = {
     'plugin:@typescript-eslint/recommended-requiring-type-checking',
   ],
   rules: {
+    // TODO: Fix issues then remove this rule
+    '@typescript-eslint/naming-convention': WARN,
+
     'import/prefer-default-export': OFF,
     // useful for compact and memory efficient code... but be careful!
     'no-cond-assign': OFF,

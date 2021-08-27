@@ -1,13 +1,13 @@
 import { noop } from '../utils';
 
-export function reuseNodes<T, N extends Node>(
+export function reuseNodes<T extends any[], N extends Node>(
   parent: Element,
   renderedValues: any[],
   data: any[],
   createFn: (...args: T) => N,
   updateFn: (node: N, ...args: T) => void = noop,
   beforeNode?: Node,
-  afterNode?: Node,
+  afterNode?: Node | null,
 ): void {
   if (data.length === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
