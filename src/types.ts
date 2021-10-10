@@ -7,7 +7,7 @@ export interface RefNodes {
   [key: string]: Node;
 }
 
-export interface S1Node extends Element {
+export interface S1Node extends Node {
   _refs: Ref[];
-  collect<T extends RefNodes = RefNodes>(node: Element): T;
+  collect<T extends RefNodes = RefNodes>(node: Node): T;
 }
