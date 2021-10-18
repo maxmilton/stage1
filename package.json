@@ -1,20 +1,19 @@
 {
   "name": "stage1",
   "version": "0.0.11",
-  "description": "WIP",
-  "license": "MIT",
-  "repository": "maxmilton/stage1",
-  "author": "Max Milton <max@happycode.ltd>",
-  "homepage": "https://github.com/maxmilton/stage1",
-  "main": "dist/index.js",
   "type": "module",
-  "sideEffects": false,
+  "description": "WIP",
+  "repository": "maxmilton/stage1",
+  "homepage": "https://github.com/maxmilton/stage1",
+  "author": "Max Milton <max@happycode.ltd>",
+  "license": "MIT",
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "pnpm run prebuild && NODE_ENV=production node build.mjs && pnpm run postbuild",
+    "build": "pnpm run prebuild && node build.mjs && pnpm run postbuild",
     "dev": "NODE_ENV=development node build.mjs",
     "lint": "pnpm run lint:js && pnpm run lint:ts",
     "lint:js": "eslint --ignore-path .gitignore --ext .ts,.js,.mjs,.cjs .",
@@ -36,14 +35,22 @@
     "eslint-plugin-import": "2.25.2",
     "jsdom": "18.0.0",
     "prettier": "2.4.1",
+    "prettier-plugin-pkg": "0.10.0",
+    "prettier-plugin-sh": "0.7.1",
+    "sirv": "1.0.18",
     "tsm": "2.1.2",
     "typescript": "4.4.4",
     "uvu": "0.5.2"
   },
+  "sideEffects": false,
   "prettier": {
     "arrowParens": "always",
     "endOfLine": "lf",
     "singleQuote": true,
-    "trailingComma": "all"
+    "trailingComma": "all",
+    "plugins": [
+      "./node_modules/prettier-plugin-pkg",
+      "./node_modules/prettier-plugin-sh"
+    ]
   }
 }
