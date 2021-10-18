@@ -1,4 +1,16 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+/* eslint-disable @typescript-eslint/no-use-before-define */
+/* eslint-disable block-scoped-var */
+/* eslint-disable no-continue */
 /* eslint-disable no-labels */
+/* eslint-disable no-multi-assign */
+/* eslint-disable no-sequences */
+/* eslint-disable no-var */
+/* eslint-disable vars-on-top */
 
 import { noop } from '../utils';
 
@@ -30,7 +42,9 @@ export function keyed<T extends any[], N extends Node>(
       if (afterNode === undefined) afterNode = null;
 
       while (node !== afterNode) {
+        // @ts-expect-error - FIXME:!
         tmp = node.nextSibling;
+        // @ts-expect-error - FIXME:!
         parent.removeChild(node);
         node = tmp;
       }
@@ -45,7 +59,9 @@ export function keyed<T extends any[], N extends Node>(
     let node;
     const mode = afterNode !== undefined ? 1 : 0;
     for (let i = 0, len = data.length; i < len; i++) {
+      // @ts-expect-error - FIXME:!
       node = createFn(data[i]);
+      // @ts-expect-error - FIXME:!
       mode ? parent.insertBefore(node, afterNode) : parent.appendChild(node);
     }
     return;
@@ -69,9 +85,11 @@ export function keyed<T extends any[], N extends Node>(
     // Skip prefix
     (a = renderedValues[prevStart]), (b = data[newStart]);
     while (a[key] === b[key]) {
+      // @ts-expect-error - FIXME:!
       updateFn(prevStartNode, b);
       prevStart++;
       newStart++;
+      // @ts-expect-error - FIXME:!
       newStartNode = prevStartNode = prevStartNode.nextSibling;
       if (prevEnd < prevStart || newEnd < newStart) break fixes;
       a = renderedValues[prevStart];
@@ -81,10 +99,12 @@ export function keyed<T extends any[], N extends Node>(
     // Skip suffix
     (a = renderedValues[prevEnd]), (b = data[newEnd]);
     while (a[key] === b[key]) {
+      // @ts-expect-error - FIXME:!
       updateFn(prevEndNode, b);
       prevEnd--;
       newEnd--;
       afterNode = prevEndNode;
+      // @ts-expect-error - FIXME:!
       prevEndNode = prevEndNode.previousSibling;
       if (prevEnd < prevStart || newEnd < newStart) break fixes;
       a = renderedValues[prevEnd];
@@ -95,8 +115,11 @@ export function keyed<T extends any[], N extends Node>(
     (a = renderedValues[prevEnd]), (b = data[newStart]);
     while (a[key] === b[key]) {
       loop = true;
+      // @ts-expect-error - FIXME:!
       updateFn(prevEndNode, b);
+      // @ts-expect-error - FIXME:!
       _node = prevEndNode.previousSibling;
+      // @ts-expect-error - FIXME:!
       parent.insertBefore(prevEndNode, newStartNode);
       prevEndNode = _node;
       newStart++;
@@ -110,8 +133,11 @@ export function keyed<T extends any[], N extends Node>(
     (a = renderedValues[prevStart]), (b = data[newEnd]);
     while (a[key] === b[key]) {
       loop = true;
+      // @ts-expect-error - FIXME:!
       updateFn(prevStartNode, b);
+      // @ts-expect-error - FIXME:!
       _node = prevStartNode.nextSibling;
+      // @ts-expect-error - FIXME:!
       parent.insertBefore(prevStartNode, afterNode);
       prevStart++;
       afterNode = prevStartNode;
@@ -129,9 +155,12 @@ export function keyed<T extends any[], N extends Node>(
       let next;
       while (prevStart <= prevEnd) {
         if (prevEnd === 0) {
+          // @ts-expect-error - FIXME:!
           parent.removeChild(prevEndNode);
         } else {
+          // @ts-expect-error - FIXME:!
           next = prevEndNode.previousSibling;
+          // @ts-expect-error - FIXME:!
           parent.removeChild(prevEndNode);
           prevEndNode = next;
         }
@@ -147,7 +176,9 @@ export function keyed<T extends any[], N extends Node>(
       let node;
       const mode = afterNode ? 1 : 0;
       while (newStart <= newEnd) {
+        // @ts-expect-error - FIXME:!
         node = createFn(data[newStart]);
+        // @ts-expect-error - FIXME:!
         mode ? parent.insertBefore(node, afterNode) : parent.appendChild(node);
         newStart++;
       }
@@ -184,7 +215,9 @@ export function keyed<T extends any[], N extends Node>(
       if (afterNode === undefined) afterNode = null;
 
       while (node !== afterNode) {
+        // @ts-expect-error - FIXME:!
         tmp = node.nextSibling;
+        // @ts-expect-error - FIXME:!
         parent.removeChild(node);
         node = tmp;
         prevStart++;
@@ -196,7 +229,9 @@ export function keyed<T extends any[], N extends Node>(
     let node;
     const mode = afterNode ? 1 : 0;
     for (let i = newStart; i <= newEnd; i++) {
+      // @ts-expect-error - FIXME:!
       node = createFn(data[i]);
+      // @ts-expect-error - FIXME:!
       mode ? parent.insertBefore(node, afterNode) : parent.appendChild(node);
     }
 
@@ -211,10 +246,12 @@ export function keyed<T extends any[], N extends Node>(
   let tmpC = prevStartNode;
   for (let i = prevStart; i <= prevEnd; i++) {
     nodes[i] = tmpC;
+    // @ts-expect-error - FIXME:!
     tmpC = tmpC.nextSibling;
   }
 
   for (let i = 0; i < toRemove.length; i++) {
+    // @ts-expect-error - FIXME:!
     parent.removeChild(nodes[toRemove[i]]);
   }
 
@@ -223,15 +260,19 @@ export function keyed<T extends any[], N extends Node>(
   for (let i = newEnd; i >= newStart; i--) {
     if (longestSeq[lisIdx] === i) {
       afterNode = nodes[P[longestSeq[lisIdx]]];
+      // @ts-expect-error - FIXME:!
       updateFn(afterNode, data[i]);
       lisIdx--;
     } else {
       if (P[i] === -1) {
+        // @ts-expect-error - FIXME:!
         tmpD = createFn(data[i]);
       } else {
         tmpD = nodes[P[i]];
+        // @ts-expect-error - FIXME:!
         updateFn(tmpD, data[i]);
       }
+      // @ts-expect-error - FIXME:!
       parent.insertBefore(tmpD, afterNode);
       afterNode = tmpD;
     }
@@ -242,7 +283,7 @@ export function keyed<T extends any[], N extends Node>(
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L368
 
 // return an array of the indices of ns that comprise the longest increasing subsequence within ns
-function longestPositiveIncreasingSubsequence(ns, newStart) {
+function longestPositiveIncreasingSubsequence(ns: any[], newStart: number) {
   const seq = [];
   const is = [];
   let l = -1;
@@ -270,7 +311,7 @@ function longestPositiveIncreasingSubsequence(ns, newStart) {
   return seq;
 }
 
-function findGreatestIndexLEQ(seq, n) {
+function findGreatestIndexLEQ(seq: any[], n: number) {
   // invariant: lo is guaranteed to be index of a value <= n, hi to be >
   // therefore, they actually start out of range: (-1, last + 1)
   let lo = -1;

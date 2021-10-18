@@ -76,7 +76,10 @@ const collect = function <T extends RefNodes = {}>(
   return refs as T;
 };
 
-export const h = (strings: TemplateStringsArray, ...args: any[]): S1Node => {
+export const h = (
+  strings: TemplateStringsArray,
+  ...args: unknown[]
+): S1Node => {
   // Compatible template literal minifier is mandatory for production consumers!
   compilerTemplate.innerHTML = process.env.NODE_ENV === 'production'
     ? String.raw(strings, ...args)
