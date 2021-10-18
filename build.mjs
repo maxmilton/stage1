@@ -1,25 +1,23 @@
-/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable import/no-extraneous-dependencies, no-console */
 
 import esbuild from 'esbuild';
 
-const mode = process.env.NODE_ENV;
-const dev = mode === 'development';
+const out = await esbuild.build({
+  entryPoints: [
+    'src/index.ts',
+    'src/reconcile/keyed.ts',
+    'src/reconcile/reconcile.ts',
+    'src/reconcile/reuse-nodes.ts',
+  ],
+  outdir: 'dist',
+  platform: 'neutral',
+  bundle: true,
+  sourcemap: true,
+  watch: !!process.env.DEV_BUILD,
+  metafile: process.stdout.isTTY,
+  logLevel: 'debug',
+});
 
-esbuild
-  .build({
-    entryPoints: [
-      'src/index.ts',
-      'src/reconcile/keyed.ts',
-      'src/reconcile/reconcile.ts',
-      'src/reconcile/reuse-nodes.ts',
-    ],
-    outdir: 'dist',
-    platform: 'neutral',
-    bundle: true,
-    sourcemap: true,
-    watch: dev,
-    logLevel: 'debug',
-  })
-  .catch((err) => {
-    throw err;
-  });
+if (out.metafile) {
+  console.log(await esbuild.analyzeMetafile(out.metafile));
+}
