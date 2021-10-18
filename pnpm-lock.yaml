@@ -14,7 +14,6 @@ specifiers:
   jsdom: 18.0.0
   prettier: 2.4.1
   prettier-plugin-pkg: 0.10.0
-  prettier-plugin-sh: 0.7.1
   sirv: 1.0.18
   tsm: 2.1.2
   typescript: 4.4.4
@@ -34,7 +33,6 @@ devDependencies:
   jsdom: 18.0.0
   prettier: 2.4.1
   prettier-plugin-pkg: 0.10.0_prettier@2.4.1
-  prettier-plugin-sh: 0.7.1_prettier@2.4.1
   sirv: 1.0.18
   tsm: 2.1.2
   typescript: 4.4.4
@@ -1655,10 +1653,6 @@ packages:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
     dev: true
 
-  /mvdan-sh/0.5.0:
-    resolution: {integrity: sha512-UWbdl4LHd2fUnaEcOUFVWRdWGLkNoV12cKVIPiirYd8qM5VkCoCTXErlDubevrkEG7kGohvjRxAlTQmOqG80tw==}
-    dev: true
-
   /natural-compare/1.4.0:
     resolution: {integrity: sha1-Sr6/7tdUHywnrPspvbvRXI1bpPc=}
     dev: true
@@ -1834,15 +1828,6 @@ packages:
     peerDependencies:
       prettier: ^2.0.5
     dependencies:
-      prettier: 2.4.1
-    dev: true
-
-  /prettier-plugin-sh/0.7.1_prettier@2.4.1:
-    resolution: {integrity: sha512-2MWRdGOSz0yf/z2kTKF1AqxDuH9MZD8faoDAz5ySGphxssi9oyM3Ys+jp7AfqsCXvGUDbRA4EJOlKS0yZKAW6w==}
-    peerDependencies:
-      prettier: ^2.0.5
-    dependencies:
-      mvdan-sh: 0.5.0
       prettier: 2.4.1
     dev: true
 
