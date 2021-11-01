@@ -33,7 +33,7 @@
     "eslint-config-airbnb-base": "14.2.1",
     "eslint-config-airbnb-typescript": "14.0.0",
     "eslint-plugin-import": "2.25.2",
-    "jsdom": "18.0.0",
+    "jsdom": "18.0.1",
     "prettier": "2.4.1",
     "prettier-plugin-pkg": "0.10.0",
     "sirv": "1.0.18",
