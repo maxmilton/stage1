@@ -4,9 +4,17 @@
 // - Object vs class for Ref in `indices`
 // - Direct reference vs this + TREE_WALKER.roll vs function roll
 // - `collector` returning '' vs 0
-// - isRefTag vs name[0] === '#'
-// - for of node.attributes vs [...node.attributes] vs Array.from(node.attributes)
+// - isRefTag vs value.charCodeAt(0) === 35 vs value[0] === '#'
+//    ↳ https://jsben.ch/CI1u5
+// - for...of node.attributes vs [...node.attributes] vs Array.from(node.attributes)
+//    ↳ Also see https://github.com/Freak613/stage0/commit/be29f76fccef54760b2294b7ed44c2315f176899
+//    ↳ https://jsben.ch/vPfrS
 // - Use of arrow functions instead of the function keyword
+
+// TODO: Test performance characteristics of h as `function h(template: string)`
+// with usage `const view = h('<p>example</p>')`
+//  ↳ How much impact does rest + spread + String.raw() have on performance?
+//  ↳ Would also have the added benefit of lower browser version requirements
 
 import type { Ref, RefNodes, S1Node } from './types';
 import { create } from './utils';
@@ -15,15 +23,15 @@ import { create } from './utils';
 const treeWalker = document.createTreeWalker(document, -1, null);
 const compilerTemplate = create('template');
 
-// 35 = #
-const isRefTag = (value: string) => value.charCodeAt(0) === 35;
-
 const collector = (node: Node): string | void => {
   // 1 = Node.ELEMENT_NODE
   if (node.nodeType === 1) {
-    for (const attr of (node as Element).attributes) {
-      const aname = attr.name;
-      if (isRefTag(aname)) {
+    const attrs = (node as Element).attributes;
+    let len = attrs.length;
+
+    while (len--) {
+      const aname = attrs[len].name;
+      if (aname[0] === '#') {
         (node as Element).removeAttribute(aname);
         return aname.slice(1);
       }
@@ -32,7 +40,7 @@ const collector = (node: Node): string | void => {
   }
 
   const content = node.nodeValue;
-  if (content && isRefTag(content)) {
+  if (content && content[0] === '#') {
     node.nodeValue = '';
     return content.slice(1);
   }
@@ -57,8 +65,7 @@ const genPath = (node: Node) => {
     } else {
       index++;
     }
-    // @ts-expect-error - null node used to end loop
-  } while ((node = treeWalker.nextNode()));
+  } while (((node as Node | null) = treeWalker.nextNode()));
 
   return indices;
 };
@@ -71,19 +78,22 @@ const collect = function <T extends RefNodes = {}>(
   const refs: RefNodes = {};
 
   treeWalker.currentNode = node;
-  this._refs.map((x) => (refs[x.ref] = roll(x.i)));
+
+  for (const x of this._refs) {
+    refs[x.ref] = roll(x.i);
+  }
 
   return refs as T;
 };
 
 export const h = (
-  strings: TemplateStringsArray,
-  ...args: unknown[]
+  template: TemplateStringsArray,
+  ...substitutions: unknown[]
 ): S1Node => {
   // Compatible template literal minifier is mandatory for production consumers!
   compilerTemplate.innerHTML = process.env.NODE_ENV === 'production'
-    ? String.raw(strings, ...args)
-    : String.raw(strings, ...args)
+    ? String.raw(template, ...substitutions)
+    : String.raw(template, ...substitutions)
       // to get the correct first node
       .trim()
       // faster genPath and cleaner test snapshots
