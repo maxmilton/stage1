@@ -2,7 +2,7 @@ lockfileVersion: 5.3
 
 specifiers:
   '@types/jsdom': 16.2.13
-  '@types/node': 16.11.6
+  '@types/node': 16.11.7
   '@typescript-eslint/eslint-plugin': 5.3.1
   '@typescript-eslint/parser': 5.3.1
   c8: 7.10.0
@@ -21,7 +21,7 @@ specifiers:
 
 devDependencies:
   '@types/jsdom': 16.2.13
-  '@types/node': 16.11.6
+  '@types/node': 16.11.7
   '@typescript-eslint/eslint-plugin': 5.3.1_4daca2483796bdceece3758b04dba2a1
   '@typescript-eslint/parser': 5.3.1_eslint@7.32.0+typescript@4.4.4
   c8: 7.10.0
@@ -138,7 +138,7 @@ packages:
   /@types/jsdom/16.2.13:
     resolution: {integrity: sha512-8JQCjdeAidptSsOcRWk2iTm9wCcwn9l+kRG6k5bzUacrnm1ezV4forq0kWjUih/tumAeoG+OspOvQEbbRucBTw==}
     dependencies:
-      '@types/node': 16.11.6
+      '@types/node': 16.11.7
       '@types/parse5': 6.0.2
       '@types/tough-cookie': 4.0.1
     dev: true
@@ -151,8 +151,8 @@ packages:
     resolution: {integrity: sha1-7ihweulOEdK4J7y+UnC86n8+ce4=}
     dev: true
 
-  /@types/node/16.11.6:
-    resolution: {integrity: sha512-ua7PgUoeQFjmWPcoo9khiPum3Pd60k4/2ZGXt18sm2Slk0W0xZTqt5Y0Ny1NyBiN1EVQ/+FaF9NcY4Qe6rwk5w==}
+  /@types/node/16.11.7:
+    resolution: {integrity: sha512-QB5D2sqfSjCmTuWcBWyJ+/44bcjO7VbjSbOE0ucoVbAsSNQc4Lt6QkgkVXkTDwkL4z/beecZNDvVX15D4P8Jbw==}
     dev: true
 
   /@types/parse5/6.0.2:
