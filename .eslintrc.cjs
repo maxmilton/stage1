@@ -23,6 +23,7 @@ module.exports = {
     // TODO: Fix issues then remove this rule
     '@typescript-eslint/naming-convention': WARN,
 
+    'default-param-last': WARN,
     'import/prefer-default-export': OFF,
     // useful for compact and memory efficient code... but be careful!
     'no-cond-assign': OFF,
