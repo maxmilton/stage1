@@ -6,15 +6,10 @@
 // - `collector` returning '' vs 0
 // - isRefTag vs value.charCodeAt(0) === 35 vs value[0] === '#'
 //    ↳ https://jsben.ch/CI1u5
-// - for...of node.attributes vs [...node.attributes] vs Array.from(node.attributes)
+// - Iterating over attributes; Array.from(node.attributes)
 //    ↳ Also see https://github.com/Freak613/stage0/commit/be29f76fccef54760b2294b7ed44c2315f176899
-//    ↳ https://jsben.ch/vPfrS
+//    ↳ https://jsben.ch/vPfrS (for loop wins)
 // - Use of arrow functions instead of the function keyword
-
-// TODO: Test performance characteristics of h as `function h(template: string)`
-// with usage `const view = h('<p>example</p>')`
-//  ↳ How much impact does rest + spread + String.raw() have on performance?
-//  ↳ Would also have the added benefit of lower browser version requirements
 
 import type { Ref, RefNodes, S1Node } from './types';
 import { create } from './utils';
@@ -86,30 +81,7 @@ const collect = function <T extends RefNodes = {}>(
   return refs as T;
 };
 
-export const h = (
-  template: TemplateStringsArray,
-  ...substitutions: unknown[]
-): S1Node => {
-  // Compatible template literal minifier is mandatory for production consumers!
-  compilerTemplate.innerHTML = process.env.NODE_ENV === 'production'
-    ? String.raw(template, ...substitutions)
-    : String.raw(template, ...substitutions)
-      // to get the correct first node
-      .trim()
-      // faster genPath and cleaner test snapshots
-      .replace(/\n\s+/g, '\n')
-      // remove whitespace around ref tags in Text nodes
-      .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
-
-  const node = compilerTemplate.content.firstChild as S1Node;
-  node._refs = genPath(node);
-  node.collect = collect;
-
-  return node;
-};
-
-// TODO: If this variant proves to be viable, it should be renamed to `h`
-export const hh = (template: string): S1Node => {
+export const h = (template: string): S1Node => {
   // Compatible template literal minifier is mandatory for production consumers!
   compilerTemplate.innerHTML = process.env.NODE_ENV === 'production'
     ? template
@@ -127,3 +99,8 @@ export const hh = (template: string): S1Node => {
 
   return node;
 };
+
+export const ht = (
+  template: TemplateStringsArray,
+  ...substitutions: unknown[]
+): S1Node => h(String.raw(template, ...substitutions));
