@@ -25,5 +25,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "exclude": ["coverage", "dist", "node_modules", "test"]
+  "exclude": ["coverage", "dist", "node_modules", "test", "build.mjs"]
 }
