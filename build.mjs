@@ -2,6 +2,8 @@
 
 import esbuild from 'esbuild';
 
+const dev = !!process.env.DEV_BUILD;
+
 const out = await esbuild.build({
   entryPoints: [
     'src/index.ts',
@@ -13,8 +15,8 @@ const out = await esbuild.build({
   platform: 'neutral',
   bundle: true,
   sourcemap: true,
-  watch: !!process.env.DEV_BUILD,
-  metafile: process.stdout.isTTY,
+  watch: dev,
+  metafile: !dev && process.stdout.isTTY,
   logLevel: 'debug',
 });
 
