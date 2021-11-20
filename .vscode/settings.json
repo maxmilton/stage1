@@ -1,12 +1,11 @@
 {
-  "css.validate": false,
   "editor.codeActionsOnSave": [
     "source.sortImports",
     "source.fixAll.format",
-    "source.fixAll.eslint",
-    "source.fixAll.stylelint"
+    "source.fixAll.eslint"
   ],
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": false,
-  "js/ts.implicitProjectConfig.checkJs": true
+  "js/ts.implicitProjectConfig.checkJs": true,
+  "prettier.ignorePath": ".gitignore"
 }
