@@ -1,5 +1,6 @@
 const OFF = 0;
 const WARN = 1;
+const ERROR = 2;
 
 // TODO: Types
 // eslint-disable-next-line max-len
@@ -24,6 +25,7 @@ module.exports = {
     // TODO: Fix issues then remove this rule
     '@typescript-eslint/naming-convention': WARN,
 
+    '@typescript-eslint/explicit-module-boundary-types': ERROR,
     'default-param-last': WARN,
     'import/prefer-default-export': OFF,
     // useful for compact and memory efficient code... but be careful!
