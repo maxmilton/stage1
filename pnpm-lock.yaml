@@ -11,7 +11,7 @@ specifiers:
   eslint-config-airbnb-base: 15.0.0
   eslint-config-airbnb-typescript: 16.0.0
   eslint-plugin-import: 2.25.3
-  jsdom: 18.1.0
+  jsdom: 18.1.1
   prettier: 2.4.1
   prettier-plugin-pkg: 0.11.0
   sirv: 1.0.18
@@ -30,7 +30,7 @@ devDependencies:
   eslint-config-airbnb-base: 15.0.0_a32f4f7b9ceb1e357b5ea9f682f0210a
   eslint-config-airbnb-typescript: 16.0.0_069bfbc98d3cac76be829d6acfcc8e7e
   eslint-plugin-import: 2.25.3_eslint@8.3.0
-  jsdom: 18.1.0
+  jsdom: 18.1.1
   prettier: 2.4.1
   prettier-plugin-pkg: 0.11.0_prettier@2.4.1
   sirv: 1.0.18
@@ -275,12 +275,6 @@ packages:
 
   /acorn/7.4.1:
     resolution: {integrity: sha512-nQyp0o1/mNdbTO1PO6kHkwSrmgZ0MT/jCCpNiwbUjGoRN4dlBhqJtoQuCnEOKzgTVwg0ZWiCoQy6SxMebQVh8A==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
-    dev: true
-
-  /acorn/8.5.0:
-    resolution: {integrity: sha512-yXbYeFy+jUuYd3/CDcg2NkIYE991XYX/bje7LmjJigUciaeO1JR4XxXgCIV1/Zc/dRuFEyw1L0pbA+qynJkW5Q==}
     engines: {node: '>=0.4.0'}
     hasBin: true
     dev: true
@@ -1407,8 +1401,8 @@ packages:
       argparse: 2.0.1
     dev: true
 
-  /jsdom/18.1.0:
-    resolution: {integrity: sha512-q6QFAfSGLEUqRJ+GCV6vn6ItZCMARWh1d33wiJZPxc+wMNw7HK71JPmQ4C2lIZAsBH8TiJu4uplach/UcrC6bQ==}
+  /jsdom/18.1.1:
+    resolution: {integrity: sha512-NmJQbjQ/gpS/1at/ce3nCx89HbXL/f5OcenBe8wU1Eik0ROhyUc3LtmG3567dEHAGXkN8rmILW/qtCOPxPHQJw==}
     engines: {node: '>=12'}
     peerDependencies:
       canvas: ^2.5.0
@@ -1417,7 +1411,7 @@ packages:
         optional: true
     dependencies:
       abab: 2.0.5
-      acorn: 8.5.0
+      acorn: 8.6.0
       acorn-globals: 6.0.0
       cssom: 0.5.0
       cssstyle: 2.3.0
