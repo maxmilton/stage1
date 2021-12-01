@@ -14,7 +14,7 @@ specifiers:
   jsdom: 18.1.1
   prettier: 2.5.0
   prettier-plugin-pkg: 0.11.1
-  sirv: 1.0.18
+  sirv: 1.0.19
   tsm: 2.2.1
   typescript: 4.5.2
   uvu: 0.5.2
@@ -33,7 +33,7 @@ devDependencies:
   jsdom: 18.1.1
   prettier: 2.5.0
   prettier-plugin-pkg: 0.11.1_prettier@2.5.0
-  sirv: 1.0.18
+  sirv: 1.0.19
   tsm: 2.2.1
   typescript: 4.5.2
   uvu: 0.5.2
@@ -1537,12 +1537,6 @@ packages:
       mime-db: 1.51.0
     dev: true
 
-  /mime/2.6.0:
-    resolution: {integrity: sha512-USPkMeET31rOMiarsBNIHZKLGgvKc/LrjofAnBlOttf5ajRvqiRA8QsenbcooctK6d6Ts6aqZXBA+XbkKthiQg==}
-    engines: {node: '>=4.0.0'}
-    hasBin: true
-    dev: true
-
   /minimatch/3.0.4:
     resolution: {integrity: sha512-yJHVQEhyqPLUTgt9B83PXu6W3rx4MvvHvSUvToogpwoGDOUQ+yDrR0HRot+yOCdCO7u4hX3pWft6kWBBcqh0UA==}
     dependencies:
@@ -1556,6 +1550,11 @@ packages:
   /mri/1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
     engines: {node: '>=4'}
+    dev: true
+
+  /mrmime/1.0.0:
+    resolution: {integrity: sha512-a70zx7zFfVO7XpnQ2IX1Myh9yY4UYvfld/dikWRnsXxbyvMcfz+u6UfgNAtH+k2QqtJuzVpv6eLTx1G2+WKZbQ==}
+    engines: {node: '>=10'}
     dev: true
 
   /ms/2.0.0:
@@ -1871,12 +1870,12 @@ packages:
     resolution: {integrity: sha512-KWcOiKeQj6ZyXx7zq4YxSMgHRlod4czeBQZrPb8OKcohcqAXShm7E20kEMle9WBt26hFcAf0qLOcp5zmY7kOqQ==}
     dev: true
 
-  /sirv/1.0.18:
-    resolution: {integrity: sha512-f2AOPogZmXgJ9Ma2M22ZEhc1dNtRIzcEkiflMFeVTRq+OViOZMvH1IPMVOwrKaxpSaHioBJiDR0SluRqGa7atA==}
+  /sirv/1.0.19:
+    resolution: {integrity: sha512-JuLThK3TnZG1TAKDwNIqNq6QA2afLOCcm+iE8D1Kj3GA40pSPsxQjjJl0J8X3tsR7T+CP1GavpzLwYkgVLWrZQ==}
     engines: {node: '>= 10'}
     dependencies:
       '@polka/url': 1.0.0-next.21
-      mime: 2.6.0
+      mrmime: 1.0.0
       totalist: 1.1.0
     dev: true
 
