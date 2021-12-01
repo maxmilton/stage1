@@ -37,7 +37,7 @@
     "prettier": "2.5.0",
     "prettier-plugin-pkg": "0.11.1",
     "sirv": "1.0.18",
-    "tsm": "2.1.4",
+    "tsm": "2.2.1",
     "typescript": "4.5.2",
     "uvu": "0.5.2"
   },
