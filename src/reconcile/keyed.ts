@@ -23,7 +23,7 @@ import { noop } from '../utils';
 // How this implementation differs from others, is that it's working with data directly,
 // without maintaining nodes arrays, and uses dom props firstChild/lastChild/nextSibling
 // for markers moving.
-export function keyed<T extends any[], N extends Node>(
+export function reconcile<T extends any[], N extends Node>(
   key: keyof N,
   parent: Element,
   renderedValues: any[],

@@ -4,7 +4,7 @@
 
 import { noop } from '../utils';
 
-export function reuseNodes<T extends any[], N extends Node>(
+export function reconcile<T extends any[], N extends Node>(
   parent: Element,
   renderedValues: any[],
   data: any[],
