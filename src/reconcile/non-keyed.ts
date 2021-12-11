@@ -278,8 +278,6 @@ export function reconcile<T extends any[], N extends Node>(
   }
 }
 
-export default reconcile;
-
 // Picked from
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L368
 
