@@ -8,7 +8,7 @@ const out = await esbuild.build({
   entryPoints: [
     'src/index.ts',
     'src/reconcile/keyed.ts',
-    'src/reconcile/reconcile.ts',
+    'src/reconcile/non-keyed.ts',
     'src/reconcile/reuse-nodes.ts',
   ],
   outdir: 'dist',
