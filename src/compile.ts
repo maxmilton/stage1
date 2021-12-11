@@ -100,7 +100,7 @@ export const h = (template: string): S1Node => {
   return node;
 };
 
-export const ht = (
+export const html = (
   template: TemplateStringsArray,
   ...substitutions: unknown[]
 ): S1Node => h(String.raw(template, ...substitutions));

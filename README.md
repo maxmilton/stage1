@@ -15,7 +15,7 @@ Originally based on the excellent <https://github.com/Freak613/stage0>.
 - Add documentation about:
   - Differences from [original stage0](https://github.com/Freak613/stage0)
     - `h` is now `function h(template: string): S1Node`
-    - `ht` is available for anyone who wants to use as a string template literal tag function e.g., `` ht`<p>#text<p>` ``
+    - `html` is available for anyone who wants to use as a string template literal tag function e.g., `` html`<p>#text<p>` ``
     - Import paths
     - Improved TypeScript support
     - Reduced size and (hopefully) improved load & runtime performance

@@ -1,12 +1,12 @@
-import { ht, S1Node } from '../..';
+import { html, S1Node } from '../..';
 
 type BasicComponent = S1Node & HTMLDivElement;
 
-const view = ht`
-  <nav id=basic>
-    <a href=l1>Link 1</a>
-    <a href=l2>Link 2</a>
-    <a href=l3>Link 3</a>
+const view = html`
+  <nav id="basic">
+    <a href="l1">Link 1</a>
+    <a href="l2">Link 2</a>
+    <a href="l3">Link 3</a>
   </nav>
 `;
 
