@@ -6,7 +6,9 @@
 
 # stage1
 
-> Warning: This is alpha software. Test thoroughly before using in production! Please report any bugs you find!
+High-performance JavaScript micro framework.
+
+> Warning: This is alpha software. Test thoroughly before using in production. Please report any bugs you find!
 
 Originally based on the excellent <https://github.com/Freak613/stage0>.
 
@@ -14,15 +16,32 @@ Originally based on the excellent <https://github.com/Freak613/stage0>.
 
 - Add documentation about:
   - Differences from [original stage0](https://github.com/Freak613/stage0)
-    - `h` is now `function h(template: string): S1Node`
-    - `html` is available for anyone who wants to use as a string template literal tag function e.g., `` html`<p>#text<p>` ``
+    - `h` is now `function h(template: string): S1Node` e.g., `h('<p>#text<p>')`
+    - `html` is available to use as a string template literal tag function e.g., `` html`<p>#text<p>` ``
     - Import paths
+      - Other than reconcilers, everything is a named export from `stage1`
+      - Reconcilers all export a `reconcile` function
+      - `/keyed` --> `/reconcile/keyed`
+      - `/reconcile` --> `/reconcile/non-keyed`
+      - `/reuse-nodes` --> `/reconcile/reuse-nodes`
     - Improved TypeScript support
-    - Reduced size and (hopefully) improved load & runtime performance
+    - Reduced size and improved load and runtime performance
   - `process.env.NODE_ENV` must be defined
-  - If `process.env.NODE_ENV === 'production` you must minify `h` tagged template literals with a compatible minifier
+  - If `process.env.NODE_ENV === 'production` you must minify `h`/`html` strings with a compatible minifier
     - Add full example with `esbuild` + `esbuild-minify-templates`
+- Add API and usage documentation
+- Add more tests
+- Add examples
 - Set up benchmarking + compare to `stage0` and other JS frameworks
+- Submit to <https://github.com/krausest/js-framework-benchmark>
+
+## Browser support
+
+TODO: Define the minimum supported browser versions (without transpiling or polyfills). Also suggest polyfills or build tooling for very old browser support.
+
+## Bugs
+
+Please report any bugs you encounter on the [GitHub issue tracker](https://github.com/maxmilton/stage1/issues).
 
 ## Changelog
 
