@@ -2,13 +2,33 @@
   "name": "stage1",
   "version": "0.2.0",
   "type": "module",
-  "description": "WIP",
+  "description": "High-performance JavaScript micro framework",
   "repository": "maxmilton/stage1",
   "homepage": "https://github.com/maxmilton/stage1",
   "author": "Max Milton <max@happycode.ltd>",
   "license": "MIT",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./reconcile/keyed": "./dist/reconcile/keyed.js",
+    "./reconcile/non-keyed": "./dist/reconcile/non-keyed.js",
+    "./reconcile/reuse-nodes": "./dist/reconcile/reuse-nodes.js",
+    "./package.json": "./package.json"
+  },
   "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "reconcile/keyed": [
+        "dist/reconcile/keyed.d.ts"
+      ],
+      "reconcile/non-keyed": [
+        "dist/reconcile/non-keyed.d.ts"
+      ],
+      "reconcile/reuse-nodes": [
+        "dist/reconcile/reuse-nodes.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist"
   ],
