@@ -10,12 +10,12 @@ High-performance JavaScript micro framework.
 
 > Warning: This is alpha software. Test thoroughly before using in production. Please report any bugs you find!
 
-Originally based on the excellent <https://github.com/Freak613/stage0>.
+Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
 
 ## TODO
 
 - Add documentation about:
-  - Differences from [original stage0](https://github.com/Freak613/stage0)
+  - Differences from the original `stage0` project:
     - `h` is now `function h(template: string): S1Node` e.g., `h('<p>#text<p>')`
     - `html` is available to use as a string template literal tag function e.g., `` html`<p>#text<p>` ``
     - Import paths
@@ -24,6 +24,7 @@ Originally based on the excellent <https://github.com/Freak613/stage0>.
       - `/keyed` --> `/reconcile/keyed`
       - `/reconcile` --> `/reconcile/non-keyed`
       - `/reuse-nodes` --> `/reconcile/reuse-nodes`
+    - Extra DOM utils
     - Improved TypeScript support
     - Reduced size and improved load and runtime performance
   - `process.env.NODE_ENV` must be defined
