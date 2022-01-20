@@ -14,7 +14,7 @@ specifiers:
   jsdom: 19.0.0
   prettier: 2.5.1
   prettier-plugin-pkg: 0.11.1
-  sirv: 2.0.0
+  sirv: 2.0.2
   tsm: 2.2.1
   typescript: 4.5.5
   uvu: 0.5.3
@@ -33,7 +33,7 @@ devDependencies:
   jsdom: 19.0.0
   prettier: 2.5.1
   prettier-plugin-pkg: 0.11.1_prettier@2.5.1
-  sirv: 2.0.0
+  sirv: 2.0.2
   tsm: 2.2.1
   typescript: 4.5.5
   uvu: 0.5.3
@@ -1871,13 +1871,13 @@ packages:
     resolution: {integrity: sha512-sDl4qMFpijcGw22U5w63KmD3cZJfBuFlVNbVMKje2keoKML7X2UzWbc4XrmEbDwg0NXJc3yv4/ox7b+JWb57kQ==}
     dev: true
 
-  /sirv/2.0.0:
-    resolution: {integrity: sha512-TT+4+zSM9LR8soWT5/4gOYHfB5a5XEOSV2LtmBRN5MUxi8kh7BSRGuoRYjeBaqhR4w+yx+k6t0OibDNgoLfF7w==}
+  /sirv/2.0.2:
+    resolution: {integrity: sha512-4Qog6aE29nIjAOKe/wowFTxOdmbEZKb+3tsLljaBRzJwtqto0BChD2zzH0LhgCSXiI+V7X+Y45v14wBZQ1TK3w==}
     engines: {node: '>= 10'}
     dependencies:
       '@polka/url': 1.0.0-next.21
       mrmime: 1.0.0
-      totalist: 2.0.0
+      totalist: 3.0.0
     dev: true
 
   /slash/3.0.0:
@@ -1968,8 +1968,8 @@ packages:
       is-number: 7.0.0
     dev: true
 
-  /totalist/2.0.0:
-    resolution: {integrity: sha512-+Y17F0YzxfACxTyjfhnJQEe7afPA0GSpYlFkl2VFMxYP7jshQf9gXV7cH47EfToBumFThfKBvfAcoUn6fdNeRQ==}
+  /totalist/3.0.0:
+    resolution: {integrity: sha512-eM+pCBxXO/njtF7vdFsHuqb+ElbxqtI4r5EAvk6grfAFyJ6IvWlSkfZ5T9ozC6xWw3Fj1fGoSmrl0gUs46JVIw==}
     engines: {node: '>=6'}
     dev: true
 

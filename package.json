@@ -56,7 +56,7 @@
     "jsdom": "19.0.0",
     "prettier": "2.5.1",
     "prettier-plugin-pkg": "0.11.1",
-    "sirv": "2.0.0",
+    "sirv": "2.0.2",
     "tsm": "2.2.1",
     "typescript": "4.5.5",
     "uvu": "0.5.3"
