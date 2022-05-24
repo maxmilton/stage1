@@ -38,7 +38,22 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
 
 ## Browser support
 
-TODO: Define the minimum supported browser versions (without transpiling or polyfills). Also suggest polyfills or build tooling for very old browser support.
+> Note: Internet Explorer is not supported.
+
+Minimum browser version required:
+
+- Chrome 26
+- Edge 13
+- Firefox 22
+- Safari 8
+- Opera 15
+
+Some optional features require a higher browser version:
+
+- Compiler `html` tagged template literal function; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw#browser_compatibility)
+- `createFragment` utility function; [requirements](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment/DocumentFragment#browser_compatibility)
+
+SSR via Node.js or Deno is not supported and is not the intended use of this library.
 
 ## Bugs
 
