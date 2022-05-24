@@ -14,8 +14,7 @@
 import type { Ref, RefNodes, S1Node } from './types';
 import { create } from './utils';
 
-// -1 = NodeFilter.SHOW_ALL
-const treeWalker = document.createTreeWalker(document, -1, null);
+const treeWalker = document.createTreeWalker(document);
 const compilerTemplate = create('template');
 
 const collector = (node: Node): string | void => {
@@ -50,7 +49,6 @@ const genPath = (node: Node) => {
   const indices: Ref[] = [];
   let ref: string | void;
   let index = 0;
-
   treeWalker.currentNode = node;
 
   do {
@@ -71,7 +69,6 @@ const collect = function <T extends RefNodes = {}>(
   node: Element,
 ): T {
   const refs: RefNodes = {};
-
   treeWalker.currentNode = node;
 
   for (const x of this._refs) {
