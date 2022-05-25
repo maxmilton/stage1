@@ -14,8 +14,8 @@
 import type { Ref, RefNodes, S1Node } from './types';
 import { create } from './utils';
 
-const treeWalker = document.createTreeWalker(document);
 const compilerTemplate = create('template');
+const treeWalker = document.createTreeWalker(compilerTemplate);
 
 const collector = (node: Node): string | void => {
   // 1 = Node.ELEMENT_NODE
