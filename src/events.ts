@@ -1,4 +1,4 @@
-const CONFIGURED_EVENTS: { [key: string]: boolean } = {};
+const configuredEvents: Record<string, boolean | null> = {};
 
 const nativeToSyntheticEvent = (event: Event) => {
   // eslint-disable-next-line prefer-template
@@ -20,9 +20,13 @@ const nativeToSyntheticEvent = (event: Event) => {
 };
 
 export const setupSyntheticEvent = (type: keyof DocumentEventMap): void => {
-  if (CONFIGURED_EVENTS[type]) return;
+  if (configuredEvents[type]) return;
 
   document.addEventListener(type, nativeToSyntheticEvent);
+  configuredEvents[type] = true;
+};
 
-  CONFIGURED_EVENTS[type] = true;
+export const deleteSyntheticEvent = (type: keyof DocumentEventMap): void => {
+  document.removeEventListener(type, nativeToSyntheticEvent);
+  configuredEvents[type] = null;
 };
