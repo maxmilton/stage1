@@ -51,14 +51,15 @@ const genPath = (node: Node) => {
   let index = 0;
   treeWalker.currentNode = node;
 
-  do {
+  while (node) {
     if ((ref = collector(node))) {
       indices.push({ i: index + 1, ref });
       index = 1;
     } else {
       index++;
     }
-  } while (((node as Node | null) = treeWalker.nextNode()));
+    (node as Node | null) = treeWalker.nextNode();
+  }
 
   return indices;
 };
