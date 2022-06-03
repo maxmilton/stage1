@@ -14,8 +14,8 @@
 import type { Ref, RefNodes, S1Node } from './types';
 import { create } from './utils';
 
-const treeWalker = document.createTreeWalker(document);
 const compilerTemplate = create('template');
+const treeWalker = document.createTreeWalker(compilerTemplate);
 
 const collector = (node: Node): string | void => {
   // 1 = Node.ELEMENT_NODE
@@ -51,14 +51,15 @@ const genPath = (node: Node) => {
   let index = 0;
   treeWalker.currentNode = node;
 
-  do {
+  while (node) {
     if ((ref = collector(node))) {
       indices.push({ i: index + 1, ref });
       index = 1;
     } else {
       index++;
     }
-  } while (((node as Node | null) = treeWalker.nextNode()));
+    (node as Node | null) = treeWalker.nextNode();
+  }
 
   return indices;
 };

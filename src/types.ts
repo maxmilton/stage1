@@ -3,9 +3,7 @@ export interface Ref {
   readonly ref: string;
 }
 
-export interface RefNodes {
-  [key: string]: Node;
-}
+export type RefNodes = Record<string, Node>;
 
 export interface S1Node extends Node, ChildNode {
   _refs: Ref[];
