@@ -2,6 +2,8 @@
 
 import esbuild from 'esbuild';
 
+// We don't use NODE_ENV here to avoid confusion with process.env.NODE_ENV
+// which we want kept in the build output
 const dev = !!process.env.DEV_BUILD;
 
 const out = await esbuild.build({
