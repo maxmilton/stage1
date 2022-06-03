@@ -12,6 +12,7 @@ specifiers:
   eslint-config-airbnb-typescript: 17.0.0
   eslint-plugin-import: 2.26.0
   jsdom: 19.0.0
+  nanospy: 0.5.0
   prettier: 2.6.2
   prettier-plugin-pkg: 0.13.2
   sirv: 2.0.2
@@ -31,6 +32,7 @@ devDependencies:
   eslint-config-airbnb-typescript: 17.0.0_epouuwgtjme5oszue63gdonk5m
   eslint-plugin-import: 2.26.0_xsmuhwqsfrjm7m3kqio7zoeziq
   jsdom: 19.0.0
+  nanospy: 0.5.0
   prettier: 2.6.2
   prettier-plugin-pkg: 0.13.2_prettier@2.6.2
   sirv: 2.0.2
@@ -1703,6 +1705,11 @@ packages:
 
   /ms/2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
+    dev: true
+
+  /nanospy/0.5.0:
+    resolution: {integrity: sha512-QxH93ntkjRiSP+gJrBLcgOO3neU6pGhUKjPAJ7rAFag/+tJ+/0lw6dXic+iXUQ/3Cxk4Dp/FwLnf57xnQsjecQ==}
+    engines: {node: ^8.0.0 || ^10.0.0 || ^12.0.0 || ^14.0.0 || >=16.0.0}
     dev: true
 
   /natural-compare/1.4.0:
