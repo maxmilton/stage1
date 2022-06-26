@@ -28,6 +28,8 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': ERROR,
     'default-param-last': WARN,
     'import/prefer-default-export': OFF,
+    // void return can be used for efficient code (if used safely!)
+    'consistent-return': WARN,
     // useful for compact and memory efficient code... but be careful!
     'no-cond-assign': OFF,
     // can be used for efficient code (if used safely!)

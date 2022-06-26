@@ -1,5 +1,3 @@
-/* eslint-disable consistent-return */
-
 // TODO: Benchmark my changes vs original stage0 (init + runtime speed and memory):
 // - Object vs class for Ref in `indices`
 // - Direct reference vs this + TREE_WALKER.roll vs function roll
