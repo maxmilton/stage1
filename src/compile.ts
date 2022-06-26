@@ -21,10 +21,10 @@ const collector = (node: Node): string | void => {
   // 1 = Node.ELEMENT_NODE
   if (node.nodeType === 1) {
     const attrs = (node as Element).attributes;
-    let len = attrs.length;
+    let index = attrs.length;
 
-    while (len--) {
-      const aname = attrs[len].name;
+    while (index--) {
+      const aname = attrs[index].name;
       if (aname[0] === '#') {
         (node as Element).removeAttribute(aname);
         return aname.slice(1);
