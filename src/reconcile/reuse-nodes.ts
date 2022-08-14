@@ -4,7 +4,7 @@
 
 import { noop } from '../utils';
 
-export function reconcile<T extends any[], N extends Node>(
+export const reconcile = <T extends any[], N extends Node>(
   parent: Element,
   renderedValues: any[],
   data: any[],
@@ -12,7 +12,7 @@ export function reconcile<T extends any[], N extends Node>(
   updateFn: (node: N, ...args: T) => void = noop,
   beforeNode?: Node,
   afterNode?: Node | null,
-): void {
+): void => {
   if (data.length === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
       let node = beforeNode !== undefined ? beforeNode.nextSibling : parent.firstChild;
@@ -67,4 +67,4 @@ export function reconcile<T extends any[], N extends Node>(
     head = head.nextSibling;
     if (head === afterNode) head = null;
   }
-}
+};

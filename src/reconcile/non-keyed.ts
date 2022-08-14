@@ -23,7 +23,7 @@ import { noop } from '../utils';
 // How this implementation differs from others, is that it's working with data directly,
 // without maintaining nodes arrays, and uses dom props firstChild/lastChild/nextSibling
 // for markers moving.
-export function reconcile<T extends any[], N extends Node>(
+export const reconcile = <T extends any[], N extends Node>(
   parent: Element,
   renderedValues: any[],
   data: any[],
@@ -31,7 +31,7 @@ export function reconcile<T extends any[], N extends Node>(
   updateFn: (node: N, ...args: T) => void = noop,
   beforeNode?: Node,
   afterNode?: Node | null,
-): void {
+): void => {
   // Fast path for clear
   if (data.length === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
@@ -276,13 +276,13 @@ export function reconcile<T extends any[], N extends Node>(
       afterNode = tmpD;
     }
   }
-}
+};
 
 // Picked from
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L368
 
 // return an array of the indices of ns that comprise the longest increasing subsequence within ns
-function longestPositiveIncreasingSubsequence(ns: any[], newStart: number) {
+const longestPositiveIncreasingSubsequence = (ns: any[], newStart: number) => {
   const seq = [];
   const is = [];
   let l = -1;
@@ -308,9 +308,9 @@ function longestPositiveIncreasingSubsequence(ns: any[], newStart: number) {
   }
 
   return seq;
-}
+};
 
-function findGreatestIndexLEQ(seq: any[], n: number) {
+const findGreatestIndexLEQ = (seq: any[], n: number) => {
   // invariant: lo is guaranteed to be index of a value <= n, hi to be >
   // therefore, they actually start out of range: (-1, last + 1)
   let lo = -1;
@@ -329,4 +329,4 @@ function findGreatestIndexLEQ(seq: any[], n: number) {
   }
 
   return lo;
-}
+};
