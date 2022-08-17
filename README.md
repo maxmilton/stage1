@@ -15,6 +15,11 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
 ## TODO
 
 - Add documentation about:
+  - Internal use of `innerHTML` — potencial risk of XSS etc.; never use `h` and `html` functions with untrusted input
+    - In future we may have `Sanitizer.sanitizeFor(...)` which could be used to sanitize untrusted input
+      - It's unlikely we'll use it internally due to performance overhead but developers should definately sanitize input when untrusted before passing it in... although we could create light wrapper functions
+      - <https://developer.mozilla.org/en-US/docs/Web/API/Sanitizer/sanitizeFor>
+      - <https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API>
   - Differences from the original `stage0` project:
     - `h` is now `function h(template: string): S1Node` e.g., `h('<p>#text<p>')`
     - `html` is available to use as a string template literal tag function e.g., `` html`<p>#text<p>` ``
