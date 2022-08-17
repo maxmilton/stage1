@@ -1,4 +1,4 @@
-name: CodeQL
+name: codeql
 on:
   push:
     branches: [master]
@@ -8,21 +8,16 @@ on:
     - cron: '28 6 * * 4'
 jobs:
   analyze:
-    name: Analyze
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
       security-events: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+      - uses: actions/checkout@v3
+      - uses: github/codeql-action/init@v2
         with:
           languages: javascript
           queries: security-extended,security-and-quality
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+      - uses: github/codeql-action/autobuild@v2
+      - uses: github/codeql-action/analyze@v2
