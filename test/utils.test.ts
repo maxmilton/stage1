@@ -139,7 +139,6 @@ describe('create', (test) => {
     assert.instance(create('iframe'), window.HTMLIFrameElement);
     assert.instance(create('embed'), window.HTMLEmbedElement);
     assert.instance(create('object'), window.HTMLObjectElement);
-    assert.instance(create('param'), window.HTMLParamElement);
     assert.instance(create('video'), window.HTMLVideoElement);
     assert.instance(create('audio'), window.HTMLAudioElement);
     assert.instance(create('source'), window.HTMLSourceElement);
