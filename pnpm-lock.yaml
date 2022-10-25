@@ -2,7 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@types/jsdom': 20.0.0
-  '@types/node': 18.7.13
+  '@types/node': 18.11.5
   '@typescript-eslint/eslint-plugin': 5.41.0
   '@typescript-eslint/parser': 5.41.0
   c8: 7.12.0
@@ -20,7 +20,7 @@ specifiers:
 
 devDependencies:
   '@types/jsdom': 20.0.0
-  '@types/node': 18.7.13
+  '@types/node': 18.11.5
   '@typescript-eslint/eslint-plugin': 5.41.0_huremdigmcnkianavgfk3x6iou
   '@typescript-eslint/parser': 5.41.0_wyqvi574yv7oiwfeinomdzmc3m
   c8: 7.12.0
@@ -160,7 +160,7 @@ packages:
   /@types/jsdom/20.0.0:
     resolution: {integrity: sha512-YfAchFs0yM1QPDrLm2VHe+WHGtqms3NXnXAMolrgrVP6fgBHHXy1ozAbo/dFtPNtZC/m66bPiCTWYmqp1F14gA==}
     dependencies:
-      '@types/node': 18.7.13
+      '@types/node': 18.11.5
       '@types/tough-cookie': 4.0.2
       parse5: 7.1.1
     dev: true
@@ -173,8 +173,8 @@ packages:
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
     dev: true
 
-  /@types/node/18.7.13:
-    resolution: {integrity: sha512-46yIhxSe5xEaJZXWdIBP7GU4HDTG8/eo0qd9atdiL+lFpA03y8KS+lkTN834TWJj5767GbWv4n/P6efyTFt1Dw==}
+  /@types/node/18.11.5:
+    resolution: {integrity: sha512-3JRwhbjI+cHLAkUorhf8RnqUbFXajvzX4q6fMn5JwkgtuwfYtRQYI3u4V92vI6NJuTsbBQWWh3RZjFsuevyMGQ==}
     dev: true
 
   /@types/semver/7.3.12:
