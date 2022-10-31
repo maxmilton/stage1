@@ -35,6 +35,7 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
   - `process.env.NODE_ENV` must be defined
   - If `process.env.NODE_ENV === 'production` you must minify `h`/`html` strings with a compatible minifier
     - Add full example with `esbuild` + `esbuild-minify-templates`
+  - Ref names should be lowercase because some browsers normalise element attribute names when rendering HTML
 - Add API and usage documentation
 - Add more tests
 - Add examples
