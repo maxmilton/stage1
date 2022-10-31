@@ -9,17 +9,18 @@ type StoreListen<T, K extends keyof T> = (
   key: K,
   callback: Handler<T, K>,
 ) => () => void;
+type Store<T, K extends keyof T> = T & {
+  on: StoreOn<T, K>;
+  off: StoreOff<T, K>;
+  listen: StoreListen<T, K>;
+};
 
 export const store = <
   T extends Record<string | symbol, unknown>,
   K extends keyof T,
 >(
   initialState: T,
-): T & {
-  on: StoreOn<T, K>;
-  off: StoreOff<T, K>;
-  listen: StoreListen<T, K>;
-} => {
+): Store<T, K> => {
   const handlers = {} as Handlers<T, K>;
 
   const proxy = new Proxy(initialState, {
@@ -32,11 +33,7 @@ export const store = <
       }
       return Reflect.set(target, property, value, receiver);
     },
-  }) as T & {
-    on: StoreOn<T, K>;
-    off: StoreOff<T, K>;
-    listen: StoreListen<T, K>;
-  };
+  }) as Store<T, K>;
 
   // TODO: Could these be added without calling the proxy setter? And while saving bytes?
 
