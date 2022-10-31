@@ -5,6 +5,7 @@ import * as indexExports from '../src/index';
 import * as keyedExports from '../src/reconcile/keyed';
 import * as nonKeyedExports from '../src/reconcile/non-keyed';
 import * as reuseNodesExports from '../src/reconcile/reuse-nodes';
+import * as storeExports from '../src/store';
 import { describe } from './utils';
 
 describe('index', (test) => {
@@ -23,10 +24,7 @@ describe('index', (test) => {
   for (const [name, type] of PUBLIC_EXPORTS) {
     test(`exports public "${name}" ${type}`, () => {
       assert.ok(Object.hasOwnProperty.call(indexExports, name));
-      assert.is(
-        Object.prototype.toString.call(indexExports[name]),
-        `[object ${type}]`,
-      );
+      assert.is(Object.prototype.toString.call(indexExports[name]), `[object ${type}]`);
     });
   }
 
@@ -43,6 +41,33 @@ describe('index', (test) => {
   });
 });
 
+// XXX: THIS STORE FEATURE IS EXPERIEMNTAL AND MAY BE REMOVED IN FUTURE!!
+describe('store', (test) => {
+  const PUBLIC_EXPORTS = [
+    ['store', 'Function'],
+    ['onNodeRemove', 'Function'],
+  ] as const;
+
+  for (const [name, type] of PUBLIC_EXPORTS) {
+    test(`exports public "${name}" ${type}`, () => {
+      assert.ok(Object.hasOwnProperty.call(storeExports, name));
+      assert.is(Object.prototype.toString.call(storeExports[name]), `[object ${type}]`);
+    });
+  }
+
+  test('does not export any private internals', () => {
+    const publicExportNames = PUBLIC_EXPORTS.map((x) => x[0]);
+    assert.is(publicExportNames.length, Object.keys(storeExports).length);
+    for (const name in storeExports) {
+      assert.ok((publicExportNames as string[]).includes(name));
+    }
+  });
+
+  test('has no default export', () => {
+    assert.not.ok(Object.hasOwnProperty.call(storeExports, 'default'));
+  });
+});
+
 const RECONSILERS = [
   ['keyed', keyedExports],
   ['non-keyed', nonKeyedExports],
@@ -53,10 +78,7 @@ for (const [reconsiler, exports] of RECONSILERS) {
   describe(`reconcile/${reconsiler}`, (test) => {
     test('exports public "reconcile" Function', () => {
       assert.ok(Object.hasOwnProperty.call(exports, 'reconcile'));
-      assert.is(
-        Object.prototype.toString.call(exports.reconcile),
-        '[object Function]',
-      );
+      assert.is(Object.prototype.toString.call(exports.reconcile), '[object Function]');
     });
 
     test('does not export any private internals', () => {

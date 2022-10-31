@@ -1,4 +1,4 @@
-// NOTE: THIS IS EXPERIEMNTAL AND MAY BE REMOVED!!
+// XXX: THIS STORE FEATURE IS EXPERIEMNTAL AND MAY BE REMOVED IN FUTURE!!
 
 type Handler<T, K extends keyof T> = (value: T[K], prev: T[K]) => any;
 type Handlers<T> = Record<keyof T, Handler<T, keyof T>[]>;
