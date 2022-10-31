@@ -30,6 +30,7 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
       - `/reconcile` --> `/reconcile/non-keyed`
       - `/reuse-nodes` --> `/reconcile/reuse-nodes`
     - Extra DOM utils
+    - New reactive `store` factory can be imported from `stage1/store`
     - Improved TypeScript support
     - Reduced size and improved load and runtime performance
   - `process.env.NODE_ENV` must be defined
@@ -58,6 +59,8 @@ Some optional features require a higher browser version:
 
 - Compiler `html` tagged template literal function; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw#browser_compatibility)
 - `createFragment` utility function; [requirements](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment/DocumentFragment#browser_compatibility)
+- `onNodeRemove` utility function uses `for...of`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#browser_compatibility)
+- `store` uses `Proxy`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/Proxy#browser_compatibility)
 
 SSR via Node.js or Deno is not supported and is not the intended use of this library.
 

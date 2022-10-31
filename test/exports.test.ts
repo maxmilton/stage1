@@ -19,6 +19,7 @@ describe('index', (test) => {
     ['create', 'Function'],
     ['append', 'Function'],
     ['prepend', 'Function'],
+    ['onNodeRemove', 'Function'],
   ] as const;
 
   for (const [name, type] of PUBLIC_EXPORTS) {
@@ -41,12 +42,8 @@ describe('index', (test) => {
   });
 });
 
-// XXX: THIS STORE FEATURE IS EXPERIEMNTAL AND MAY BE REMOVED IN FUTURE!!
 describe('store', (test) => {
-  const PUBLIC_EXPORTS = [
-    ['store', 'Function'],
-    ['onNodeRemove', 'Function'],
-  ] as const;
+  const PUBLIC_EXPORTS = [['store', 'Function']] as const;
 
   for (const [name, type] of PUBLIC_EXPORTS) {
     test(`exports public "${name}" ${type}`, () => {

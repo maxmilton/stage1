@@ -1,5 +1,3 @@
-// XXX: THIS STORE FEATURE IS EXPERIEMNTAL AND MAY BE REMOVED IN FUTURE!!
-
 type Handler<T, K extends keyof T> = (value: T[K], prev: T[K]) => any;
 type Handlers<T> = Record<keyof T, Handler<T, keyof T>[]>;
 type StoreOn<T> = <K extends keyof T>(key: K, callback: Handler<T, K>) => void;
@@ -8,8 +6,6 @@ type StoreListen<T> = <K extends keyof T>(
   key: K,
   callback: Handler<T, K>,
 ) => () => void;
-
-// TODO: Could something similar be achived without using Proxy for better browser support?
 
 export const store = <T extends Record<string, any>>(
   initialState: T,
@@ -45,24 +41,4 @@ export const store = <T extends Record<string, any>>(
   };
 
   return proxy;
-};
-
-/**
- * Run callback when a node has been removed from the DOM.
- *
- * Use sparingly to minimize performance impact.
- */
-export const onNodeRemove = (node: Node, callback: () => void): void => {
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.removedNodes[0]?.contains(node)) {
-        callback();
-        observer.disconnect();
-      }
-    }
-  });
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
 };
