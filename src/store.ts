@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/indent */
 
 type Handler<T, K extends keyof T> = (value: T[K], prev: T[K]) => unknown;
-type Handlers<T, K extends keyof T> = Record<K, Handler<T, K>[] | undefined>;
-type StoreOn<T, K extends keyof T> = (key: K, callback: Handler<T, K>) => void;
-type StoreOff<T, K extends keyof T> = (key: K, callback: Handler<T, K>) => void;
+type Handlers<T> = { [K in keyof T]?: Handler<T, K>[] };
+type StoreOn<T> = <K extends keyof T>(key: K, callback: Handler<T, K>) => void;
+type StoreOff<T> = <K extends keyof T>(key: K, callback: Handler<T, K>) => void;
 /** @returns A function that will remove the listener when called. */
-type StoreListen<T, K extends keyof T> = (
+type StoreListen<T> = <K extends keyof T>(
   key: K,
   callback: Handler<T, K>,
 ) => () => void;
-type Store<T, K extends keyof T> = T & {
-  on: StoreOn<T, K>;
-  off: StoreOff<T, K>;
-  listen: StoreListen<T, K>;
+type Store<T> = T & {
+  on: StoreOn<T>;
+  off: StoreOff<T>;
+  listen: StoreListen<T>;
 };
 
 export const store = <
@@ -20,8 +20,8 @@ export const store = <
   K extends keyof T,
 >(
   initialState: T,
-): Store<T, K> => {
-  const handlers = {} as Handlers<T, K>;
+): Store<T> => {
+  const handlers: Handlers<T> = {};
 
   const proxy = new Proxy(initialState, {
     // @ts-expect-error - FIXME: Resolve "'K' could be instantiated with a different subtype" error
@@ -33,7 +33,7 @@ export const store = <
       }
       return Reflect.set(target, property, value, receiver);
     },
-  }) as Store<T, K>;
+  }) as Store<T>;
 
   // TODO: Could these be added without calling the proxy setter? And while saving bytes?
 
