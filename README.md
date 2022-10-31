@@ -58,6 +58,7 @@ Some optional features require a higher browser version:
 
 - Compiler `html` tagged template literal function; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw#browser_compatibility)
 - `createFragment` utility function; [requirements](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment/DocumentFragment#browser_compatibility)
+- `store` uses `Proxy`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/Proxy#browser_compatibility)
 
 SSR via Node.js or Deno is not supported and is not the intended use of this library.
 
