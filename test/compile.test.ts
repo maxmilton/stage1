@@ -14,10 +14,7 @@ describe('h', (test) => {
       </ul>
     `);
     const rendered = render(view);
-    assert.fixture(
-      rendered.container.innerHTML,
-      '<ul>\n<li>A</li>\n<li>B</li>\n<li>C</li>\n</ul>',
-    );
+    assert.fixture(rendered.container.innerHTML, '<ul>\n<li>A</li>\n<li>B</li>\n<li>C</li>\n</ul>');
   });
 
   test('renders SVG template', () => {
@@ -54,10 +51,7 @@ describe('h', (test) => {
       </ul>
     `);
     const rendered = render(view);
-    assert.fixture(
-      rendered.container.innerHTML,
-      '<ul>\n<li>A</li>\n<li>B</li>\n</ul>',
-    );
+    assert.fixture(rendered.container.innerHTML, '<ul>\n<li>A</li>\n<li>B</li>\n</ul>');
   });
 
   test('collects all refs', () => {
@@ -187,9 +181,6 @@ describe('html', (test) => {
       </ul>
     `;
     const rendered = render(view);
-    assert.fixture(
-      rendered.container.innerHTML,
-      '<ul>\n<li>A</li>\n<li>B</li>\n<li>C</li>\n</ul>',
-    );
+    assert.fixture(rendered.container.innerHTML, '<ul>\n<li>A</li>\n<li>B</li>\n<li>C</li>\n</ul>');
   });
 });
