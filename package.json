@@ -13,6 +13,7 @@
     "./reconcile/keyed": "./dist/reconcile/keyed.js",
     "./reconcile/non-keyed": "./dist/reconcile/non-keyed.js",
     "./reconcile/reuse-nodes": "./dist/reconcile/reuse-nodes.js",
+    "./store": "./dist/store.js",
     "./package.json": "./package.json"
   },
   "types": "dist/index.d.ts",
@@ -26,6 +27,9 @@
       ],
       "reconcile/reuse-nodes": [
         "dist/reconcile/reuse-nodes.d.ts"
+      ],
+      "store": [
+        "dist/store.d.ts"
       ]
     }
   },

@@ -9,6 +9,7 @@ const dev = !!process.env.DEV_BUILD;
 const out = await esbuild.build({
   entryPoints: [
     'src/index.ts',
+    'src/store.ts',
     'src/reconcile/keyed.ts',
     'src/reconcile/non-keyed.ts',
     'src/reconcile/reuse-nodes.ts',
