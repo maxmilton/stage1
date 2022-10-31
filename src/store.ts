@@ -1,39 +1,48 @@
-type Handler<T, K extends keyof T> = (value: T[K], prev: T[K]) => any;
-type Handlers<T> = Record<keyof T, Handler<T, keyof T>[]>;
-type StoreOn<T> = <K extends keyof T>(key: K, callback: Handler<T, K>) => void;
-type StoreOff<T> = <K extends keyof T>(key: K, callback: Handler<T, K>) => void;
-type StoreListen<T> = <K extends keyof T>(
+/* eslint-disable @typescript-eslint/indent */
+
+type Handler<T, K extends keyof T> = (value: T[K], prev: T[K]) => unknown;
+type Handlers<T, K extends keyof T> = Record<K, Handler<T, K>[] | undefined>;
+type StoreOn<T, K extends keyof T> = (key: K, callback: Handler<T, K>) => void;
+type StoreOff<T, K extends keyof T> = (key: K, callback: Handler<T, K>) => void;
+/** @returns A function that will remove the listener when called. */
+type StoreListen<T, K extends keyof T> = (
   key: K,
   callback: Handler<T, K>,
 ) => () => void;
+type Store<T, K extends keyof T> = T & {
+  on: StoreOn<T, K>;
+  off: StoreOff<T, K>;
+  listen: StoreListen<T, K>;
+};
 
-export const store = <T extends Record<string, any>>(
+export const store = <
+  T extends Record<string | symbol, unknown>,
+  K extends keyof T,
+>(
   initialState: T,
-): T & { on: StoreOn<T>; off: StoreOff<T>; listen: StoreListen<T> } => {
-  const handlers = {} as Handlers<T>;
+): Store<T, K> => {
+  const handlers = {} as Handlers<T, K>;
 
   const proxy = new Proxy(initialState, {
-    set(target, property, value, receiver) {
-      if (typeof property === 'string' && handlers[property]) {
-        for (const listener of handlers[property]) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    // @ts-expect-error - FIXME: Resolve "'K' could be instantiated with a different subtype" error
+    set(target, property: K, value: T[K], receiver) {
+      if (handlers[property]) {
+        for (const listener of handlers[property]!) {
           listener(value, target[property]);
         }
       }
       return Reflect.set(target, property, value, receiver);
     },
-  }) as T & { on: StoreOn<T>; off: StoreOff<T>; listen: StoreListen<T> };
+  }) as Store<T, K>;
 
   // TODO: Could these be added without calling the proxy setter? And while saving bytes?
 
   proxy.on = (property, callback) => {
-    // @ts-expect-error- FIXME:!
     (handlers[property] ??= []).push(callback);
   };
   proxy.off = (property, callback) => {
-    // @ts-expect-error- FIXME:!
     // eslint-disable-next-line no-bitwise
-    handlers[property]?.splice(handlers[property].indexOf(callback) >>> 0, 1);
+    handlers[property]?.splice(handlers[property]!.indexOf(callback) >>> 0, 1);
   };
   proxy.listen = (property, callback) => {
     proxy.on(property, callback);
