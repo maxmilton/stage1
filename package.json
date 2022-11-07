@@ -47,7 +47,7 @@
     "test": "c8 --all --include=src --reporter=text --reporter=lcovonly uvu -r tsm -r \"$PWD\"/test/setup.ts test '\\.test\\.ts$'"
   },
   "devDependencies": {
-    "@types/jsdom": "20.0.0",
+    "@types/jsdom": "20.0.1",
     "@types/node": "18.11.9",
     "@typescript-eslint/eslint-plugin": "5.42.1",
     "@typescript-eslint/parser": "5.42.1",
