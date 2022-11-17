@@ -8,5 +8,6 @@
   "editor.formatOnSave": false,
   "git.branchProtection": ["master"],
   "js/ts.implicitProjectConfig.checkJs": true,
-  "prettier.ignorePath": ".gitignore"
+  "prettier.ignorePath": ".gitignore",
+  "typescript.tsdk": "node_modules/typescript/lib"
 }
