@@ -13,7 +13,7 @@ specifiers:
   eslint-plugin-import: 2.26.0
   jsdom: 20.0.3
   nanospy: 0.5.0
-  prettier: 2.7.1
+  prettier: 2.8.0
   tsm: 2.2.2
   typescript: 4.9.3
   uvu: 0.5.6
@@ -31,7 +31,7 @@ devDependencies:
   eslint-plugin-import: 2.26.0_vfrilbydaxalswvos6uuh4sxs4
   jsdom: 20.0.3
   nanospy: 0.5.0
-  prettier: 2.7.1
+  prettier: 2.8.0
   tsm: 2.2.2
   typescript: 4.9.3
   uvu: 0.5.6
@@ -2084,8 +2084,8 @@ packages:
     engines: {node: '>= 0.8.0'}
     dev: true
 
-  /prettier/2.7.1:
-    resolution: {integrity: sha512-ujppO+MkdPqoVINuDFDRLClm7D78qbDt0/NR+wp5FqEZOoTNAjPHWj17QRhu7geIHJfcNhRk1XVQmF8Bp3ye+g==}
+  /prettier/2.8.0:
+    resolution: {integrity: sha512-9Lmg8hTFZKG0Asr/kW9Bp8tJjRVluO8EJQVfY2T7FMw9T5jy4I/Uvx0Rca/XWf50QQ1/SS48+6IJWnrb+2yemA==}
     engines: {node: '>=10.13.0'}
     hasBin: true
     dev: true
