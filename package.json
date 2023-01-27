@@ -57,7 +57,7 @@
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-config-airbnb-typescript": "17.0.0",
     "eslint-plugin-import": "2.27.5",
-    "jsdom": "21.0.0",
+    "jsdom": "21.1.0",
     "nanospy": "0.5.0",
     "prettier": "2.8.3",
     "tsm": "2.3.0",
