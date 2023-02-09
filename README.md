@@ -1,4 +1,4 @@
-[![Build status](https://img.shields.io/github/workflow/status/maxmilton/stage1/ci)](https://github.com/maxmilton/stage1/actions)
+[![Build status](https://img.shields.io/github/actions/workflow/status/maxmilton/stage1/ci.yml?branch=master)](https://github.com/maxmilton/stage1/actions)
 [![Coverage status](https://img.shields.io/codeclimate/coverage/maxmilton/stage1)](https://codeclimate.com/github/maxmilton/stage1)
 [![NPM version](https://img.shields.io/npm/v/stage1.svg)](https://www.npmjs.com/package/stage1)
 [![NPM bundle size (minified + gzip)](https://img.shields.io/bundlephobia/minzip/stage1.svg)](https://bundlephobia.com/result?p=stage1)
