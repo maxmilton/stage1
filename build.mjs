@@ -6,7 +6,8 @@ import esbuild from 'esbuild';
 // which we want kept in the build output
 const dev = !!process.env.DEV_BUILD;
 
-const out = await esbuild.build({
+/** @type {esbuild.BuildOptions} */
+const esbuildConfig = {
   entryPoints: [
     'src/index.ts',
     'src/store.ts',
@@ -18,11 +19,17 @@ const out = await esbuild.build({
   platform: 'neutral',
   bundle: true,
   sourcemap: true,
-  watch: dev,
   metafile: !dev && process.stdout.isTTY,
   logLevel: 'debug',
-});
+};
 
-if (out.metafile) {
-  console.log(await esbuild.analyzeMetafile(out.metafile));
+if (dev) {
+  const context = await esbuild.context(esbuildConfig);
+  await context.watch();
+} else {
+  const out = await esbuild.build(esbuildConfig);
+
+  if (out.metafile) {
+    console.log(await esbuild.analyzeMetafile(out.metafile));
+  }
 }
