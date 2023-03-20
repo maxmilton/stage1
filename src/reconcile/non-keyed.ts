@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -35,7 +36,8 @@ export const reconcile = <T extends any[], N extends Node>(
   // Fast path for clear
   if (data.length === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
-      let node = beforeNode !== undefined ? beforeNode.nextSibling : parent.firstChild;
+      let node =
+        beforeNode !== undefined ? beforeNode.nextSibling : parent.firstChild;
       let tmp;
 
       if (afterNode === undefined) afterNode = null;
@@ -208,7 +210,8 @@ export const reconcile = <T extends any[], N extends Node>(
   // Fast path for full replace
   if (reusingNodes === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
-      let node = beforeNode !== undefined ? beforeNode.nextSibling : parent.firstChild;
+      let node =
+        beforeNode !== undefined ? beforeNode.nextSibling : parent.firstChild;
       let tmp;
 
       if (afterNode === undefined) afterNode = null;

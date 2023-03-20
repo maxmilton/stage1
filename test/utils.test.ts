@@ -1,7 +1,5 @@
 import * as assert from 'uvu/assert';
-import {
-  append, create, createFragment, noop, prepend,
-} from '../src/utils';
+import { append, create, createFragment, noop, prepend } from '../src/utils';
 import { describe } from './utils';
 
 const ul = document.createElement('ul');

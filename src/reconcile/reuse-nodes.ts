@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unused-expressions */
@@ -15,7 +16,8 @@ export const reconcile = <T extends any[], N extends Node>(
 ): void => {
   if (data.length === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
-      let node = beforeNode !== undefined ? beforeNode.nextSibling : parent.firstChild;
+      let node =
+        beforeNode !== undefined ? beforeNode.nextSibling : parent.firstChild;
       let tmp;
 
       if (afterNode === undefined) afterNode = null;
@@ -34,8 +36,9 @@ export const reconcile = <T extends any[], N extends Node>(
   }
   if (renderedValues.length > data.length) {
     let i = renderedValues.length;
-    // @ts-expect-error - FIXME:!
-    let tail = afterNode !== undefined ? afterNode.previousSibling : parent.lastChild;
+    let tail =
+      // @ts-expect-error - FIXME:!
+      afterNode !== undefined ? afterNode.previousSibling : parent.lastChild;
     let tmp;
     while (i > data.length) {
       // @ts-expect-error - FIXME:!
