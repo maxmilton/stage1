@@ -79,15 +79,16 @@ const collect = function <T extends RefNodes = {}>(
 
 export const h = (template: string): S1Node => {
   // Compatible template literal minifier is mandatory for production consumers!
-  compilerTemplate.innerHTML = process.env.NODE_ENV === 'production'
-    ? template
-    : template
-      // to get the correct first node
-      .trim()
-      // faster genPath and cleaner test snapshots
-      .replace(/\n\s+/g, '\n')
-      // remove whitespace around ref tags in Text nodes
-      .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
+  compilerTemplate.innerHTML =
+    process.env.NODE_ENV === 'production'
+      ? template
+      : template
+          // to get the correct first node
+          .trim()
+          // faster genPath and cleaner test snapshots
+          .replace(/\n\s+/g, '\n')
+          // remove whitespace around ref tags in Text nodes
+          .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
 
   const node = compilerTemplate.content.firstChild as S1Node;
   node._refs = genPath(node);

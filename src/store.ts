@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/indent */
-
 type Handler<T, K extends keyof T> = (value: T[K], prev: T[K]) => unknown;
 type Handlers<T> = { [K in keyof T]?: Handler<T, K>[] };
 type StoreOn<T> = <K extends keyof T>(key: K, callback: Handler<T, K>) => void;
