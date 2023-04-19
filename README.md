@@ -79,4 +79,4 @@ MIT license. See [LICENSE](https://github.com/maxmilton/stage1/blob/master/LICEN
 
 ---
 
-© 2022 [Max Milton](https://maxmilton.com)
+© 2023 [Max Milton](https://maxmilton.com)
