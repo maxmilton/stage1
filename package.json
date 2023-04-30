@@ -1,6 +1,6 @@
 {
   "name": "stage1",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "description": "High-performance JavaScript micro framework",
   "repository": "maxmilton/stage1",
