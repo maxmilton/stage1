@@ -20,6 +20,13 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
       - It's unlikely we'll use it internally due to performance overhead but developers should definately sanitize input when untrusted before passing it in... although we could create light wrapper functions
       - <https://developer.mozilla.org/en-US/docs/Web/API/Sanitizer/sanitizeFor>
       - <https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API>
+  - New DOM utility functions
+    - `createFragment`
+    - `create`
+    - `append`
+    - `prepend`
+    - `onNodeRemove`
+  - New reactive store feature
   - Differences from the original `stage0` project:
     - `h` is now `function h(template: string): S1Node` e.g., `h('<p>#text<p>')`
     - `html` is available to use as a string template literal tag function e.g., `` html`<p>#text<p>` ``
@@ -36,7 +43,7 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
   - `process.env.NODE_ENV` must be defined
   - If `process.env.NODE_ENV === 'production` you must minify `h`/`html` strings with a compatible minifier
     - Add full example with `esbuild` + `esbuild-minify-templates`
-  - Ref names should be lowercase because some browsers normalise element attribute names when rendering HTML
+  - Ref names must be lowercase because some browsers normalise element attribute names when rendering HTML
 - Add API and usage documentation
 - Add more tests
 - Add examples
