@@ -1,6 +1,6 @@
 type Handler<T, K extends keyof T> = (value: T[K], prev: T[K]) => void;
 type Store<T> = T & {
-  readonly on: <K extends keyof Omit<T, 'on'>>(
+  readonly on: <K extends keyof T>(
     key: K,
     callback: Handler<T, K>,
   ) => /** off */ () => void;
