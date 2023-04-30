@@ -1,15 +1,4 @@
-// TODO: Benchmark my changes vs original stage0 (init + runtime speed and memory):
-// - Object vs class for Ref in `indices`
-// - Direct reference vs this + TREE_WALKER.roll vs function roll
-// - `collector` returning '' vs 0
-// - isRefTag vs value.charCodeAt(0) === 35 vs value[0] === '#'
-//    ↳ https://jsben.ch/CI1u5
-// - Iterating over attributes; Array.from(node.attributes)
-//    ↳ Also see https://github.com/Freak613/stage0/commit/be29f76fccef54760b2294b7ed44c2315f176899
-//    ↳ https://jsben.ch/vPfrS (for loop wins)
-// - Use of arrow functions instead of the function keyword
-
-import type { Ref, RefNodes, S1Node } from './types';
+import type { Ref, Refs, S1Node } from './types';
 import { create } from './utils';
 
 const compilerTemplate = create('template');
@@ -62,12 +51,9 @@ const genPath = (node: Node) => {
   return indices;
 };
 
-// eslint-disable-next-line @typescript-eslint/ban-types, func-names
-const collect = function <T extends RefNodes = {}>(
-  this: S1Node,
-  node: Element,
-): T {
-  const refs: RefNodes = {};
+// eslint-disable-next-line func-names
+const collect = function <T extends Refs = Refs>(this: S1Node, node: Node): T {
+  const refs: Refs = {};
   treeWalker.currentNode = node;
 
   for (const x of this._refs) {
@@ -101,3 +87,38 @@ export const html = (
   template: TemplateStringsArray,
   ...substitutions: unknown[]
 ): S1Node => h(String.raw(template, ...substitutions));
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// FIXME: EXPERIMENTAL ; REMOVE!!
+
+// XXX: S1Node templates must have a single root node, however, S1Fragment
+// templates can have multiple root nodes.
+//  ↳ Is it actually useful? What's the benefit?
+//  ↳ It makes it hard to type
+
+export interface S1Fragment extends DocumentFragment {
+  _refs: Ref[];
+  // collect<T extends Refs = Refs>(frag: Node): LowercaseKeys<T>;
+  collect<T extends Refs = Refs>(frag: Node): T;
+}
+
+export const hf = (template: string): S1Fragment => {
+  // Compatible template literal minifier is mandatory for production consumers!
+  compilerTemplate.innerHTML =
+    process.env.NODE_ENV === 'production'
+      ? template
+      : template
+          // to get the correct first node
+          .trim()
+          // faster genPath and cleaner test snapshots
+          .replace(/\n\s+/g, '\n')
+          // remove whitespace around ref tags in Text nodes
+          .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
+
+  const frag = compilerTemplate.content as S1Fragment;
+  frag._refs = genPath(frag);
+  frag.collect = collect;
+
+  return frag;
+};

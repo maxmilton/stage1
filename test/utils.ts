@@ -55,8 +55,8 @@ export function render(component: Node): RenderResult {
   return {
     container,
     debug(el = container) {
-      // eslint-disable-next-line no-console
-      console.log('DEBUG:\n', el.innerHTML);
+      /* prettier-ignore */ // eslint-disable-next-line
+      console.log('DEBUG:\n' + require('prettier').format(el.innerHTML, { parser: 'html' }));
     },
     unmount() {
       container.removeChild(component);
@@ -65,7 +65,11 @@ export function render(component: Node): RenderResult {
 }
 
 export function cleanup(): void {
-  if (!mountedContainers || mountedContainers.size === 0) return;
+  if (!mountedContainers || mountedContainers.size === 0) {
+    throw new Error(
+      'No mounted components exist, did you forget to call render()?',
+    );
+  }
 
   mountedContainers.forEach((container) => {
     if (container.parentNode === document.body) {
