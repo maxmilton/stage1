@@ -24,7 +24,7 @@ export const store = <T extends Record<string | symbol, unknown>>(
       ...initialState,
       on(key, fn) {
         (handlers[key] ??= []).push(fn);
-        return () => {
+        return /** off */ () => {
           // eslint-disable-next-line no-bitwise
           handlers[key]?.splice(handlers[key]!.indexOf(fn) >>> 0, 1);
         };
