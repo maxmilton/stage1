@@ -9,9 +9,12 @@ type Store<T> = T & {
 /**
  * Creates a proxied state object that triggers callback functions when its
  * properties are set.
+ *
+ * @param initialState - An initial store state. The provided object should not
+ * have an `on` property because it is used internally.
  */
 export const store = <T extends Record<string | symbol, unknown>>(
-  initialState: T & { readonly on?: never },
+  initialState: T & { on?: never },
 ): Store<T> => {
   const handlers: { [K in keyof T]?: Handler<T, K>[] } = {};
 
