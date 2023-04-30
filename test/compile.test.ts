@@ -155,16 +155,32 @@ describe('h', (test) => {
   test('does not format template when NODE_ENV=production', () => {
     const oldNodeEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
-    const view = html`<ul>
+    const view = h(`<ul>
       <li>A</li>
       <li>B</li>
       <li>C</li>
-    </ul> `;
+    </ul> `);
     const rendered = render(view);
     assert.fixture(
       rendered.container.innerHTML,
       '<ul>\n      <li>A</li>\n      <li>B</li>\n      <li>C</li>\n    </ul>',
     );
+    process.env.NODE_ENV = oldNodeEnv;
+  });
+
+  test('omits leading space to correctly render HTMLDivElement when not NODE_ENV=production', () => {
+    assert.is.not(process.env.NODE_ENV, 'production');
+    const view = h(' <div></div>');
+    const rendered = render(view);
+    assert.instance(rendered.container.firstChild, window.HTMLDivElement);
+  });
+
+  test('does not omit leading space and renders Text node when NODE_ENV=production', () => {
+    const oldNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    const view = h(' <div></div>');
+    const rendered = render(view);
+    assert.instance(rendered.container.firstChild, window.Text);
     process.env.NODE_ENV = oldNodeEnv;
   });
 });
@@ -182,5 +198,37 @@ describe('html', (test) => {
     `;
     const rendered = render(view);
     assert.fixture(rendered.container.innerHTML, '<ul>\n<li>A</li>\n<li>B</li>\n<li>C</li>\n</ul>');
+  });
+
+  test('does not format template when NODE_ENV=production', () => {
+    const oldNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    const view = html`<ul>
+      <li>A</li>
+      <li>B</li>
+      <li>C</li>
+    </ul> `;
+    const rendered = render(view);
+    assert.fixture(
+      rendered.container.innerHTML,
+      '<ul>\n      <li>A</li>\n      <li>B</li>\n      <li>C</li>\n    </ul>',
+    );
+    process.env.NODE_ENV = oldNodeEnv;
+  });
+
+  test('omits leading space to correctly render HTMLDivElement when not NODE_ENV=production', () => {
+    assert.is.not(process.env.NODE_ENV, 'production');
+    const view = html` <div></div>`;
+    const rendered = render(view);
+    assert.instance(rendered.container.firstChild, window.HTMLDivElement);
+  });
+
+  test('does not omit leading space and renders Text node when NODE_ENV=production', () => {
+    const oldNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    const view = html` <div></div>`;
+    const rendered = render(view);
+    assert.instance(rendered.container.firstChild, window.Text);
+    process.env.NODE_ENV = oldNodeEnv;
   });
 });

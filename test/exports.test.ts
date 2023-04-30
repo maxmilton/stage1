@@ -20,6 +20,9 @@ describe('index', (test) => {
     ['append', 'Function'],
     ['prepend', 'Function'],
     ['onNodeRemove', 'Function'],
+
+    // FIXME: EXPERIMENTAL ; REMOVE!!
+    ['hf', 'Function'],
   ] as const;
 
   for (const [name, type] of PUBLIC_EXPORTS) {
