@@ -11,7 +11,7 @@ type Store<T> = T & {
  * properties are set.
  */
 export const store = <T extends Record<string | symbol, unknown>>(
-  initialState: T & { readonly on: never },
+  initialState: T & { readonly on?: never },
 ): Store<T> => {
   const handlers: { [K in keyof T]?: Handler<T, K>[] } = {};
 
