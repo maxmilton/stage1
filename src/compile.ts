@@ -87,38 +87,3 @@ export const html = (
   template: TemplateStringsArray,
   ...substitutions: unknown[]
 ): S1Node => h(String.raw(template, ...substitutions));
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// FIXME: EXPERIMENTAL ; REMOVE!!
-
-// XXX: S1Node templates must have a single root node, however, S1Fragment
-// templates can have multiple root nodes.
-//  ↳ Is it actually useful? What's the benefit?
-//  ↳ It makes it hard to type
-
-export interface S1Fragment extends DocumentFragment {
-  _refs: Ref[];
-  // collect<T extends Refs = Refs>(frag: Node): LowercaseKeys<T>;
-  collect<T extends Refs = Refs>(frag: Node): T;
-}
-
-export const hf = (template: string): S1Fragment => {
-  // Compatible template literal minifier is mandatory for production consumers!
-  compilerTemplate.innerHTML =
-    process.env.NODE_ENV === 'production'
-      ? template
-      : template
-          // to get the correct first node
-          .trim()
-          // faster genPath and cleaner test snapshots
-          .replace(/\n\s+/g, '\n')
-          // remove whitespace around ref tags in Text nodes
-          .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
-
-  const frag = compilerTemplate.content as S1Fragment;
-  frag._refs = genPath(frag);
-  frag.collect = collect;
-
-  return frag;
-};
