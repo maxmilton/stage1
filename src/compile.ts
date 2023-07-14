@@ -1,84 +1,61 @@
-import type { Ref, Refs, S1Node } from './types';
+import type { LowercaseKeys, Ref, Refs, S1View } from './types';
 import { create } from './utils';
 
 const compilerTemplate = create('template');
 const treeWalker = document.createTreeWalker(compilerTemplate);
+let str;
 
-const collector = (node: Node): string | void => {
+const collector = (node: Node): string | undefined => {
   // 1 = Node.ELEMENT_NODE
   if (node.nodeType === 1) {
     const attrs = (node as Element).attributes;
     let index = attrs.length;
 
     while (index--) {
-      const aname = attrs[index].name;
-      if (aname[0] === '#') {
-        (node as Element).removeAttribute(aname);
-        return aname.slice(1);
+      str = attrs[index].name;
+      if (str[0] === '@') {
+        (node as Element).removeAttribute(str);
+        return str.slice(1);
       }
     }
     return;
   }
 
-  const content = node.nodeValue;
-  if (content && content[0] === '#') {
+  str = node.nodeValue;
+  if (str && str[0] === '@') {
     node.nodeValue = '';
-    return content.slice(1);
+    return str.slice(1);
   }
 };
 
-const roll = (n: number) => {
-  while (--n) treeWalker.nextNode();
-  return treeWalker.currentNode;
-};
+/**
+ * Creates a DOM node from a template and collects ref node metadata.
+ * @param template - HTML template string.
+ */
+export const h = <T extends Node & ChildNode = Element>(
+  template: string,
+): S1View & T => {
+  compilerTemplate.innerHTML = template
+    // reduce any whitespace to a single space
+    .replace(/\s+/g, ' ')
+    // remove space adjacent to tags
+    .replace(/> /g, '>')
+    .replace(/ </g, '<');
 
-const genPath = (node: Node) => {
-  const indices: Ref[] = [];
-  let ref: string | void;
-  let index = 0;
-  treeWalker.currentNode = node;
+  const node = compilerTemplate.content.firstChild as S1View & T;
+  const metadata: Ref[] = (node._refs = []);
+  let current: Node | null = (treeWalker.currentNode = node);
+  let distance = 0;
 
-  while (node) {
-    if ((ref = collector(node))) {
-      indices.push({ i: index + 1, ref });
-      index = 1;
+  while (current) {
+    if ((str = collector(current))) {
+      metadata.push({ k: str, d: distance });
+      distance = 1;
     } else {
-      index++;
+      distance++;
     }
-    (node as Node | null) = treeWalker.nextNode();
+    current = treeWalker.nextNode();
   }
-
-  return indices;
-};
-
-// eslint-disable-next-line func-names
-const collect = function <T extends Refs = Refs>(this: S1Node, node: Node): T {
-  const refs: Refs = {};
-  treeWalker.currentNode = node;
-
-  for (const x of this._refs) {
-    refs[x.ref] = roll(x.i);
-  }
-
-  return refs as T;
-};
-
-export const h = (template: string): S1Node => {
-  // Compatible template literal minifier is mandatory for production consumers!
-  compilerTemplate.innerHTML =
-    process.env.NODE_ENV === 'production'
-      ? template
-      : template
-          // to get the correct first node
-          .trim()
-          // faster genPath and cleaner test snapshots
-          .replace(/\n\s+/g, '\n')
-          // remove whitespace around ref tags in Text nodes
-          .replace(/>\s+#(\w+)\s+</gm, '>#$1<');
-
-  const node = compilerTemplate.content.firstChild as S1Node;
-  node._refs = genPath(node);
-  node.collect = collect;
 
   return node;
 };
@@ -86,4 +63,33 @@ export const h = (template: string): S1Node => {
 export const html = (
   template: TemplateStringsArray,
   ...substitutions: unknown[]
-): S1Node => h(String.raw(template, ...substitutions));
+): S1View => h(String.raw(template, ...substitutions));
+
+/**
+ * Collects node refs from a compiled template view.
+ * @param root - Root node.
+ * @param view - Compiled template view.
+ * @returns An object mapping ref nodes keyed by their ref name. Note that some
+ * browsers lowercase rendered HTML element attribute names so we lowercase the
+ * typed key names to bring awareness to this.
+ */
+export const collect = <R extends Refs = Refs>(
+  root: Node,
+  view: S1View,
+): LowercaseKeys<R> => {
+  const len = view._refs.length;
+  const refs: Refs = {};
+  let index = 0;
+  let metadata;
+  let distance;
+  treeWalker.currentNode = root;
+
+  for (; index < len; index++) {
+    metadata = view._refs[index];
+    distance = metadata.d;
+    while (distance--) treeWalker.nextNode();
+    refs[metadata.k] = treeWalker.currentNode;
+  }
+
+  return refs as LowercaseKeys<R>;
+};

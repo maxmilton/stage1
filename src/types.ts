@@ -1,7 +1,14 @@
-/** @internal */
+/** @private */
 export interface Ref {
-  readonly i: number;
-  readonly ref: string;
+  /** Ref key name. */
+  readonly k: string;
+  /** Distance from previous ref node or root. */
+  readonly d: number;
+}
+
+export interface S1View extends Node, ChildNode {
+  /** @private */
+  _refs: readonly Ref[];
 }
 
 export type Refs = Record<string, Node>;
@@ -9,10 +16,3 @@ export type Refs = Record<string, Node>;
 export type LowercaseKeys<T> = {
   [K in keyof T as Lowercase<string & K>]: T[K];
 };
-
-export interface S1Node extends Node, ChildNode {
-  _refs: Ref[];
-  // Some browsers lowercase rendered HTMLElement attribute names so we
-  // lowercase the ref keys to bring awareness to this.
-  collect<T extends Refs = Refs>(node: Node): LowercaseKeys<T>;
-}
