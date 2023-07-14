@@ -32,8 +32,8 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
       - New pre-compiled runtime mode for ultimate performance. Compiles templates at build-time via a bun macro that minifies templates, generates metadata, and then includes minimal runtime code in your JS bundle. Currently only works with [Bun.build](https://bun.sh/docs/bundler).
       - The regular mode is still availiable which generates metadata when your JS is run in the browser. Regular mode can be used with or without a build process.
     - Ref nodes are now marked with `@` rather than `#`
-    - `h` is now `function h(template: string): S1Node` e.g., `h('<p>:key<p>')`
-    - `html` is available to use as a string template literal tag function e.g., `` html`<p>:key<p>` `` (regular mode only)
+    - `h` is now `function h(template: string): S1Node` e.g., `h('<p>@key<p>')`
+    - `html` is available to use as a string template literal tag function e.g., `` html`<p>@key<p>` `` (regular mode only)
     - `view.collect` is now a `collect` function that needs to be imported seperately
     - Extra DOM utils
     - New reactive `store` factory can be imported from `stage1/store`
