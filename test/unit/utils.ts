@@ -1,34 +1,4 @@
-import { JSDOM } from 'jsdom';
-import { suite, type Context, type Test } from 'uvu';
-
-// increase limit from 10
-global.Error.stackTraceLimit = 100;
-
-const mountedContainers = new Set<HTMLDivElement>();
-
-export function describe<T = Context>(
-  name: string,
-  fn: (test: Test<T>) => void,
-): void {
-  const test = suite<T>(name);
-  fn(test);
-  test.run();
-}
-
-export function setupDOM(): void {
-  const dom = new JSDOM('<!DOCTYPE html>', {
-    pretendToBeVisual: true,
-    runScripts: 'dangerously',
-    url: 'http://localhost/',
-  });
-
-  global.window = dom.window.document.defaultView!;
-  global.document = global.window.document;
-}
-
-export function setupMocks(): void {
-  global.DocumentFragment = global.window.DocumentFragment;
-}
+import { expect, spyOn, type Mock } from 'bun:test';
 
 export interface RenderResult {
   /** A wrapper DIV which contains your mounted component. */
@@ -40,9 +10,11 @@ export interface RenderResult {
    *
    * @param el - An element to inspect. Default is the mounted container.
    */
-  debug(el?: Element): void;
+  debug(el?: Element): Promise<void>;
   unmount(): void;
 }
+
+const mountedContainers = new Set<HTMLDivElement>();
 
 export function render(component: Node): RenderResult {
   const container = document.createElement('div');
@@ -54,18 +26,20 @@ export function render(component: Node): RenderResult {
 
   return {
     container,
-    debug(el = container) {
-      /* prettier-ignore */ // eslint-disable-next-line
-      console.log('DEBUG:\n' + require('prettier').format(el.innerHTML, { parser: 'html' }));
+    async debug(el = container) {
+      const { format } = await import('prettier');
+      // eslint-disable-next-line no-console
+      console.log(`DEBUG:\n${await format(el.innerHTML, { parser: 'html' })}`);
     },
     unmount() {
+      // eslint-disable-next-line unicorn/prefer-dom-node-remove
       container.removeChild(component);
     },
   };
 }
 
 export function cleanup(): void {
-  if (!mountedContainers || mountedContainers.size === 0) {
+  if (mountedContainers.size === 0) {
     throw new Error(
       'No mounted components exist, did you forget to call render()?',
     );
@@ -78,4 +52,23 @@ export function cleanup(): void {
 
     mountedContainers.delete(container);
   });
+}
+
+const consoleMethods = Object.getOwnPropertyNames(
+  window.console,
+) as (keyof Console)[];
+
+export function consoleSpy(): () => void {
+  const spies: Mock<() => void>[] = [];
+
+  for (const method of consoleMethods) {
+    spies.push(spyOn(window.console, method));
+  }
+
+  return () => {
+    for (const spy of spies) {
+      expect(spy).toHaveBeenCalledTimes(0);
+      spy.mockRestore();
+    }
+  };
 }
