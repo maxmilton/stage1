@@ -25,24 +25,25 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
     - `create`
     - `append`
     - `prepend`
-    - `onNodeRemove`
+    - `onRemove`
   - New reactive store feature
   - Differences from the original `stage0` project:
-    - `h` is now `function h(template: string): S1Node` e.g., `h('<p>#text<p>')`
-    - `html` is available to use as a string template literal tag function e.g., `` html`<p>#text<p>` ``
-    - Import paths
-      - Other than reconcilers, everything is a named export from `stage1`
-      - Reconcilers all export a `reconcile` function
-      - `/keyed` --> `/reconcile/keyed`
-      - `/reconcile` --> `/reconcile/non-keyed`
-      - `/reuse-nodes` --> `/reconcile/reuse-nodes`
+    - There are now 2 runtime modes:
+      - New pre-compiled runtime mode for ultimate performance. Compiles templates at build-time via a bun macro that minifies templates, generates metadata, and then includes minimal runtime code in your JS bundle. Currently only works with [Bun.build](https://bun.sh/docs/bundler).
+      - The regular mode is still availiable which generates metadata when your JS is run in the browser. Regular mode can be used with or without a build process.
+    - `h` is now `function h(template: string): S1Node` e.g., `h('<p>:key<p>')`
+    - `html` is available to use as a string template literal tag function e.g., `` html`<p>:key<p>` `` (regular mode only)
+    - `view.collect` is now a `collect` function that needs to be imported seperately
     - Extra DOM utils
     - New reactive `store` factory can be imported from `stage1/store`
     - Improved TypeScript support
     - Reduced size and improved load and runtime performance
-  - `process.env.NODE_ENV` must be defined
-  - If `process.env.NODE_ENV === 'production` you must minify `h`/`html` strings with a compatible minifier
-    - Add full example with `esbuild` + `esbuild-minify-templates`
+    - Import paths:
+      - Other than reconcilers and the store, everything is a named export from `stage1`
+      - Reconcilers all export a `reconcile` function
+      - `/keyed` --> `/reconcile/keyed`
+      - `/reconcile` --> `/reconcile/non-keyed`
+      - `/reuse-nodes` --> `/reconcile/reuse-nodes`
   - Ref names must be lowercase because some browsers normalise element attribute names when rendering HTML
 - Add API and usage documentation
 - Add more tests
@@ -64,13 +65,13 @@ Minimum browser version required:
 
 Some optional features require a higher browser version:
 
-- Compiler `html` tagged template literal function uses `String.raw`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw#browser_compatibility)
+- `html` tagged template literal function uses `String.raw`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw#browser_compatibility)
 - `createFragment` utility function uses `DocumentFragment`; [requirements](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment/DocumentFragment#browser_compatibility)
-- `onNodeRemove` utility function uses `for...of`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#browser_compatibility)
+- `onRemove` utility function uses `for...of` and `MutationObserver`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#browser_compatibility), [requirements](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver/)
 - `store` uses `Proxy`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/Proxy#browser_compatibility)
   - Also uses [logical nullish assignment](<(https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_nullish_assignment#browser_compatibility)>) and [optional chaining operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining#browser_compatibility), however, build tools can transform these for old browser targets
 
-SSR via Node.js or Deno is not supported and is not the intended use of this library.
+SSR (server-side rendering) is not supported and is not the intended use of this library.
 
 ## Bugs
 
