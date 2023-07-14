@@ -8,28 +8,35 @@
   "license": "MIT",
   "sideEffects": false,
   "main": "dist/index.js",
+  "browser": "dist/browser.js",
   "exports": {
     ".": "./dist/index.js",
+    "./macro": "./dist/runtime/macro.js",
+    "./runtime": "./dist/runtime/index.js",
+    "./store": "./dist/store.js",
     "./reconcile/keyed": "./dist/reconcile/keyed.js",
     "./reconcile/non-keyed": "./dist/reconcile/non-keyed.js",
     "./reconcile/reuse-nodes": "./dist/reconcile/reuse-nodes.js",
-    "./store": "./dist/store.js",
+    "./browser": "./dist/browser.js",
     "./package.json": "./package.json"
   },
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "reconcile/keyed": [
-        "dist/reconcile/keyed.d.ts"
+      "macro": [
+        "dist/runtime/macro.d.ts"
       ],
-      "reconcile/non-keyed": [
-        "dist/reconcile/non-keyed.d.ts"
-      ],
-      "reconcile/reuse-nodes": [
-        "dist/reconcile/reuse-nodes.d.ts"
+      "runtime": [
+        "dist/runtime/index.d.ts"
       ],
       "store": [
         "dist/store.d.ts"
+      ],
+      "reconcile/*": [
+        "dist/reconcile/*.d.ts"
+      ],
+      "browser": [
+        "dist/browser.d.ts"
       ]
     }
   },
