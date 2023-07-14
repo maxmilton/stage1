@@ -4,9 +4,9 @@
   "type": "module",
   "description": "High-performance JavaScript micro framework",
   "repository": "maxmilton/stage1",
-  "homepage": "https://github.com/maxmilton/stage1",
   "author": "Max Milton <max@happyhackers.xyz>",
   "license": "MIT",
+  "sideEffects": false,
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
