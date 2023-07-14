@@ -1,17 +1,12 @@
 {
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
-    "declaration": true,
-
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "esModuleInterop": true,
+    "esModuleInterop": false,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "allowJs": true,
-    "checkJs": true,
+    "allowJs": false,
 
     "strict": true,
     "allowUnreachableCode": false,
@@ -21,7 +16,13 @@
     "noImplicitOverride": true,
     "noUnusedLocals": false, // covered by eslint
     "noUnusedParameters": false, // covered by eslint
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+
+    "types": [
+      "bun-types",
+      "./node_modules/typescript/lib/lib.esnext.full.d.ts" // workaround for bun-types breaking dom types
+    ]
   },
-  "exclude": ["coverage", "dist", "node_modules", "test", "build.mjs"]
+  "include": ["src", "test", "build.ts", "playwright.config.ts"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
