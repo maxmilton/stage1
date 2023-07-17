@@ -1,6 +1,6 @@
 /**
- * Bun macro which compiles a template string into a format that can be used by
- * the runtime.
+ * Bun macro which compiles a template string at build-time into a format that
+ * can be used by the runtime.
  * @param template - HTML template string.
  * @param keepComments - Whether to keep HTML comments in the output.
  */
