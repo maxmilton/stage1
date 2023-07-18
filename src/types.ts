@@ -1,5 +1,5 @@
 /** @private */
-export interface Ref {
+export interface RefInfo {
   /** Ref key name. */
   readonly k: string;
   /** Distance from previous ref node or root. */
@@ -8,7 +8,7 @@ export interface Ref {
 
 export interface S1View extends Node, ChildNode {
   /** @private */
-  _refs: readonly Ref[];
+  $$refs: readonly RefInfo[];
 }
 
 export type Refs = Record<string, Node>;

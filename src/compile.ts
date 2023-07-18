@@ -1,4 +1,4 @@
-import type { LowercaseKeys, Ref, Refs, S1View } from './types';
+import type { LowercaseKeys, RefInfo, Refs, S1View } from './types';
 import { create } from './utils';
 
 const compilerTemplate = create('template');
@@ -43,7 +43,7 @@ export const h = <T extends Node & ChildNode = Element>(
     .replace(/ </g, '<');
 
   const node = compilerTemplate.content.firstChild as S1View & T;
-  const metadata: Ref[] = (node._refs = []);
+  const metadata: RefInfo[] = (node.$$refs = []);
   let current: Node | null = (treeWalker.currentNode = node);
   let distance = 0;
 
@@ -77,7 +77,7 @@ export const collect = <R extends Refs = Refs>(
   root: Node,
   view: S1View,
 ): LowercaseKeys<R> => {
-  const len = view._refs.length;
+  const len = view.$$refs.length;
   const refs: Refs = {};
   let index = 0;
   let metadata;
@@ -85,7 +85,7 @@ export const collect = <R extends Refs = Refs>(
   treeWalker.currentNode = root;
 
   for (; index < len; index++) {
-    metadata = view._refs[index];
+    metadata = view.$$refs[index];
     distance = metadata.d;
     while (distance--) treeWalker.nextNode();
     refs[metadata.k] = treeWalker.currentNode;
