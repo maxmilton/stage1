@@ -77,18 +77,19 @@ export const collect = <R extends Refs = Refs>(
   root: Node,
   view: S1View,
 ): LowercaseKeys<R> => {
+  const walker = treeWalker;
   const len = view.$$refs.length;
   const refs: Refs = {};
   let index = 0;
   let metadata;
   let distance;
-  treeWalker.currentNode = root;
+  walker.currentNode = root;
 
   for (; index < len; index++) {
     metadata = view.$$refs[index];
     distance = metadata.d;
-    while (distance--) treeWalker.nextNode();
-    refs[metadata.k] = treeWalker.currentNode;
+    while (distance--) walker.nextNode();
+    refs[metadata.k] = walker.currentNode;
   }
 
   return refs as LowercaseKeys<R>;

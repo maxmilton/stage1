@@ -7,7 +7,7 @@
 export async function compile(
   template: string,
   keepComments?: boolean,
-  // @ts-expect-error - Bun macros always return synchronous output.
+  // @ts-expect-error - Bun macros always result in synchronous inlined data.
 ): { html: string; k: readonly string[]; d: readonly number[] } {
   const rewriter = new HTMLRewriter();
   const k: string[] = [];

@@ -15,11 +15,6 @@ export const h = <T extends Node & ChildNode = Element>(
   return compilerTemplate.content.firstChild as T;
 };
 
-// const next = (d: number) => {
-//   while (d--) treeWalker.nextNode();
-//   return treeWalker.currentNode;
-// };
-
 /**
  * Collects node refs from a compiled template.
  * @param root - Root node.
@@ -34,21 +29,17 @@ export const collect = <R extends Refs>(
   k: readonly string[],
   d: readonly number[],
 ): LowercaseKeys<R> => {
+  const walker = treeWalker;
   const refs: Refs = {};
   const len = k.length;
   let index = 0;
   let distance;
-  // TODO: Performance test setting treeWalker to a local variable.
-  treeWalker.currentNode = root;
+  walker.currentNode = root;
 
-  // TODO: Performance test these 2 approaches.
-  // for (; index < len; index++) {
-  //   refs[k[index]] = next(d[index]);
-  // }
   for (; index < len; index++) {
     distance = d[index];
-    while (distance--) treeWalker.nextNode();
-    refs[k[index]] = treeWalker.currentNode;
+    while (distance--) walker.nextNode();
+    refs[k[index]] = walker.currentNode;
   }
 
   return refs as LowercaseKeys<R>;
