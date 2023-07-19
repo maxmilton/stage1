@@ -63,6 +63,38 @@ describe('h', () => {
     const rendered = render(view);
     expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
   });
+
+  // FIXME: Don't skip this test once bun v0.7.0 or v0.6.15 is released.
+  test.skip('does not minify in whitespace-sensitive blocks', () => {
+    const meta = compile(`
+      <div>
+        <pre>
+          a
+          b
+          c
+
+
+        </pre>
+        <span>
+          Foo
+        </span>
+        <code>
+          &lt;span&gt;
+            Foo
+          &lt;/span&gt;
+        </code>
+
+      </div>
+    `);
+    const view = h(meta.html);
+    const rendered = render(view);
+    expect(rendered.container.innerHTML).toBe(
+      '<div><pre>\n          a\n          b\n          c\n\n\n        </pre><span>Foo</span><code>\n          &lt;span&gt;\n            Foo\n          &lt;/span&gt;\n        </code></div>',
+    );
+  });
+
+  // FIXME: Test for each of the compile macro options; keepComments, keepSpace
+  //  ↳ When keepComments, check refs metadata calculations are still correct.
 });
 
 // describe('html', () => {
