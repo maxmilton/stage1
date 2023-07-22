@@ -7,6 +7,38 @@ import { cleanup, render } from './utils';
 
 // FIXME: Use inline snapshots once bun:test supports them.
 
+describe('compile', () => {
+  // FIXME: Test for each of the compile macro options; keepComments, keepSpace
+  //  ↳ When keepComments, check refs metadata calculations are still correct.
+
+  test('does not minify in whitespace-sensitive blocks', () => {
+    const meta = compile(`
+      <div>
+        <pre>
+          a
+           b
+          c
+
+
+          &lt;span&gt; Foo  &lt;/span&gt;
+        </pre>
+        <span>
+          Bar
+        </span>
+        <code>
+          &lt;span&gt;
+            Baz
+          &lt;/span&gt;
+        </code>
+
+      </div>
+    `);
+    expect(meta.html).toBe(
+      '<div><pre>\n          a\n           b\n          c\n\n\n          &lt;span&gt; Foo  &lt;/span&gt;\n        </pre><span>Bar</span><code>\n          &lt;span&gt;\n            Baz\n          &lt;/span&gt;\n        </code></div>',
+    );
+  });
+});
+
 describe('h', () => {
   afterEach(cleanup);
 
@@ -64,23 +96,23 @@ describe('h', () => {
     expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
   });
 
-  // FIXME: Don't skip this test once bun v0.7.0 or v0.6.15 is released.
-  test.skip('does not minify in whitespace-sensitive blocks', () => {
+  test('does not minify in whitespace-sensitive blocks', () => {
     const meta = compile(`
       <div>
         <pre>
           a
-          b
+           b
           c
 
 
+          &lt;span&gt; Foo  &lt;/span&gt;
         </pre>
         <span>
-          Foo
+          Bar
         </span>
         <code>
           &lt;span&gt;
-            Foo
+            Baz
           &lt;/span&gt;
         </code>
 
@@ -89,12 +121,9 @@ describe('h', () => {
     const view = h(meta.html);
     const rendered = render(view);
     expect(rendered.container.innerHTML).toBe(
-      '<div><pre>\n          a\n          b\n          c\n\n\n        </pre><span>Foo</span><code>\n          &lt;span&gt;\n            Foo\n          &lt;/span&gt;\n        </code></div>',
+      '<div><pre>\n          a\n           b\n          c\n\n\n          <span> Foo  </span>\n        </pre><span>Bar</span><code>\n          <span>\n            Baz\n          </span>\n        </code></div>',
     );
   });
-
-  // FIXME: Test for each of the compile macro options; keepComments, keepSpace
-  //  ↳ When keepComments, check refs metadata calculations are still correct.
 });
 
 // describe('html', () => {
