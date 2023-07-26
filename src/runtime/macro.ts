@@ -1,15 +1,15 @@
 export interface CompileOptions {
   /**
-   * Keep HTML comments in output HTML?
+   * Keep HTML comments in output HTML.
    * @default false
    */
   keepComments?: boolean;
   /**
-   * Keep spaces adjacent to tags in output HTML? When keepSpace is `false`,
+   * Keep spaces adjacent to tags in output HTML. When keepSpaces is `false`,
    * `<div> x </div>` becomes `<div>x</div>`.
    * @default false
    */
-  keepSpace?: boolean;
+  keepSpaces?: boolean;
 }
 
 /**
@@ -20,7 +20,7 @@ export interface CompileOptions {
  */
 export async function compile(
   template: string,
-  { keepComments, keepSpace }: CompileOptions = {},
+  { keepComments, keepSpaces }: CompileOptions = {},
   // @ts-expect-error - Bun macros always result in synchronous inlined data.
 ): { html: string; k: readonly string[]; d: readonly number[] } {
   const rewriter = new HTMLRewriter();
@@ -68,7 +68,7 @@ export async function compile(
           chunk.replace(' ');
         } else if (!whitespaceSensitiveBlock) {
           // reduce any whitespace to a single space
-          chunk.replace((keepSpace ? chunk.text : text).replace(/\s+/g, ' '));
+          chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, ' '));
         }
         distance++;
       }
