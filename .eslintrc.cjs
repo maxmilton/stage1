@@ -25,6 +25,7 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': ERROR,
     '@typescript-eslint/no-non-null-assertion': WARN,
     'import/prefer-default-export': OFF,
+    'import/order': OFF, // broken with prettier
     'no-restricted-syntax': OFF,
     'prettier/prettier': WARN,
     'unicorn/filename-case': OFF,
