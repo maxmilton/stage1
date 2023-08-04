@@ -84,18 +84,20 @@ export async function compile(
           k.push(text.slice(1));
           d.push(distance);
           distance = 0;
-          // replace with single space which will be turned into a text node
-          chunk.replace(' ');
+          // replace with single space which renders a Text node at runtime
+          chunk.replace(' ', { html: true });
         } else if (!whitespaceSensitiveBlock) {
           // reduce any whitespace to a single space
-          chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, ' '));
+          chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, ' '), {
+            html: true,
+          });
         }
         distance++;
       }
     },
     comments(node) {
       if (keepComments) {
-        // TODO: Support comments as node refs.
+        // TODO: Support comments as node refs once bun issue #3832 is fixed.
         distance++;
       } else {
         node.remove();

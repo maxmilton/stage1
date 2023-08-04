@@ -12,7 +12,7 @@ describe('compile', () => {
   //  ↳ When keepComments, check refs metadata calculations are still correct.
   //  ↳ Currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
 
-  test('outputs object', () => {
+  test('outputs an object', () => {
     const meta = compile('<div></div>');
     expect(meta).toBeInstanceOf(Object);
   });
@@ -85,6 +85,12 @@ describe('compile', () => {
     expect(meta.html).toBe(
       '<div><pre>\n          a\n           b\n          c\n\n\n          &lt;span&gt; Foo  &lt;/span&gt;\n        </pre><span>Bar</span><code>\n          &lt;span&gt;\n            Baz\n          &lt;/span&gt;\n        </code></div>',
     );
+  });
+
+  test('does not escape html entities', () => {
+    const template = '<div>&lt;span&gt;Foo&lt;/span&gt;</div>';
+    const meta = compile(template);
+    expect(meta.html).toBe(template);
   });
 
   // TODO: Don't skip this test. Not sure it's possible to spy on console.error
