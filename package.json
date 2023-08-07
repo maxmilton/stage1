@@ -46,7 +46,7 @@
   "scripts": {
     "build": "bun build.ts",
     "lint": "bun run lint:js && bun run lint:ts",
-    "lint:js": "eslint --ignore-path .gitignore --ext .ts,.js,.mjs,.cjs .",
+    "lint:js": "eslint --ignore-path .gitignore --ignore-pattern bench --ext .ts,.js,.mjs,.cjs .",
     "lint:ts": "tsc --noEmit",
     "postbuild": "tsc --project ./tsconfig.d.json",
     "prebuild": "rm -rf dist",

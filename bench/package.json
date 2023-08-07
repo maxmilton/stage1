@@ -1,0 +1,12 @@
+{
+  "name": "bench",
+  "version": "0.0.0",
+  "private": "true",
+  "scripts": {
+    "build": "bun build.ts",
+    "start": "bun cases/index.ts"
+  },
+  "dependencies": {
+    "mitata": "0.1.6"
+  }
+}
