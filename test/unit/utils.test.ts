@@ -302,9 +302,10 @@ describe('onRemove', () => {
     expect(onRemove).toHaveLength(2);
   });
 
-  // TODO: Don't skip these tests. Currently happy-dom doesn't support the 2nd
+  // FIXME: Don't skip these tests. Currently happy-dom doesn't support the 2nd
   // parameter in MutationObserver callbacks. Open an issue!
 
+  // TODO: Don't skip this test.
   test.skip('calls callback when watched element is removed', () => {
     const spy = mock(() => {});
     const root = document.createElement('div');
@@ -314,6 +315,7 @@ describe('onRemove', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
+  // TODO: Don't skip this test.
   test.skip('calls callback when parent parent element is removed', () => {
     const spy = mock(() => {});
     const root = document.createElement('div');
@@ -327,6 +329,7 @@ describe('onRemove', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
+  // TODO: Don't skip this test.
   test.skip('does not call callback when nested child element is removed', () => {
     const spy = mock(() => {});
     const root = document.createElement('div');
@@ -338,6 +341,7 @@ describe('onRemove', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  // TODO: Don't skip this test.
   test.skip('does not call callback when element is added or moved', () => {
     const spy = mock(() => {});
     const root = document.createElement('div');

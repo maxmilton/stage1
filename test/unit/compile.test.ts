@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { collect, h, html } from '../../src/compile';
 import { cleanup, render } from './utils';
 
-// FIXME: Use inline snapshots once bun:test supports them.
+// TODO: Consider using inline snapshots once bun:test supports them.
 
 describe('h', () => {
   afterEach(cleanup);
@@ -58,6 +58,10 @@ describe('h', () => {
     const rendered = render(view);
     expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
   });
+
+  // NOTE: This is not supported by the current implementation of the h()
+  // function because it would be too slow.
+  test.skip('does not minify in whitespace-sensitive blocks', () => {});
 });
 
 describe('html', () => {
@@ -180,4 +184,7 @@ describe('collect', () => {
     expect(refs.search.id).toBe('search');
     expect(refs.search.name).toBe('q');
   });
+
+  // NOTE: The regular mode h() function does not support options like the
+  // runtime mode compile() macro does. So there's no need to test them here.
 });

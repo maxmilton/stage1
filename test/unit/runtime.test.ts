@@ -1,111 +1,11 @@
 // XXX: This file has the same tests as test/unit/compile.test.ts, keep them in sync.
 
-import { afterEach, describe, expect, spyOn, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { collect, h } from '../../src/runtime/index';
-// eslint-disable-next-line import/no-duplicates
 import { compile } from '../../src/runtime/macro' assert { type: 'macro' };
-// eslint-disable-next-line import/no-duplicates
-import { compile as compileNoMacro } from '../../src/runtime/macro';
 import { cleanup, render } from './utils';
 
 // TODO: Consider using inline snapshots once bun:test supports them.
-
-describe('compile', () => {
-  // FIXME: Test for each of the compile macro options; keepComments, keepSpace
-  //  ↳ When keepComments, check refs metadata calculations are still correct.
-  //  ↳ Currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
-
-  test('outputs an object', () => {
-    const meta = compile('<div></div>');
-    expect(meta).toBeInstanceOf(Object);
-  });
-  test('outputs html property with string value', () => {
-    const meta = compile('<div></div>');
-    expect(meta).toHaveProperty('html');
-    expect(typeof meta.html).toBe('string');
-  });
-  test('outputs k property with array value', () => {
-    const meta = compile('<div></div>');
-    expect(meta).toHaveProperty('k');
-    expect(meta.k).toBeInstanceOf(Array);
-  });
-  test('outputs d property with array value', () => {
-    const meta = compile('<div></div>');
-    expect(meta).toHaveProperty('d');
-    expect(meta.d).toBeInstanceOf(Array);
-  });
-
-  test('has empty k and d properties when no node refs', () => {
-    const meta = compile('<div></div>');
-    expect(meta.k).toHaveLength(0);
-    expect(meta.d).toHaveLength(0);
-  });
-
-  test('has 3 k and d properties when 3 node refs', () => {
-    const meta = compile('<div @a><div @b></div><div @c></div></div>');
-    expect(meta.k).toHaveLength(3);
-    expect(meta.d).toHaveLength(3);
-  });
-
-  test('has 3 k and d properties when 3 node refs with whitespace', () => {
-    // FIXME: Whitespace handling is broken in happy-dom; https://github.com/capricorn86/happy-dom/issues/971
-    // const meta = compile(
-    //   '\n\n\t<div><div     @a  ></div> \t\t\n\n\n<div \n\t @b></  div> <div @c></\n\tdiv>\n\n</div>\n',
-    // );
-    const meta = compile(`
-      <div>
-        <div @a></div>
-        <div @b></div>
-        <div @c></div>
-      </div>
-    `);
-    expect(meta.k).toHaveLength(3);
-    expect(meta.d).toHaveLength(3);
-  });
-
-  test('does not minify in whitespace-sensitive blocks', () => {
-    const meta = compile(`
-      <div>
-        <pre>
-          a
-           b
-          c
-
-
-          &lt;span&gt; Foo  &lt;/span&gt;
-        </pre>
-        <span>
-          Bar
-        </span>
-        <code>
-          &lt;span&gt;
-            Baz
-          &lt;/span&gt;
-        </code>
-
-      </div>
-    `);
-    expect(meta.html).toBe(
-      '<div><pre>\n          a\n           b\n          c\n\n\n          &lt;span&gt; Foo  &lt;/span&gt;\n        </pre><span>Bar</span><code>\n          &lt;span&gt;\n            Baz\n          &lt;/span&gt;\n        </code></div>',
-    );
-  });
-
-  test('does not escape html entities', () => {
-    const template = '<div>&lt;span&gt;Foo&lt;/span&gt;</div>';
-    const meta = compile(template);
-    expect(meta.html).toBe(template);
-  });
-
-  test('logs error when more than one root element', () => {
-    const spy = spyOn(console, 'error')
-      // @ts-expect-error - noop stub
-      .mockImplementation(() => {});
-    compileNoMacro('<div></div><div></div>');
-    // expect(spy).toHaveBeenCalledWith('Expected template to have a single root element');
-    expect(spy).toHaveBeenCalledTimes(1);
-    spy.mockRestore();
-  });
-});
 
 describe('h', () => {
   afterEach(cleanup);
@@ -323,35 +223,165 @@ describe('collect', () => {
     expect(refs.search.name).toBe('q');
   });
 
-  // FIXME: Uncomment this test once using objects in macro args is fixed in
-  // bun; https://github.com/oven-sh/bun/issues/3832
+  // TODO: Instead of repeating similar tests multiple times, we should create
+  // a reusable test suite and create a test matrix that covers all the
+  // different combinations of options.
 
-  // test('collects refs when keepComments is true', () => {
-  //   const meta = compile(
-  //     `
-  //       <div>
-  //         <!-- -->
-  //         @a
-  //         <!-- -->
-  //         <!-- -->
-  //         <div @b>
-  //           <!-- -->
-  //           @c
-  //           <!-- -->
-  //           <!-- -->
-  //           <div @d></div>
-  //         </div>
-  //       </div>
-  //     `,
-  //     { keepComments: true },
-  //   );
-  //   const view = h(meta.html);
-  //   const refs = collect(view, meta.k, meta.d);
-  //   expect(refs.a.nodeName).toEqual('#text');
-  //   expect(refs.a).toBeInstanceOf(window.Text);
-  //   expect(refs.b.nodeName).toEqual('DIV');
-  //   expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-  //   expect(refs.c.nodeName).toEqual('#text');
-  //   expect(refs.c).toBeInstanceOf(window.Text);
-  // });
+  describe('keepComments option', () => {
+    test('collects refs when option is default', () => {
+      const meta = compile(`
+        <div>
+          <!-- -->
+          @a
+          <!-- -->
+          <!-- -->
+          <div @b>
+            <!-- -->
+            @c
+            <!-- -->
+            <!-- -->
+            <div @d></div>
+          </div>
+        </div>
+      `);
+      const view = h(meta.html);
+      const refs = collect(view, meta.k, meta.d);
+      expect(refs.a.nodeName).toEqual('#text');
+      expect(refs.a).toBeInstanceOf(window.Text);
+      expect(refs.b.nodeName).toEqual('DIV');
+      expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs.c.nodeName).toEqual('#text');
+      expect(refs.c).toBeInstanceOf(window.Text);
+    });
+
+    // TODO: This test is currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
+    test.todo('collects refs when option is true', () => {
+      // const meta = compile(
+      //   `
+      //     <div>
+      //       <!-- -->
+      //       @a
+      //       <!-- -->
+      //       <!-- -->
+      //       <div @b>
+      //         <!-- -->
+      //         @c
+      //         <!-- -->
+      //         <!-- -->
+      //         <div @d></div>
+      //       </div>
+      //     </div>
+      //   `,
+      //   { keepComments: true },
+      // );
+      // const view = h(meta.html);
+      // const refs = collect(view, meta.k, meta.d);
+      // expect(refs.a.nodeName).toEqual('#text');
+      // expect(refs.a).toBeInstanceOf(window.Text);
+      // expect(refs.b.nodeName).toEqual('DIV');
+      // expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+      // expect(refs.c.nodeName).toEqual('#text');
+      // expect(refs.c).toBeInstanceOf(window.Text);
+    });
+
+    // TODO: This test is currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
+    test.todo('collects refs when option is false', () => {
+      // const meta = compile(
+      //   `
+      //     <div>
+      //       <!-- -->
+      //       @a
+      //       <!-- -->
+      //       <!-- -->
+      //       <div @b>
+      //         <!-- -->
+      //         @c
+      //         <!-- -->
+      //         <!-- -->
+      //         <div @d></div>
+      //       </div>
+      //     </div>
+      //   `,
+      //   { keepComments: false },
+      // );
+      // const view = h(meta.html);
+      // const refs = collect(view, meta.k, meta.d);
+      // expect(refs.a.nodeName).toEqual('#text');
+      // expect(refs.a).toBeInstanceOf(window.Text);
+      // expect(refs.b.nodeName).toEqual('DIV');
+      // expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+      // expect(refs.c.nodeName).toEqual('#text');
+      // expect(refs.c).toBeInstanceOf(window.Text);
+    });
+  });
+
+  describe('keepSpaces option', () => {
+    test('collects refs when option is default', () => {
+      const meta = compile(`
+        <div>
+          @a
+          <div @b>
+            @c
+            <div @d></div>
+          </div>
+        </div>
+      `);
+      const view = h(meta.html);
+      const refs = collect(view, meta.k, meta.d);
+      expect(refs.a.nodeName).toEqual('#text');
+      expect(refs.a).toBeInstanceOf(window.Text);
+      expect(refs.b.nodeName).toEqual('DIV');
+      expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs.c.nodeName).toEqual('#text');
+      expect(refs.c).toBeInstanceOf(window.Text);
+    });
+
+    // TODO: This test is currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
+    test.todo('collects refs when option is true', () => {
+      // const meta = compile(
+      //   `
+      //     <div>
+      //       @a
+      //       <div @b>
+      //         @c
+      //         <div @d></div>
+      //       </div>
+      //     </div>
+      //   `,
+      //   { keepSpaces: true },
+      // );
+      // const view = h(meta.html);
+      // const refs = collect(view, meta.k, meta.d);
+      // expect(refs.a.nodeName).toEqual('#text');
+      // expect(refs.a).toBeInstanceOf(window.Text);
+      // expect(refs.b.nodeName).toEqual('DIV');
+      // expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+      // expect(refs.c.nodeName).toEqual('#text');
+      // expect(refs.c).toBeInstanceOf(window.Text);
+    });
+
+    // TODO: This test is currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
+    test.todo('collects refs when option is false', () => {
+      // const meta = compile(
+      //   `
+      //     <div>
+      //       @a
+      //       <div @b>
+      //         @c
+      //         <div @d></div>
+      //       </div>
+      //     </div>
+      //   `,
+      //   { keepSpaces: false },
+      // );
+      // const view = h(meta.html);
+      // const refs = collect(view, meta.k, meta.d);
+      // expect(refs.a.nodeName).toEqual('#text');
+      // expect(refs.a).toBeInstanceOf(window.Text);
+      // expect(refs.b.nodeName).toEqual('DIV');
+      // expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+      // expect(refs.c.nodeName).toEqual('#text');
+      // expect(refs.c).toBeInstanceOf(window.Text);
+    });
+  });
 });

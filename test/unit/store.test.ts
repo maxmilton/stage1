@@ -112,7 +112,7 @@ describe('store', () => {
   });
 
   // TODO: Don't skip once bun:test mocks support toHaveBeenCalledWith()
-  test.skip('calls callback with new value and previous value', () => {
+  test.todo('calls callback with new value and previous value', () => {
     // const initialState = { a: 'old' };
     // const state = store(initialState);
     // const callback = mock(() => {});

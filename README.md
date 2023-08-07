@@ -29,7 +29,7 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
   - New reactive store feature
   - Differences from the original `stage0` project:
     - There are now 2 runtime modes:
-      - New pre-compiled runtime mode for ultimate performance. Compiles templates at build-time via a bun macro that minifies templates, generates metadata, and then includes minimal runtime code in your JS bundle. Currently only works with [Bun.build](https://bun.sh/docs/bundler).
+      - New precompiled runtime mode for ultimate performance. Compiles templates at build-time via a bun macro that minifies templates, generates metadata, and then includes minimal runtime code in your JS bundle. Currently only works with [Bun.build](https://bun.sh/docs/bundler).
       - The regular mode is still availiable which generates metadata when your JS is run in the browser. Regular mode can be used with or without a build process.
     - Ref nodes are now marked with `@` rather than `#`
     - `h` is now `function h(template: string): S1Node` e.g., `h('<p>@key<p>')`
@@ -47,6 +47,7 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
       - `/reuse-nodes` --> `/reconcile/reuse-nodes`
   - Ref names must be lowercase because some browsers normalise element attribute names when rendering HTML
 - Add API and usage documentation
+  - The regular mode `h()` function does not support skipping minification in whitespace sensitive HTML blocks like `<pre>` and `<code>` because it would be too slow. The precompiled mode `compile()` macro does however. Same for the other compile options.
 - Add more tests
 - Add examples
 - Set up benchmarking + compare to `stage0` and other JS frameworks

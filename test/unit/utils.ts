@@ -1,4 +1,4 @@
-import { expect, spyOn, type Mock } from 'bun:test';
+// import { expect, spyOn, type Mock } from 'bun:test';
 
 export interface RenderResult {
   /** A wrapper DIV which contains your mounted component. */
@@ -54,21 +54,22 @@ export function cleanup(): void {
   });
 }
 
-const consoleMethods = Object.getOwnPropertyNames(
-  window.console,
-) as (keyof Console)[];
+// TODO: Remove if unused.
+// const consoleMethods = Object.getOwnPropertyNames(
+//   window.console,
+// ) as (keyof Console)[];
 
-export function consoleSpy(): () => void {
-  const spies: Mock<() => void>[] = [];
-
-  for (const method of consoleMethods) {
-    spies.push(spyOn(window.console, method));
-  }
-
-  return () => {
-    for (const spy of spies) {
-      expect(spy).toHaveBeenCalledTimes(0);
-      spy.mockRestore();
-    }
-  };
-}
+// export function consoleSpy(): () => void {
+//   const spies: Mock<() => void>[] = [];
+//
+//   for (const method of consoleMethods) {
+//     spies.push(spyOn(window.console, method));
+//   }
+//
+//   return () => {
+//     for (const spy of spies) {
+//       expect(spy).toHaveBeenCalledTimes(0);
+//       spy.mockRestore();
+//     }
+//   };
+// }
