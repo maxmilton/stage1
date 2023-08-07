@@ -50,7 +50,7 @@
     "lint:ts": "tsc --noEmit",
     "postbuild": "tsc --project ./tsconfig.d.json",
     "prebuild": "rm -rf dist",
-    "test": "bun test --preload ./test/setup.ts test/unit",
+    "test": "bun test --preload ./test/setup.ts test/unit --coverage",
     "test:e2e": "TZ=UTC playwright test"
   },
   "devDependencies": {
