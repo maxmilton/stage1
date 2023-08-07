@@ -2,10 +2,13 @@
 
 import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import { collect, h } from '../../src/runtime/index';
+// eslint-disable-next-line import/no-duplicates
 import { compile } from '../../src/runtime/macro' assert { type: 'macro' };
+// eslint-disable-next-line import/no-duplicates
+import { compile as compileNoMacro } from '../../src/runtime/macro';
 import { cleanup, render } from './utils';
 
-// FIXME: Use inline snapshots once bun:test supports them.
+// TODO: Consider using inline snapshots once bun:test supports them.
 
 describe('compile', () => {
   // FIXME: Test for each of the compile macro options; keepComments, keepSpace
@@ -93,14 +96,11 @@ describe('compile', () => {
     expect(meta.html).toBe(template);
   });
 
-  // TODO: Don't skip this test. Not sure it's possible to spy on console.error
-  // for macros because they run before the text execution phase and in a
-  // different context.
-  test.skip('logs error when more than one root element', () => {
+  test('logs error when more than one root element', () => {
     const spy = spyOn(console, 'error')
       // @ts-expect-error - noop stub
       .mockImplementation(() => {});
-    compile('<div></div><div></div>');
+    compileNoMacro('<div></div><div></div>');
     // expect(spy).toHaveBeenCalledWith('Expected template to have a single root element');
     expect(spy).toHaveBeenCalledTimes(1);
     spy.mockRestore();
