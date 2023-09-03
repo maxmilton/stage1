@@ -8,6 +8,9 @@ import { compile as compileNoMacro } from '../../src/runtime/macro';
 
 // TODO: Consider using inline snapshots once bun:test supports them.
 
+// TODO: Test not text ref when text includes whitespace
+// TODO: Test not text ref when text has escapsed @ character (e.g. \@)
+
 describe('compile', () => {
   // FIXME: Test for each of the compile macro options; keepComments, keepSpace
   //  ↳ When keepComments, check refs metadata calculations are still correct.

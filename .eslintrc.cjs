@@ -39,9 +39,11 @@ module.exports = {
     // byte savings
     '@typescript-eslint/no-confusing-void-expression': OFF,
     // worse performance
-    '@typescript-eslint/prefer-string-starts-ends-with': OFF,
+    '@typescript-eslint/prefer-includes': OFF,
     // worse performance
     '@typescript-eslint/prefer-for-of': OFF,
+    // worse performance
+    '@typescript-eslint/prefer-string-starts-ends-with': OFF,
     // void return can be used for efficient code (if used safely!)
     'consistent-return': WARN,
     // useful for compact and memory efficient code... but be careful!
