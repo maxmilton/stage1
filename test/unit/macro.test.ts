@@ -98,9 +98,7 @@ describe('compile', () => {
   });
 
   test('logs error when more than one root element', () => {
-    const spy = spyOn(console, 'error')
-      // @ts-expect-error - noop stub
-      .mockImplementation(() => {});
+    const spy = spyOn(console, 'error').mockImplementation(() => {});
     compileNoMacro('<div></div><div></div>');
     // TODO: Check for specific error message once bun:test supports it.
     // expect(spy).toHaveBeenCalledWith('Expected template to have a single root element');

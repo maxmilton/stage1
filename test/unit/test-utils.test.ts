@@ -58,9 +58,7 @@ describe('render', () => {
   });
 
   test('debug function prints to console', async () => {
-    const logSpy = spyOn(console, 'log')
-      // @ts-expect-error - noop mock
-      .mockImplementation(() => {});
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     const rendered = render(document.createElement('div'));
     await rendered.debug();
     expect(logSpy).toHaveBeenCalledTimes(1);
@@ -70,9 +68,7 @@ describe('render', () => {
   });
 
   test('debug function prints prettified container DOM to console', async () => {
-    const logSpy = spyOn(console, 'log')
-      // @ts-expect-error - noop mock
-      .mockImplementation(() => {});
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     const main = document.createElement('main');
     main.append(
       document.createElement('div'),
