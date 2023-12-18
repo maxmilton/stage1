@@ -1,6 +1,7 @@
 export interface CompileOptions {
   /**
-   * Whether to keep HTML comments in output HTML.
+   * Whether to keep HTML comments in output HTML. When keepComments is true,
+   * comments can be used as refs.
    * @default false
    */
   keepComments?: boolean;
@@ -20,9 +21,6 @@ export interface CompileOptions {
  */
 export async function compile(
   template: string,
-  // FIXME: Actually using objects in macro arguments is broken in bun.
-  //  ↳ https://github.com/oven-sh/bun/issues/3832
-  //  ↳ Add to documentation if it's not resolved by the time we write proper docs
   { keepComments, keepSpaces }: CompileOptions = {},
   // @ts-expect-error - Bun macros always result in synchronous inlined data.
 ): { html: string; k: readonly string[]; d: readonly number[] } {
@@ -68,7 +66,7 @@ export async function compile(
       distance++;
     },
     // This text handler is invoked twice for each Text node: first with the
-    // actual text, then with an empty last chunk. This behavior stems from
+    // actual text, then with an empty last chunk. This behaviour stems from
     // the fact that the Response provided to HTMLRewriter.transform() is not
     // streamed; otherwise, there could be multiple chunks before the last one.
     text(chunk) {
@@ -97,7 +95,20 @@ export async function compile(
     },
     comments(node) {
       if (keepComments) {
-        // TODO: Support comments as node refs once bun issue #3832 is fixed.
+        // TODO: Add documentation that the build/runtime mode also supports
+        // using comments as refs. Requires the keepComments option to be true.
+        const text = node.text.trim();
+        if (text[0] === '@') {
+          k.push(text.slice(1));
+          d.push(distance);
+          distance = 0;
+          // TODO: Use empty comment once lol-html supports it (less alloc than node.replace)
+          // node.text = '';
+          // TODO: use node.replace() once lol-html fixes it for comments
+          // node.replace('<!---->', { html: true });
+          node.remove();
+          node.after('<!---->', { html: true });
+        }
         distance++;
       } else {
         node.remove();
