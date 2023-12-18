@@ -1,18 +1,16 @@
 import type { LowercaseKeys, Refs } from '../types';
 import { create } from '../utils';
 
-const compilerTemplate = create('template');
-const treeWalker = document.createTreeWalker(compilerTemplate);
+const template = create('template');
+const treeWalker = document.createTreeWalker(template);
 
 /**
  * Creates a DOM node from a compiled template.
- * @param template - HTML template string.
+ * @param html - HTML string.
  */
-export const h = <T extends Node & ChildNode = Element>(
-  template: string,
-): T => {
-  compilerTemplate.innerHTML = template;
-  return compilerTemplate.content.firstChild as T;
+export const h = <T extends Node & ChildNode = Element>(html: string): T => {
+  template.innerHTML = html;
+  return template.content.firstChild as T;
 };
 
 /**
@@ -29,7 +27,7 @@ export const collect = <R extends Refs>(
   k: readonly string[],
   d: readonly number[],
 ): LowercaseKeys<R> => {
-  const walker = treeWalker;
+  const walker = treeWalker; // local var is faster in some JS engines
   const refs: Refs = {};
   const len = k.length;
   let index = 0;

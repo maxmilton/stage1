@@ -1,3 +1,10 @@
+// TODO: It would be great if the compile macro could also minify the HTML
+// beyond just whitespace. However it seems to not be possible with lol-html.
+//  ↳ Remove quotes around attributes with no spaces or special characters
+//  ↳ Make all quotes consistent (but be careful with embedded JS/CSS etc.)
+//  ↳ Remove unnecessary closing tags
+//  ↳ Convert tags to self-closing when possible
+
 export interface CompileOptions {
   /**
    * Whether to keep HTML comments in output HTML. When keepComments is true,
