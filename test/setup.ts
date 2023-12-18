@@ -5,9 +5,6 @@ declare global {
   var happyDOM: Window['happyDOM'];
 }
 
-// Increase stack limit from 10 (v8 default)
-global.Error.stackTraceLimit = 50;
-
 function setupDOM() {
   const dom = new GlobalWindow({
     url: 'chrome-extension://cpcibnbdmpmcmnkhoiilpnlaepkepknb/',

@@ -8,9 +8,9 @@ export interface RenderResult {
    * prettified and may not accurately represent your actual HTML. It's intended
    * for debugging tests only and should not be used in any assertions.
    *
-   * @param el - An element to inspect. Default is the mounted container.
+   * @param element - An element to inspect. Default is the mounted container.
    */
-  debug(el?: Element): Promise<void>;
+  debug(element?: Element): Promise<void>;
   unmount(): void;
 }
 
@@ -55,10 +55,11 @@ export function cleanup(): void {
 }
 
 // TODO: Remove if unused.
+
 // const consoleMethods = Object.getOwnPropertyNames(
 //   window.console,
 // ) as (keyof Console)[];
-
+//
 // export function consoleSpy(): () => void {
 //   const spies: Mock<() => void>[] = [];
 //
