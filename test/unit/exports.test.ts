@@ -92,10 +92,10 @@ describe('macro', () => {
 
   test('does not export any private internals', () => {
     const publicExportNames = PUBLIC_EXPORTS.map((x) => x[0]);
-    expect(publicExportNames).toHaveLength(Object.keys(macroExports).length);
     for (const name in macroExports) {
       expect(publicExportNames).toContain(name);
     }
+    expect(publicExportNames).toHaveLength(Object.keys(macroExports).length);
   });
 
   test('has no default export', () => {

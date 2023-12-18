@@ -89,12 +89,11 @@ describe('store', () => {
     const callback = mock(() => {});
     state.on('a', callback);
     state.a = 1;
-    // TODO: Uncomment once bun:test mocks support toHaveBeenCalledWith()
-    // expect(callback).toHaveBeenCalledWith(1, 0);
+    expect(callback).toHaveBeenCalledWith(1, 0);
     state.a = 2;
-    // expect(callback).toHaveBeenCalledWith(2, 1);
+    expect(callback).toHaveBeenCalledWith(2, 1);
     state.a = 3;
-    // expect(callback).toHaveBeenCalledWith(3, 2);
+    expect(callback).toHaveBeenCalledWith(3, 2);
     expect(callback).toHaveBeenCalledTimes(3);
   });
 
@@ -111,14 +110,13 @@ describe('store', () => {
     expect(callback).toHaveBeenCalledTimes(1); // still called only once
   });
 
-  // TODO: Don't skip once bun:test mocks support toHaveBeenCalledWith()
-  test.todo('calls callback with new value and previous value', () => {
-    // const initialState = { a: 'old' };
-    // const state = store(initialState);
-    // const callback = mock(() => {});
-    // state.on('a', callback);
-    // state.a = 'new';
-    // expect(callback).toHaveBeenCalledWith('new', 'old');
+  test('calls callback with new value and previous value', () => {
+    const initialState = { a: 'old' };
+    const state = store(initialState);
+    const callback = mock(() => {});
+    state.on('a', callback);
+    state.a = 'new';
+    expect(callback).toHaveBeenCalledWith('new', 'old');
   });
 
   test('calls all callbacks for mutated property', () => {

@@ -4,8 +4,6 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { collect, h, html } from '../../src/compile';
 import { cleanup, render } from './utils';
 
-// TODO: Consider using inline snapshots once bun:test supports them.
-
 describe('h', () => {
   afterEach(cleanup);
 
@@ -15,6 +13,21 @@ describe('h', () => {
         <li>A</li>
         <li>B</li>
         <li>C</li>
+      </ul>
+    `);
+    const rendered = render(view);
+    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+  });
+
+  test('renders basic template with messy whitespace', () => {
+    const view = h(`
+      <ul>
+        <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
+        <li
+          >
+            B</li>
+        <li>C
+          </li>
       </ul>
     `);
     const rendered = render(view);
@@ -147,6 +160,7 @@ describe('collect', () => {
     expect(refs.r).toBeInstanceOf(window.HTMLElement);
     expect(refs.s.nodeName).toEqual('#text');
     expect(refs.s).toBeInstanceOf(window.Text);
+    expect(Object.keys(refs)).toHaveLength(19);
   });
 
   test('collects ref at start of element attributes', () => {
@@ -159,6 +173,7 @@ describe('collect', () => {
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
     expect(refs.search.id).toBe('search');
     expect(refs.search.name).toBe('q');
+    expect(Object.keys(refs)).toHaveLength(1);
   });
 
   test('collects ref at end of element attributes', () => {
@@ -171,6 +186,7 @@ describe('collect', () => {
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
     expect(refs.search.id).toBe('search');
     expect(refs.search.name).toBe('q');
+    expect(Object.keys(refs)).toHaveLength(1);
   });
 
   test('collects ref in middle of element attributes', () => {
@@ -183,6 +199,7 @@ describe('collect', () => {
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
     expect(refs.search.id).toBe('search');
     expect(refs.search.name).toBe('q');
+    expect(Object.keys(refs)).toHaveLength(1);
   });
 
   // NOTE: The regular mode h() function does not support options like the

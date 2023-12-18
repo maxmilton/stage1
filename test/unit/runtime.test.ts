@@ -5,8 +5,6 @@ import { collect, h } from '../../src/runtime/index';
 import { compile } from '../../src/runtime/macro' assert { type: 'macro' };
 import { cleanup, render } from './utils';
 
-// TODO: Consider using inline snapshots once bun:test supports them.
-
 describe('h', () => {
   afterEach(cleanup);
 
@@ -16,6 +14,22 @@ describe('h', () => {
         <li>A</li>
         <li>B</li>
         <li>C</li>
+      </ul>
+    `);
+    const view = h(meta.html);
+    const rendered = render(view);
+    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+  });
+
+  test('renders basic template with messy whitespace', () => {
+    const meta = compile(`
+      <ul>
+        <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
+        <li
+          >
+            B</li>
+        <li>C
+          </li>
       </ul>
     `);
     const view = h(meta.html);
@@ -182,6 +196,7 @@ describe('collect', () => {
     expect(refs.r).toBeInstanceOf(window.HTMLElement);
     expect(refs.s.nodeName).toEqual('#text');
     expect(refs.s).toBeInstanceOf(window.Text);
+    expect(Object.keys(refs)).toHaveLength(19);
   });
 
   test('collects ref at start of element attributes', () => {
@@ -195,6 +210,7 @@ describe('collect', () => {
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
     expect(refs.search.id).toBe('search');
     expect(refs.search.name).toBe('q');
+    expect(Object.keys(refs)).toHaveLength(1);
   });
 
   test('collects ref at end of element attributes', () => {
@@ -208,6 +224,7 @@ describe('collect', () => {
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
     expect(refs.search.id).toBe('search');
     expect(refs.search.name).toBe('q');
+    expect(Object.keys(refs)).toHaveLength(1);
   });
 
   test('collects ref in middle of element attributes', () => {
@@ -221,6 +238,7 @@ describe('collect', () => {
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
     expect(refs.search.id).toBe('search');
     expect(refs.search.name).toBe('q');
+    expect(Object.keys(refs)).toHaveLength(1);
   });
 
   // TODO: Instead of repeating similar tests multiple times, we should create
@@ -234,13 +252,13 @@ describe('collect', () => {
           <!-- -->
           @a
           <!-- -->
-          <!-- -->
-          <div @b>
+          <!-- @b -->
+          <div @c>
             <!-- -->
-            @c
+            @d
+            <!-- @e -->
             <!-- -->
-            <!-- -->
-            <div @d></div>
+            <div @f></div>
           </div>
         </div>
       `);
@@ -248,70 +266,85 @@ describe('collect', () => {
       const refs = collect(view, meta.k, meta.d);
       expect(refs.a.nodeName).toEqual('#text');
       expect(refs.a).toBeInstanceOf(window.Text);
-      expect(refs.b.nodeName).toEqual('DIV');
-      expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs.c.nodeName).toEqual('#text');
-      expect(refs.c).toBeInstanceOf(window.Text);
+      expect(refs.b).toBeUndefined();
+      expect(refs.c.nodeName).toEqual('DIV');
+      expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs.d.nodeName).toEqual('#text');
+      expect(refs.d).toBeInstanceOf(window.Text);
+      expect(refs.e).toBeUndefined();
+      expect(refs.f.nodeName).toEqual('DIV');
+      expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
+      expect(Object.keys(refs)).toHaveLength(4);
     });
 
-    // TODO: This test is currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
-    test.todo('collects refs when option is true', () => {
-      // const meta = compile(
-      //   `
-      //     <div>
-      //       <!-- -->
-      //       @a
-      //       <!-- -->
-      //       <!-- -->
-      //       <div @b>
-      //         <!-- -->
-      //         @c
-      //         <!-- -->
-      //         <!-- -->
-      //         <div @d></div>
-      //       </div>
-      //     </div>
-      //   `,
-      //   { keepComments: true },
-      // );
-      // const view = h(meta.html);
-      // const refs = collect(view, meta.k, meta.d);
-      // expect(refs.a.nodeName).toEqual('#text');
-      // expect(refs.a).toBeInstanceOf(window.Text);
-      // expect(refs.b.nodeName).toEqual('DIV');
-      // expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-      // expect(refs.c.nodeName).toEqual('#text');
-      // expect(refs.c).toBeInstanceOf(window.Text);
+    test('collects refs when option is true', () => {
+      const meta = compile(
+        `
+          <div>
+            <!-- -->
+            @a
+            <!-- -->
+            <!-- @b -->
+            <div @c>
+              <!-- -->
+              @d
+              <!-- @e -->
+              <!-- -->
+              <div @f></div>
+            </div>
+          </div>
+        `,
+        { keepComments: true },
+      );
+      const view = h(meta.html);
+      const refs = collect(view, meta.k, meta.d);
+      expect(refs.a.nodeName).toEqual('#text');
+      expect(refs.a).toBeInstanceOf(window.Text);
+      expect(refs.b.nodeName).toEqual('#comment');
+      expect(refs.b).toBeInstanceOf(window.Comment);
+      expect(refs.c.nodeName).toEqual('DIV');
+      expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs.d.nodeName).toEqual('#text');
+      expect(refs.d).toBeInstanceOf(window.Text);
+      expect(refs.e.nodeName).toEqual('#comment');
+      expect(refs.e).toBeInstanceOf(window.Comment);
+      expect(refs.f.nodeName).toEqual('DIV');
+      expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
+      expect(Object.keys(refs)).toHaveLength(6);
     });
 
-    // TODO: This test is currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
-    test.todo('collects refs when option is false', () => {
-      // const meta = compile(
-      //   `
-      //     <div>
-      //       <!-- -->
-      //       @a
-      //       <!-- -->
-      //       <!-- -->
-      //       <div @b>
-      //         <!-- -->
-      //         @c
-      //         <!-- -->
-      //         <!-- -->
-      //         <div @d></div>
-      //       </div>
-      //     </div>
-      //   `,
-      //   { keepComments: false },
-      // );
-      // const view = h(meta.html);
-      // const refs = collect(view, meta.k, meta.d);
-      // expect(refs.a.nodeName).toEqual('#text');
-      // expect(refs.a).toBeInstanceOf(window.Text);
-      // expect(refs.b.nodeName).toEqual('DIV');
-      // expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-      // expect(refs.c.nodeName).toEqual('#text');
-      // expect(refs.c).toBeInstanceOf(window.Text);
+    test('collects refs when option is false', () => {
+      const meta = compile(
+        `
+          <div>
+            <!-- -->
+            @a
+            <!-- -->
+            <!-- @b -->
+            <div @c>
+              <!-- -->
+              @d
+              <!-- @e -->
+              <!-- -->
+              <div @f></div>
+            </div>
+          </div>
+        `,
+        { keepComments: false },
+      );
+      const view = h(meta.html);
+      const refs = collect(view, meta.k, meta.d);
+      expect(refs.a.nodeName).toEqual('#text');
+      expect(refs.a).toBeInstanceOf(window.Text);
+      expect(refs.b).toBeUndefined();
+      expect(refs.c.nodeName).toEqual('DIV');
+      expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs.d.nodeName).toEqual('#text');
+      expect(refs.d).toBeInstanceOf(window.Text);
+      expect(refs.e).toBeUndefined();
+      expect(refs.f.nodeName).toEqual('DIV');
+      expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
+      expect(Object.keys(refs)).toHaveLength(4);
     });
   });
 
@@ -334,54 +367,55 @@ describe('collect', () => {
       expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
       expect(refs.c.nodeName).toEqual('#text');
       expect(refs.c).toBeInstanceOf(window.Text);
+      expect(Object.keys(refs)).toHaveLength(4);
     });
 
-    // TODO: This test is currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
-    test.todo('collects refs when option is true', () => {
-      // const meta = compile(
-      //   `
-      //     <div>
-      //       @a
-      //       <div @b>
-      //         @c
-      //         <div @d></div>
-      //       </div>
-      //     </div>
-      //   `,
-      //   { keepSpaces: true },
-      // );
-      // const view = h(meta.html);
-      // const refs = collect(view, meta.k, meta.d);
-      // expect(refs.a.nodeName).toEqual('#text');
-      // expect(refs.a).toBeInstanceOf(window.Text);
-      // expect(refs.b.nodeName).toEqual('DIV');
-      // expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-      // expect(refs.c.nodeName).toEqual('#text');
-      // expect(refs.c).toBeInstanceOf(window.Text);
+    test('collects refs when option is true', () => {
+      const meta = compile(
+        `
+          <div>
+            @a
+            <div @b>
+              @c
+              <div @d></div>
+            </div>
+          </div>
+        `,
+        { keepSpaces: true },
+      );
+      const view = h(meta.html);
+      const refs = collect(view, meta.k, meta.d);
+      expect(refs.a.nodeName).toEqual('#text');
+      expect(refs.a).toBeInstanceOf(window.Text);
+      expect(refs.b.nodeName).toEqual('DIV');
+      expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs.c.nodeName).toEqual('#text');
+      expect(refs.c).toBeInstanceOf(window.Text);
+      expect(Object.keys(refs)).toHaveLength(4);
     });
 
-    // TODO: This test is currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
-    test.todo('collects refs when option is false', () => {
-      // const meta = compile(
-      //   `
-      //     <div>
-      //       @a
-      //       <div @b>
-      //         @c
-      //         <div @d></div>
-      //       </div>
-      //     </div>
-      //   `,
-      //   { keepSpaces: false },
-      // );
-      // const view = h(meta.html);
-      // const refs = collect(view, meta.k, meta.d);
-      // expect(refs.a.nodeName).toEqual('#text');
-      // expect(refs.a).toBeInstanceOf(window.Text);
-      // expect(refs.b.nodeName).toEqual('DIV');
-      // expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-      // expect(refs.c.nodeName).toEqual('#text');
-      // expect(refs.c).toBeInstanceOf(window.Text);
+    test('collects refs when option is false', () => {
+      const meta = compile(
+        `
+          <div>
+            @a
+            <div @b>
+              @c
+              <div @d></div>
+            </div>
+          </div>
+        `,
+        { keepSpaces: false },
+      );
+      const view = h(meta.html);
+      const refs = collect(view, meta.k, meta.d);
+      expect(refs.a.nodeName).toEqual('#text');
+      expect(refs.a).toBeInstanceOf(window.Text);
+      expect(refs.b.nodeName).toEqual('DIV');
+      expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs.c.nodeName).toEqual('#text');
+      expect(refs.c).toBeInstanceOf(window.Text);
+      expect(Object.keys(refs)).toHaveLength(4);
     });
   });
 });

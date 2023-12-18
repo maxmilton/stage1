@@ -62,8 +62,7 @@ describe('render', () => {
     const rendered = render(document.createElement('div'));
     await rendered.debug();
     expect(logSpy).toHaveBeenCalledTimes(1);
-    // TODO: Use this once bun:test supports it.
-    // expect(logSpy).toHaveBeenCalledWith('DEBUG:\n<div></div>\n');
+    expect(logSpy).toHaveBeenCalledWith('DEBUG:\n<div></div>\n');
     logSpy.mockRestore();
   });
 
@@ -78,8 +77,9 @@ describe('render', () => {
     const rendered = render(main);
     await rendered.debug();
     expect(logSpy).toHaveBeenCalledTimes(1);
-    // TODO: Use this once bun:test supports it.
-    // expect(logSpy).toHaveBeenCalledWith('DEBUG:\n<main>\n  <div></div>\n  <div></div>\n  <div></div>\n</main>\n');
+    expect(logSpy).toHaveBeenCalledWith(
+      'DEBUG:\n<main>\n  <div></div>\n  <div></div>\n  <div></div>\n</main>\n',
+    );
     logSpy.mockRestore();
   });
 
