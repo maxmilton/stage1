@@ -5,5 +5,8 @@
     "moduleResolution": "node10",
     "allowSyntheticDefaultImports": true
   },
-  "include": [".eslintrc.cjs", "package.json"]
+  "include": [
+    ".eslintrc.cjs",
+    "package.json" // included in package.json#exports
+  ]
 }
