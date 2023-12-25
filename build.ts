@@ -5,7 +5,7 @@ export {};
 console.time('build');
 
 // Minified browser bundle which includes "regular mode" functions, utils, and store.
-const out = await Bun.build({
+const out1 = await Bun.build({
   entrypoints: ['src/browser.ts'],
   outdir: 'dist',
   target: 'browser',
@@ -49,4 +49,4 @@ const out5 = await Bun.build({
 });
 
 console.timeEnd('build');
-console.log(out, out2, out3, out4, out5);
+console.log(out1, out2, out3, out4, out5);
