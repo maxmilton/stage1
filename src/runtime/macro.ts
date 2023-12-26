@@ -1,10 +1,3 @@
-// TODO: It would be great if the compile macro could also minify the HTML
-// beyond just whitespace. However it seems to not be possible with lol-html.
-//  ↳ Remove quotes around attributes with no spaces or special characters
-//  ↳ Make all quotes consistent (but be careful with embedded JS/CSS etc.)
-//  ↳ Remove unnecessary closing tags
-//  ↳ Convert tags to self-closing when possible
-
 export interface CompileOptions {
   /**
    * Whether to keep HTML comments in output HTML. When keepComments is true,
@@ -94,9 +87,7 @@ export function compile(
             // reduce any whitespace to a single space
             chunk.replace(
               (keepSpaces ? chunk.text : text).replace(/\s+/g, ' '),
-              {
-                html: true,
-              },
+              { html: true },
             );
           }
           distance++;
@@ -128,49 +119,3 @@ export function compile(
 
   return { html, k, d };
 }
-
-// FIXME: Decide whether to keep the minifyHTML macro or not.
-
-// /**
-//  * Bun macro which minifies whitespace in a HTML string at build-time.
-//  * @param html - Static HTML code string.
-//  * @param options - Compile options.
-//  */
-// export function minifyHTML(
-//   html: string,
-//   { keepComments, keepSpaces }: CompileOptions = {},
-// ): string {
-//   let whitespaceSensitiveBlock = false;
-//
-//   return new HTMLRewriter()
-//     .on('*', {
-//       element(node) {
-//         if (node.tagName === 'pre' || node.tagName === 'code') {
-//           whitespaceSensitiveBlock = true;
-//           node.onEndTag(() => {
-//             whitespaceSensitiveBlock = false;
-//           });
-//         }
-//       },
-//       text(chunk) {
-//         // see above explanation
-//         if (!chunk.lastInTextNode) {
-//           const text = chunk.text.trim();
-//           if (!text && !whitespaceSensitiveBlock) {
-//             chunk.remove();
-//           } else if (!whitespaceSensitiveBlock) {
-//             // reduce any whitespace to a single space
-//             chunk.replace(
-//               (keepSpaces ? chunk.text : text).replace(/\s+/g, ' '),
-//             );
-//           }
-//         }
-//       },
-//       comments(node) {
-//         if (!keepComments) {
-//           node.remove();
-//         }
-//       },
-//     })
-//     .transform(html.trim());
-// }
