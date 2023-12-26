@@ -1,7 +1,8 @@
 *-lock.json*
+*-lock.yaml
+*.bak
 *.lock
 *.log
-/bench/bun.lockb
 /coverage/
-dist
-node_modules
+/dist/
+/node_modules/
