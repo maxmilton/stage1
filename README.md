@@ -75,6 +75,12 @@ Some optional features require a higher browser version:
 
 SSR (server-side rendering) is not supported and is not the intended use of this library.
 
+## Build environment JS runtime support
+
+The default runtime requires [bun](https://bun.sh/) version 1.0.20 or above.
+
+The browser bundle does not have any specific build requirements.
+
 ## Bugs
 
 Please report any bugs you encounter on the [GitHub issue tracker](https://github.com/maxmilton/stage1/issues).
@@ -89,4 +95,4 @@ MIT license. See [LICENSE](https://github.com/maxmilton/stage1/blob/master/LICEN
 
 ---
 
-© 2023 [Max Milton](https://maxmilton.com)
+© 2024 [Max Milton](https://maxmilton.com)
