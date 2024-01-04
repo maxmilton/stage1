@@ -1,13 +1,24 @@
 import { afterEach, describe, expect, spyOn, test } from 'bun:test';
-import { Test as TestPrecompiled } from '../TestComponent_precompiled';
-import { Test as TestRegular } from '../TestComponent_regular';
-import { cleanup, render } from './utils';
+import { Test } from '../TestComponent';
+import { Test as TestBrowser } from '../TestComponent_browser';
+import { cleanup, consoleSpy, render } from './utils';
+
+describe('render (no call)', () => {
+  test('is a function', () => {
+    expect(render).toBeInstanceOf(Function);
+  });
+
+  test('takes a single argument', () => {
+    expect(render).toHaveLength(1);
+  });
+});
 
 describe('render', () => {
   afterEach(cleanup);
 
   test('returns a container element', () => {
     const rendered = render(document.createElement('div'));
+    expect(rendered).toHaveProperty('container');
     expect(rendered.container).toBeInstanceOf(window.Element);
   });
 
@@ -37,64 +48,89 @@ describe('render', () => {
     document.body.textContent = '';
   });
 
-  test('returns an unmount function', () => {
-    const rendered = render(document.createElement('div'));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(rendered.unmount).toBeInstanceOf(Function);
-  });
-
-  test('unmount removes supplied element from container', () => {
-    const rendered = render(document.createElement('div'));
-    expect(rendered.container.firstChild).toBeTruthy();
-    rendered.unmount();
-    expect(rendered.container).toBeTruthy();
-    expect(rendered.container.firstChild).toBeNull();
-  });
-
-  test('returns a debug function', () => {
-    const rendered = render(document.createElement('div'));
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(rendered.debug).toBeInstanceOf(Function);
-  });
-
-  test('debug function prints to console', async () => {
-    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
-    const rendered = render(document.createElement('div'));
-    await rendered.debug();
-    expect(logSpy).toHaveBeenCalledTimes(1);
-    expect(logSpy).toHaveBeenCalledWith('DEBUG:\n<div></div>\n');
-    logSpy.mockRestore();
-  });
-
-  test('debug function prints prettified container DOM to console', async () => {
-    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
-    const main = document.createElement('main');
-    main.append(
-      document.createElement('div'),
-      document.createElement('div'),
-      document.createElement('div'),
-    );
-    const rendered = render(main);
-    await rendered.debug();
-    expect(logSpy).toHaveBeenCalledTimes(1);
-    expect(logSpy).toHaveBeenCalledWith(
-      'DEBUG:\n<main>\n  <div></div>\n  <div></div>\n  <div></div>\n</main>\n',
-    );
-    logSpy.mockRestore();
-  });
-
-  test('renders TestRegular component correctly', () => {
-    const rendered = render(TestRegular({ text: 'abc' }));
+  test('renders TestBrowser component correctly', () => {
+    const rendered = render(TestBrowser({ text: 'abc' }));
     expect(rendered.container.innerHTML).toBe('<div id="test">abc</div>');
   });
 
-  test('renders TestPrecompiled component correctly', () => {
-    const rendered = render(TestPrecompiled({ text: 'abc' }));
+  test('renders Test component correctly', () => {
+    const rendered = render(Test({ text: 'abc' }));
     expect(rendered.container.innerHTML).toBe('<div id="test">abc</div>');
+  });
+
+  describe('unmount method', () => {
+    test('is a function', () => {
+      const rendered = render(document.createElement('div'));
+      expect(rendered).toHaveProperty('unmount');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(rendered.unmount).toBeInstanceOf(Function);
+    });
+
+    test('removes supplied element from container', () => {
+      const rendered = render(document.createElement('div'));
+      expect(rendered.container.firstChild).toBeTruthy();
+      rendered.unmount();
+      expect(rendered.container).toBeTruthy();
+      expect(rendered.container.firstChild).toBeNull();
+    });
+  });
+
+  describe('debug method', () => {
+    test('is a function', () => {
+      const rendered = render(document.createElement('div'));
+      expect(rendered).toHaveProperty('debug');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(rendered.debug).toBeInstanceOf(Function);
+    });
+
+    test('prints to console2', async () => {
+      const spy = spyOn(console2, 'log').mockImplementation(() => {});
+      const rendered = render(document.createElement('div'));
+      await rendered.debug();
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith('DEBUG:\n<div></div>\n');
+      spy.mockRestore();
+    });
+
+    test('does not print to console, only console2', async () => {
+      const spy = spyOn(console, 'log').mockImplementation(() => {});
+      const spy2 = spyOn(console2, 'log').mockImplementation(() => {});
+      const rendered = render(document.createElement('div'));
+      await rendered.debug();
+      expect(spy).not.toHaveBeenCalled();
+      expect(spy2).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+      spy2.mockRestore();
+    });
+
+    test('prints prettified container DOM to console', async () => {
+      const spy = spyOn(console2, 'log').mockImplementation(() => {});
+      const main = document.createElement('main');
+      main.append(
+        document.createElement('div'),
+        document.createElement('div'),
+        document.createElement('div'),
+      );
+      const rendered = render(main);
+      await rendered.debug();
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(
+        'DEBUG:\n<main>\n  <div></div>\n  <div></div>\n  <div></div>\n</main>\n',
+      );
+      spy.mockRestore();
+    });
   });
 });
 
 describe('cleanup', () => {
+  test('is a function', () => {
+    expect(cleanup).toBeInstanceOf(Function);
+  });
+
+  test('takes no arguments', () => {
+    expect(cleanup).toHaveLength(0);
+  });
+
   test('throws when there are no rendered components', () => {
     expect(() => cleanup()).toThrow();
   });
@@ -128,5 +164,41 @@ describe('cleanup', () => {
       expect(node).toBeInstanceOf(window.HTMLSpanElement);
     }
     document.body.textContent = '';
+  });
+});
+
+describe('consoleSpy', () => {
+  test('is a function', () => {
+    expect(consoleSpy).toBeInstanceOf(Function);
+  });
+
+  test('takes no arguments', () => {
+    expect(consoleSpy).toHaveLength(0);
+  });
+
+  test('returns a function', () => {
+    const checkConsoleSpy = consoleSpy();
+    expect(checkConsoleSpy).toBeInstanceOf(Function);
+    checkConsoleSpy();
+  });
+
+  test('returned function takes no arguments', () => {
+    const checkConsoleSpy = consoleSpy();
+    expect(checkConsoleSpy).toHaveLength(0);
+    checkConsoleSpy();
+  });
+
+  test('passes when no console methods are called', () => {
+    const checkConsoleSpy = consoleSpy();
+    checkConsoleSpy();
+  });
+
+  // FIXME: How to test this?
+  test.skip('fails when console methods are called', () => {
+    const checkConsoleSpy = consoleSpy();
+    console.log('a');
+    console.warn('b');
+    console.error('c');
+    checkConsoleSpy();
   });
 });

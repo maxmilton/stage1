@@ -2,9 +2,9 @@
 
 import { describe, expect, spyOn, test } from 'bun:test';
 // eslint-disable-next-line import/no-duplicates
-import { compile } from '../../src/runtime/macro' assert { type: 'macro' };
+import { compile } from '../../src/macro' assert { type: 'macro' };
 // eslint-disable-next-line import/no-duplicates
-import { compile as compileNoMacro } from '../../src/runtime/macro';
+import { compile as compileNoMacro } from '../../src/macro';
 
 describe('compile', () => {
   // FIXME: Test for each of the compile macro options; keepComments, keepSpace
@@ -171,13 +171,61 @@ describe('compile', () => {
       expect(meta.html).toBe('<div></div>');
     });
 
-    test('keeps comments when option is true', () => {
+    test('keeps comment when option is true', () => {
       const meta = compile('<div><!-- comment --></div>', { keepComments: true });
       expect(meta.html).toBe('<div><!-- comment --></div>');
     });
 
-    test('removes comments when option is false', () => {
+    test('removes comment when option is false', () => {
       const meta = compile('<div><!-- comment --></div>', { keepComments: false });
+      expect(meta.html).toBe('<div></div>');
+    });
+
+    test('keeps multiple comments when option is true', () => {
+      const meta = compile('<div><!-- comment --><!-- comment --><!-- comment --></div>', {
+        keepComments: true,
+      });
+      expect(meta.html).toBe('<div><!-- comment --><!-- comment --><!-- comment --></div>');
+    });
+
+    test('removes multiple comments when option is false', () => {
+      const meta = compile('<div><!-- comment --><!-- comment --><!-- comment --></div>', {
+        keepComments: false,
+      });
+      expect(meta.html).toBe('<div></div>');
+    });
+
+    test('keeps comment when option is true and template is only comment', () => {
+      const meta = compile('<!-- comment -->', { keepComments: true });
+      expect(meta.html).toBe('<!-- comment -->');
+    });
+
+    test('removes comment when option is false and template is only comment', () => {
+      const meta = compile('<!-- comment -->', { keepComments: false });
+      expect(meta.html).toBe('');
+    });
+
+    const templates = [
+      '<div><!-- comment --></div>',
+      '<div><!-- --></div>',
+      '<div><!----></div>',
+      '<div><!---></div>',
+      '<div><!--></div>',
+      '<div><!------></div>',
+      '<div><!-- <!-- --></div>',
+      '<div><!--  \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF --></div>',
+      '<div><!-- comment --!></div>',
+      '<div><!-- --!></div>',
+      '<div><!----!></div>',
+    ];
+
+    test.each(templates)('keeps comment when option is true for %j', (template) => {
+      const meta = compileNoMacro(template, { keepComments: true });
+      expect(meta.html).toBe(template);
+    });
+
+    test.each(templates)('removes comment when option is false for %j', (template) => {
+      const meta = compileNoMacro(template, { keepComments: false });
       expect(meta.html).toBe('<div></div>');
     });
 
@@ -189,7 +237,7 @@ describe('compile', () => {
 
     test('returns expected html for template with comment ref when option is true', () => {
       const meta = compile('<div><!-- @a --></div>', { keepComments: true });
-      expect(meta.html).toBe('<div><!----></div>');
+      expect(meta.html).toBe('<div><!--></div>');
     });
   });
 

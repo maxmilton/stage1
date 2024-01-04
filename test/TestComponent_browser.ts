@@ -1,4 +1,4 @@
-import { collect, h } from '../src/index';
+import { collect, h } from '../src/browser/compile';
 
 type TestComponent = HTMLDivElement;
 

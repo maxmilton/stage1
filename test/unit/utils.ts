@@ -1,4 +1,4 @@
-// import { expect, spyOn, type Mock } from 'bun:test';
+import { expect, spyOn, type Mock } from 'bun:test';
 
 export interface RenderResult {
   /** A wrapper DIV which contains your mounted component. */
@@ -28,8 +28,8 @@ export function render(component: Node): RenderResult {
     container,
     async debug(el = container) {
       const { format } = await import('prettier');
-      // eslint-disable-next-line no-console
-      console.log(`DEBUG:\n${await format(el.innerHTML, { parser: 'html' })}`);
+      const html = await format(el.innerHTML, { parser: 'html' });
+      console2.log(`DEBUG:\n${html}`);
     },
     unmount() {
       // eslint-disable-next-line unicorn/prefer-dom-node-remove
@@ -54,23 +54,19 @@ export function cleanup(): void {
   });
 }
 
-// TODO: Remove if unused.
+const consoleMethods = Object.getOwnPropertyNames(console) as (keyof Console)[];
 
-// const consoleMethods = Object.getOwnPropertyNames(
-//   window.console,
-// ) as (keyof Console)[];
-//
-// export function consoleSpy(): () => void {
-//   const spies: Mock<() => void>[] = [];
-//
-//   for (const method of consoleMethods) {
-//     spies.push(spyOn(window.console, method));
-//   }
-//
-//   return () => {
-//     for (const spy of spies) {
-//       expect(spy).toHaveBeenCalledTimes(0);
-//       spy.mockRestore();
-//     }
-//   };
-// }
+export function consoleSpy(): () => void {
+  const spies: Mock<() => void>[] = [];
+
+  for (const method of consoleMethods) {
+    spies.push(spyOn(console, method));
+  }
+
+  return /** check */ () => {
+    for (const spy of spies) {
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    }
+  };
+}

@@ -1,5 +1,5 @@
-import { collect, h } from '../src/runtime/index';
-import { compile } from '../src/runtime/macro' assert { type: 'macro' };
+import { compile } from '../src/macro' assert { type: 'macro' };
+import { collect, h } from '../src/runtime';
 
 type TestComponent = HTMLDivElement;
 

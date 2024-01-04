@@ -1,15 +1,14 @@
 /* eslint-disable guard-for-in */
 
 import { describe, expect, test } from 'bun:test';
+import * as browserExports from '../../src/browser/index';
 import * as indexExports from '../../src/index';
+import * as macroExports from '../../src/macro';
 import * as keyedExports from '../../src/reconcile/keyed';
 import * as nonKeyedExports from '../../src/reconcile/non-keyed';
 import * as reuseNodesExports from '../../src/reconcile/reuse-nodes';
-import * as runtimeExports from '../../src/runtime/index';
-import * as macroExports from '../../src/runtime/macro';
-import * as storeExports from '../../src/store';
 
-describe('index', () => {
+describe('browser', () => {
   const PUBLIC_EXPORTS = [
     ['h', Function],
     ['html', Function],
@@ -23,29 +22,30 @@ describe('index', () => {
     ['prepend', Function],
     ['clone', Function],
     ['onRemove', Function],
+    ['store', Function],
   ] as const;
 
   for (const [name, type] of PUBLIC_EXPORTS) {
     test(`exports public "${name}" ${type.name}`, () => {
-      expect(indexExports).toHaveProperty(name);
-      expect(indexExports[name]).toBeInstanceOf(type);
+      expect(browserExports).toHaveProperty(name);
+      expect(browserExports[name]).toBeInstanceOf(type);
     });
   }
 
   test('does not export any private internals', () => {
     const publicExportNames = PUBLIC_EXPORTS.map((x) => x[0]);
-    expect(publicExportNames).toHaveLength(Object.keys(indexExports).length);
-    for (const name in indexExports) {
+    for (const name in browserExports) {
       expect(publicExportNames).toContain(name);
     }
+    expect(publicExportNames).toHaveLength(Object.keys(browserExports).length);
   });
 
   test('has no default export', () => {
-    expect(indexExports).not.toHaveProperty('default');
+    expect(browserExports).not.toHaveProperty('default');
   });
 });
 
-describe('runtime', () => {
+describe('index', () => {
   const PUBLIC_EXPORTS = [
     ['h', Function],
     ['collect', Function],
@@ -58,25 +58,26 @@ describe('runtime', () => {
     ['prepend', Function],
     ['clone', Function],
     ['onRemove', Function],
+    ['store', Function],
   ] as const;
 
   for (const [name, type] of PUBLIC_EXPORTS) {
     test(`exports public "${name}" ${type.name}`, () => {
-      expect(runtimeExports).toHaveProperty(name);
-      expect(runtimeExports[name]).toBeInstanceOf(type);
+      expect(indexExports).toHaveProperty(name);
+      expect(indexExports[name]).toBeInstanceOf(type);
     });
   }
 
   test('does not export any private internals', () => {
     const publicExportNames = PUBLIC_EXPORTS.map((x) => x[0]);
-    expect(publicExportNames).toHaveLength(Object.keys(runtimeExports).length);
-    for (const name in runtimeExports) {
+    for (const name in indexExports) {
       expect(publicExportNames).toContain(name);
     }
+    expect(publicExportNames).toHaveLength(Object.keys(indexExports).length);
   });
 
   test('has no default export', () => {
-    expect(runtimeExports).not.toHaveProperty('default');
+    expect(indexExports).not.toHaveProperty('default');
   });
 });
 
@@ -103,29 +104,6 @@ describe('macro', () => {
   });
 });
 
-describe('store', () => {
-  const PUBLIC_EXPORTS = [['store', Function]] as const;
-
-  for (const [name, type] of PUBLIC_EXPORTS) {
-    test(`exports public "${name}" ${type.name}`, () => {
-      expect(storeExports).toHaveProperty(name);
-      expect(storeExports[name]).toBeInstanceOf(type);
-    });
-  }
-
-  test('does not export any private internals', () => {
-    const publicExportNames = PUBLIC_EXPORTS.map((x) => x[0]);
-    expect(publicExportNames).toHaveLength(Object.keys(storeExports).length);
-    for (const name in storeExports) {
-      expect(publicExportNames).toContain(name);
-    }
-  });
-
-  test('has no default export', () => {
-    expect(storeExports).not.toHaveProperty('default');
-  });
-});
-
 const RECONSILERS = [
   ['keyed', keyedExports],
   ['non-keyed', nonKeyedExports],
@@ -141,10 +119,10 @@ for (const [reconsiler, exports] of RECONSILERS) {
 
     test('does not export any private internals', () => {
       const publicExportNames = ['reconcile'];
-      expect(publicExportNames).toHaveLength(Object.keys(exports).length);
       for (const name in exports) {
         expect(publicExportNames).toContain(name);
       }
+      expect(publicExportNames).toHaveLength(Object.keys(exports).length);
     });
 
     test('has no default export', () => {
