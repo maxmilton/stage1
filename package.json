@@ -8,40 +8,45 @@
   "license": "MIT",
   "sideEffects": false,
   "main": "dist/index.js",
-  "browser": "dist/browser.js",
+  "browser": "dist/browser/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./macro": "./dist/runtime/macro.js",
-    "./runtime": "./dist/runtime/index.js",
-    "./store": "./dist/store.js",
-    "./reconcile/keyed": "./dist/reconcile/keyed.js",
-    "./reconcile/non-keyed": "./dist/reconcile/non-keyed.js",
-    "./reconcile/reuse-nodes": "./dist/reconcile/reuse-nodes.js",
-    "./browser": "./dist/browser.js",
+    ".": {
+      "FIXME__browser": {
+        "types": "./dist/browser/index.d.ts",
+        "import": "./dist/browser/index.mjs",
+        "require": "./dist/browser/index.js"
+      },
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./macro": {
+      "types": "./dist/macro.d.ts",
+      "default": "./dist/macro.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "import": "./dist/browser/index.mjs",
+      "require": "./dist/browser/index.js"
+    },
+    "./reconcile/keyed": {
+      "types": "./dist/reconcile/keyed.d.ts",
+      "default": "./dist/reconcile/keyed.js"
+    },
+    "./reconcile/non-keyed": {
+      "types": "./dist/reconcile/non-keyed.d.ts",
+      "default": "./dist/reconcile/non-keyed.js"
+    },
+    "./reconcile/reuse-nodes": {
+      "types": "./dist/reconcile/reuse-nodes.d.ts",
+      "default": "./dist/reconcile/reuse-nodes.js"
+    },
+    "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
-  "types": "dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "macro": [
-        "dist/runtime/macro.d.ts"
-      ],
-      "runtime": [
-        "dist/runtime/index.d.ts"
-      ],
-      "store": [
-        "dist/store.d.ts"
-      ],
-      "reconcile/*": [
-        "dist/reconcile/*.d.ts"
-      ],
-      "browser": [
-        "dist/browser.d.ts"
-      ]
-    }
-  },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "scripts": {
     "build": "bun build.ts",
