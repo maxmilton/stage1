@@ -1,5 +1,17 @@
-import type { LowercaseKeys, RefInfo, Refs, S1View } from './types';
-import { create } from './utils';
+import type { LowercaseKeys, Refs } from '../types';
+import { create } from '../utils';
+
+interface RefInfo {
+  /** Ref key name. */
+  readonly k: string;
+  /** Distance from previous ref node or root. */
+  readonly d: number;
+}
+
+export interface S1View extends Node, ChildNode {
+  /** @private */
+  $$refs: readonly RefInfo[];
+}
 
 const compilerTemplate = create('template');
 const treeWalker = document.createTreeWalker(compilerTemplate);

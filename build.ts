@@ -1,28 +1,74 @@
 /* eslint-disable no-console */
 
-export {};
+import * as rollup from 'rollup';
+import { minify } from 'terser';
 
 console.time('build');
 
-// Minified browser bundle which includes "regular mode" functions, utils, and store.
 const out1 = await Bun.build({
-  entrypoints: ['src/browser.ts'],
-  outdir: 'dist',
+  entrypoints: ['src/browser/index.ts'],
+  outdir: 'dist/browser',
   target: 'browser',
-  // FIXME: Use iife once Bun.build supports it (but we should have 2 bundles, esm and iife)
-  // format: 'iife',
+  minify: true,
+  sourcemap: 'inline',
+});
+const bundle = await rollup.rollup({
+  input: out1.outputs[0].path,
+});
+await bundle.write({
+  file: out1.outputs[0].path,
+  format: 'iife',
+  name: 'stage1',
+  sourcemap: true,
+  plugins: [
+    // @ts-expect-error - TODO: Fix return types
+    {
+      name: 'terser',
+      renderChunk(src) {
+        return minify(src, {
+          ecma: 2015,
+          sourceMap: true,
+          compress: {
+            reduce_funcs: false, // prevent functions being inlined
+            passes: 2,
+          },
+          mangle: {
+            properties: {
+              regex: /^\$\$/,
+            },
+          },
+        });
+      },
+    },
+  ],
+});
+
+const out2 = await Bun.build({
+  entrypoints: ['src/browser/index.ts'],
+  outdir: 'dist/browser',
+  target: 'browser',
+  naming: '[dir]/[name].mjs',
   minify: true,
   sourcemap: 'external',
 });
 
-const out2 = await Bun.build({
-  entrypoints: ['src/index.ts', 'src/store.ts'],
+const out3 = await Bun.build({
+  entrypoints: ['src/index.ts'],
   outdir: 'dist',
   target: 'browser',
+  minify: true,
   sourcemap: 'external',
 });
 
-const out3 = await Bun.build({
+const out4 = await Bun.build({
+  entrypoints: ['src/macro.ts'],
+  outdir: 'dist',
+  target: 'bun',
+  minify: true,
+  sourcemap: 'external',
+});
+
+const out5 = await Bun.build({
   entrypoints: [
     'src/reconcile/keyed.ts',
     'src/reconcile/non-keyed.ts',
@@ -30,21 +76,6 @@ const out3 = await Bun.build({
   ],
   outdir: 'dist/reconcile',
   target: 'browser',
-  sourcemap: 'external',
-});
-
-const out4 = await Bun.build({
-  entrypoints: ['src/runtime/index.ts'],
-  outdir: 'dist/runtime',
-  target: 'browser',
-  sourcemap: 'external',
-});
-
-const out5 = await Bun.build({
-  entrypoints: ['src/runtime/macro.ts'],
-  outdir: 'dist/runtime',
-  target: 'bun',
-  minify: true,
   sourcemap: 'external',
 });
 

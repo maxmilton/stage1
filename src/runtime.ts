@@ -1,5 +1,5 @@
-import type { LowercaseKeys, Refs } from '../types';
-import { create } from '../utils';
+import type { LowercaseKeys, Refs } from './types';
+import { create } from './utils';
 
 const template = create('template');
 const treeWalker = document.createTreeWalker(template);

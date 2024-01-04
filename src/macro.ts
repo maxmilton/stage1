@@ -30,6 +30,27 @@ export function compile(
   let root: boolean | undefined;
 
   const html = new HTMLRewriter()
+    .onDocument({
+      comments(node) {
+        if (keepComments) {
+          // TODO: Add documentation that precompiled mode supports using
+          // comments as refs. Requires the keepComments option to be true.
+          const text = node.text.trim();
+          if (text[0] === '@') {
+            k.push(text.slice(1));
+            d.push(distance);
+            distance = 0;
+            // TODO: use node.replace() once lol-html fixes it for comments
+            // node.replace('<!-->', { html: true });
+            node.remove();
+            node.after('<!-->', { html: true });
+          }
+          distance++;
+        } else {
+          node.remove();
+        }
+      },
+    })
     .on('*', {
       element(node) {
         if (!root) {
@@ -91,27 +112,6 @@ export function compile(
             );
           }
           distance++;
-        }
-      },
-      comments(node) {
-        if (keepComments) {
-          // TODO: Add documentation that the build/runtime mode also supports
-          // using comments as refs. Requires the keepComments option to be true.
-          const text = node.text.trim();
-          if (text[0] === '@') {
-            k.push(text.slice(1));
-            d.push(distance);
-            distance = 0;
-            // TODO: Use empty comment once lol-html supports it (less alloc than node.replace)
-            // node.text = '';
-            // TODO: use node.replace() once lol-html fixes it for comments
-            // node.replace('<!---->', { html: true });
-            node.remove();
-            node.after('<!---->', { html: true });
-          }
-          distance++;
-        } else {
-          node.remove();
         }
       },
     })
