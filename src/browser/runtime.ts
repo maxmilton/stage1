@@ -1,16 +1,16 @@
 import type { LowercaseKeys, Refs } from '../types';
 import { create } from '../utils';
 
-interface RefInfo {
+interface RefMeta {
   /** Ref key name. */
   readonly k: string;
   /** Distance from previous ref node or root. */
   readonly d: number;
 }
 
-export interface S1View extends Node, ChildNode {
+export interface View extends Node, ChildNode {
   /** @private */
-  $$refs: readonly RefInfo[];
+  $$refs: readonly RefMeta[];
 }
 
 const compilerTemplate = create('template');
@@ -46,7 +46,7 @@ const collector = (node: Node): string | undefined => {
  */
 export const h = <T extends Node & ChildNode = Element>(
   template: string,
-): S1View & T => {
+): View & T => {
   compilerTemplate.innerHTML = template
     // reduce any whitespace to a single space
     .replace(/\s+/g, ' ')
@@ -54,8 +54,8 @@ export const h = <T extends Node & ChildNode = Element>(
     .replace(/> /g, '>')
     .replace(/ </g, '<');
 
-  const node = compilerTemplate.content.firstChild as S1View & T;
-  const metadata: RefInfo[] = (node.$$refs = []);
+  const node = compilerTemplate.content.firstChild as View & T;
+  const metadata: RefMeta[] = (node.$$refs = []);
   let current: Node | null = (treeWalker.currentNode = node);
   let distance = 0;
 
@@ -75,7 +75,7 @@ export const h = <T extends Node & ChildNode = Element>(
 export const html = (
   template: TemplateStringsArray,
   ...substitutions: unknown[]
-): S1View => h(String.raw(template, ...substitutions));
+): View => h(String.raw(template, ...substitutions));
 
 /**
  * Collects node refs from a compiled template view.
@@ -87,11 +87,11 @@ export const html = (
  */
 export const collect = <R extends Refs = Refs>(
   root: Node,
-  view: S1View,
+  view: View,
 ): LowercaseKeys<R> => {
-  const walker = treeWalker;
-  const len = view.$$refs.length;
+  const walker = treeWalker; // local var is faster in some JS engines
   const refs: Refs = {};
+  const len = view.$$refs.length;
   let index = 0;
   let metadata;
   let distance;

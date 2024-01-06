@@ -1,7 +1,7 @@
 // XXX: This file has the same tests as test/unit/runtime.test.ts, keep them in sync.
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import { collect, h, html } from '../../src/browser/compile';
+import { collect, h, html } from '../../src/browser/runtime';
 import { cleanup, render } from './utils';
 
 describe('h', () => {
