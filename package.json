@@ -67,7 +67,7 @@
     "eslint-plugin-unicorn": "50.0.1",
     "happy-dom": "12.10.3",
     "prettier": "3.1.1",
-    "rollup": "4.9.2",
+    "rollup": "4.9.3",
     "terser": "5.26.0",
     "typescript": "5.3.3"
   },
