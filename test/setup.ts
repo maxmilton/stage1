@@ -30,7 +30,6 @@ expect.extend({
 });
 
 const originalConsole = global.console;
-
 const noop = () => {};
 
 function setupDOM() {
@@ -41,12 +40,7 @@ function setupDOM() {
   global.window = dom.window.document.defaultView;
   global.document = window.document;
   global.console = window.console; // https://github.com/capricorn86/happy-dom/wiki/Virtual-Console
-  global.setTimeout = window.setTimeout;
-  global.clearTimeout = window.clearTimeout;
   global.DocumentFragment = window.DocumentFragment;
-  global.CSSStyleSheet = window.CSSStyleSheet;
-  global.Text = window.Text;
-  global.fetch = window.fetch;
   global.MutationObserver = window.MutationObserver;
 }
 
