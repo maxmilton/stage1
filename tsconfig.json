@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
+    "moduleDetection": "force",
     "moduleResolution": "bundler",
     "esModuleInterop": false,
     "resolveJsonModule": true,
@@ -26,6 +27,6 @@
     //   "./node_modules/typescript/lib/lib.esnext.full.d.ts" // workaround for bun-types breaking dom types
     // ]
   },
-  "include": ["src", "test", "build.ts", "*.config.ts"],
+  "include": ["src", "test", "build.ts", "*.config.ts", "*.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -8,37 +8,32 @@
   "license": "MIT",
   "sideEffects": false,
   "main": "dist/index.js",
-  "browser": "dist/browser/index.js",
+  "browser": "dist/browser.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "FIXME__browser": {
-        "types": "./dist/browser/index.d.ts",
-        "import": "./dist/browser/index.mjs",
-        "require": "./dist/browser/index.js"
-      },
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./macro": {
-      "types": "./dist/macro.d.ts",
+      "types": "./dist/index.d.ts",
       "default": "./dist/macro.js"
     },
     "./browser": {
-      "types": "./dist/browser/index.d.ts",
-      "import": "./dist/browser/index.mjs",
-      "require": "./dist/browser/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/browser.mjs",
+      "require": "./dist/browser.js"
     },
     "./reconcile/keyed": {
-      "types": "./dist/reconcile/keyed.d.ts",
+      "types": "./dist/index.d.ts",
       "default": "./dist/reconcile/keyed.js"
     },
     "./reconcile/non-keyed": {
-      "types": "./dist/reconcile/non-keyed.d.ts",
+      "types": "./dist/index.d.ts",
       "default": "./dist/reconcile/non-keyed.js"
     },
     "./reconcile/reuse-nodes": {
-      "types": "./dist/reconcile/reuse-nodes.d.ts",
+      "types": "./dist/index.d.ts",
       "default": "./dist/reconcile/reuse-nodes.js"
     },
     "./dist/*": "./dist/*",
@@ -53,7 +48,6 @@
     "lint": "bun run lint:js && bun run lint:ts",
     "lint:js": "eslint --ignore-path .gitignore --ignore-pattern bench --ext .ts,.mjs,.js,.cjs .",
     "lint:ts": "tsc --noEmit",
-    "postbuild": "tsc --project ./tsconfig.d.json",
     "prebuild": "rm -rf dist",
     "test": "bun test --preload ./test/setup.ts test/unit --coverage",
     "test:e2e": "TZ=UTC playwright test"
@@ -63,6 +57,7 @@
     "@types/bun": "1.0.0",
     "@typescript-eslint/eslint-plugin": "6.17.0",
     "@typescript-eslint/parser": "6.17.0",
+    "dts-buddy": "0.4.3",
     "eslint": "8.56.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-config-airbnb-typescript": "17.1.0",

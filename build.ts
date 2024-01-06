@@ -1,22 +1,24 @@
 /* eslint-disable no-console */
 
-import * as rollup from 'rollup';
+import { createBundle } from 'dts-buddy';
+import { rollup } from 'rollup';
 import { minify } from 'terser';
 
 console.time('build');
 
-const out1 = await Bun.build({
+const out = await Bun.build({
   entrypoints: ['src/browser/index.ts'],
-  outdir: 'dist/browser',
+  outdir: 'dist',
+  naming: '[dir]/browser.js',
   target: 'browser',
   minify: true,
   sourcemap: 'inline',
 });
-const bundle = await rollup.rollup({
-  input: out1.outputs[0].path,
+const bundle = await rollup({
+  input: out.outputs[0].path,
 });
 await bundle.write({
-  file: out1.outputs[0].path,
+  file: out.outputs[0].path,
   format: 'iife',
   name: 'stage1',
   sourcemap: true,
@@ -43,16 +45,16 @@ await bundle.write({
   ],
 });
 
-const out2 = await Bun.build({
+await Bun.build({
   entrypoints: ['src/browser/index.ts'],
-  outdir: 'dist/browser',
+  outdir: 'dist',
   target: 'browser',
-  naming: '[dir]/[name].mjs',
+  naming: '[dir]/browser.mjs',
   minify: true,
   sourcemap: 'external',
 });
 
-const out3 = await Bun.build({
+await Bun.build({
   entrypoints: ['src/index.ts'],
   outdir: 'dist',
   target: 'browser',
@@ -60,7 +62,7 @@ const out3 = await Bun.build({
   sourcemap: 'external',
 });
 
-const out4 = await Bun.build({
+await Bun.build({
   entrypoints: ['src/macro.ts'],
   outdir: 'dist',
   target: 'bun',
@@ -68,7 +70,7 @@ const out4 = await Bun.build({
   sourcemap: 'external',
 });
 
-const out5 = await Bun.build({
+await Bun.build({
   entrypoints: [
     'src/reconcile/keyed.ts',
     'src/reconcile/non-keyed.ts',
@@ -80,4 +82,19 @@ const out5 = await Bun.build({
 });
 
 console.timeEnd('build');
-console.log(out1, out2, out3, out4, out5);
+console.time('dts');
+
+await createBundle({
+  output: 'dist/index.d.ts',
+  modules: {
+    stage1: 'src/index.ts',
+    'stage1/browser': 'src/browser/index.ts',
+    'stage1/macro': 'src/macro.ts',
+    'stage1/reconcile/keyed': 'src/reconcile/keyed.ts',
+    'stage1/reconcile/non-keyed': 'src/reconcile/non-keyed.ts',
+    'stage1/reconcile/reuse-nodes': 'src/reconcile/reuse-nodes.ts',
+  },
+  include: ['src'],
+});
+
+console.timeEnd('dts');
