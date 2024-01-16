@@ -302,16 +302,17 @@ describe('onRemove', () => {
     expect(onRemove).toHaveLength(2);
   });
 
-  test('calls callback when watched element is removed', () => {
+  test('calls callback when watched element is removed', async () => {
     const spy = mock(() => {});
     const root = document.createElement('div');
     document.body.appendChild(root);
     onRemove(root, spy);
     root.remove();
+    await happyDOM.waitUntilComplete();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  test('calls callback when parent parent element is removed', () => {
+  test('calls callback when parent parent element is removed', async () => {
     const spy = mock(() => {});
     const root = document.createElement('div');
     const parent = document.createElement('div');
@@ -321,10 +322,11 @@ describe('onRemove', () => {
     document.body.appendChild(root);
     onRemove(child, spy);
     root.remove();
+    await happyDOM.waitUntilComplete();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  test('does not call callback when nested child element is removed', () => {
+  test('does not call callback when nested child element is removed', async () => {
     const spy = mock(() => {});
     const root = document.createElement('div');
     const child = document.createElement('div');
@@ -332,10 +334,11 @@ describe('onRemove', () => {
     document.body.appendChild(root);
     onRemove(root, spy);
     child.remove();
+    await happyDOM.waitUntilComplete();
     expect(spy).not.toHaveBeenCalled();
   });
 
-  test('does not call callback when element is added or moved', () => {
+  test('does not call callback when element is added or moved', async () => {
     const spy = mock(() => {});
     const root = document.createElement('div');
     const child = document.createElement('div');
@@ -343,6 +346,7 @@ describe('onRemove', () => {
     onRemove(root, spy);
     root.appendChild(child);
     document.body.appendChild(root);
+    await happyDOM.waitUntilComplete();
     expect(spy).not.toHaveBeenCalled();
   });
 });

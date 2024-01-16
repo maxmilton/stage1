@@ -51,9 +51,15 @@ function setupMocks(): void {
   global.performance.measure = noop;
 }
 
-export function reset(): void {
+export async function reset(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (global.happyDOM) {
+    await happyDOM.abort();
+    window.close();
+  }
+
   setupDOM();
   setupMocks();
 }
 
-reset();
+await reset();
