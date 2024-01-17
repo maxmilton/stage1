@@ -1,5 +1,3 @@
-import { expect, spyOn, type Mock } from 'bun:test';
-
 export interface RenderResult {
   /** A wrapper DIV which contains your mounted component. */
   container: HTMLDivElement;
@@ -52,21 +50,4 @@ export function cleanup(): void {
 
     mountedContainers.delete(container);
   });
-}
-
-const consoleMethods = Object.getOwnPropertyNames(console) as (keyof Console)[];
-
-export function consoleSpy(): () => void {
-  const spies: Mock<() => void>[] = [];
-
-  for (const method of consoleMethods) {
-    spies.push(spyOn(console, method));
-  }
-
-  return /** check */ () => {
-    for (const spy of spies) {
-      expect(spy).not.toHaveBeenCalled();
-      spy.mockRestore();
-    }
-  };
 }
