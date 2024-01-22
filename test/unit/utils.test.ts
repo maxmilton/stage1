@@ -87,15 +87,6 @@ describe('create', () => {
     expect(create).toHaveLength(1);
   });
 
-  // TODO: happy-dom is missing HTMLOptionElement and HTMLOptGroupElement... remove these definitions when they are added
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (window.HTMLOptionElement || window.HTMLOptGroupElement)
-    throw new Error('Remove this when happy-dom adds HTMLOptionElement');
-  // @ts-expect-error - temporary
-  window.HTMLOptionElement = window.HTMLElement;
-  // @ts-expect-error - temporary
-  window.HTMLOptGroupElement = window.HTMLElement;
-
   const inputs = [
     ['x', window.HTMLUnknownElement],
     ['div', window.HTMLDivElement],

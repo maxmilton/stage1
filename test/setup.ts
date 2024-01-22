@@ -17,8 +17,7 @@ declare module 'bun:test' {
 }
 
 expect.extend({
-  // XXX: Although bun has a `toBeObject` matcher, it's not as useful since it
-  // doesn't check for plain objects.
+  // XXX: Bun's `toBeObject` matcher is the equivalent of `typeof x === 'object'`.
   toBePlainObject(received: unknown) {
     return Object.prototype.toString.call(received) === '[object Object]'
       ? { pass: true }
