@@ -20,22 +20,27 @@ module.exports = {
     'plugin:@typescript-eslint/strict-type-checked',
     'plugin:@typescript-eslint/stylistic-type-checked',
     'plugin:unicorn/recommended',
-    'prettier',
   ],
-  plugins: ['prettier'],
   rules: {
     '@typescript-eslint/explicit-module-boundary-types': ERROR,
     '@typescript-eslint/no-non-null-assertion': WARN,
     'import/prefer-default-export': OFF,
-    'import/order': OFF, // broken with prettier
     'no-restricted-syntax': OFF,
-    'prettier/prettier': WARN,
     'unicorn/filename-case': OFF,
     'unicorn/no-abusive-eslint-disable': WARN,
     'unicorn/no-null': OFF,
     'unicorn/prefer-module': WARN,
     'unicorn/prefer-top-level-await': WARN,
     'unicorn/prevent-abbreviations': OFF,
+
+    /* Covered by biome formatter */
+    '@typescript-eslint/indent': OFF,
+    'function-paren-newline': OFF,
+    'implicit-arrow-linebreak': OFF,
+    'max-len': OFF,
+    'object-curly-newline': OFF,
+    'operator-linebreak': OFF,
+    'unicorn/no-nested-ternary': OFF,
 
     /* Performance and byte savings */
     // byte savings
