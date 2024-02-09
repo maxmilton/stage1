@@ -1,13 +1,15 @@
 import { expect } from 'bun:test';
 import { GlobalWindow, type Window } from 'happy-dom';
 
+/* eslint-disable no-var, vars-on-top */
 declare global {
   /** Real bun console. `console` is mapped to happy-dom's virtual console. */
-  // eslint-disable-next-line no-var, vars-on-top
+  // biome-ignore lint/style/noVar: define global
   var console2: Console;
-  // eslint-disable-next-line no-var, vars-on-top
+  // biome-ignore lint/style/noVar: define global
   var happyDOM: Window['happyDOM'];
 }
+/* eslint-enable */
 
 declare module 'bun:test' {
   interface Matchers {

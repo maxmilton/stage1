@@ -71,7 +71,7 @@ describe('compile', () => {
 
   // TODO: Add documentation about this since it differs from the default compile.ts h() behaviour
   test('has 1 k and d properties when 1 text ref with whitespace', () => {
-    const meta = compile(`<div> @a</div>`);
+    const meta = compile('<div> @a</div>');
     expect(meta.k).toHaveLength(1);
     expect(meta.d).toHaveLength(1);
   });
@@ -162,7 +162,7 @@ describe('compile', () => {
         <circle cx=10 cy='10' r="10" />
       </svg>
     `);
-    expect(meta.html).toBe(`<svg><circle cx=10 cy='10' r="10" /></svg>`);
+    expect(meta.html).toBe('<svg><circle cx=10 cy=\'10\' r="10" /></svg>');
   });
 
   describe('keepComments option', () => {

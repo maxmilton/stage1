@@ -9,7 +9,7 @@ import * as nonKeyedExports from '../../src/reconcile/non-keyed';
 import * as reuseNodesExports from '../../src/reconcile/reuse-nodes';
 
 describe('browser', () => {
-  const PUBLIC_EXPORTS = [
+  const publicExports = [
     ['h', Function],
     ['html', Function],
     ['collect', Function],
@@ -25,7 +25,7 @@ describe('browser', () => {
     ['store', Function],
   ] as const;
 
-  for (const [name, type] of PUBLIC_EXPORTS) {
+  for (const [name, type] of publicExports) {
     test(`exports public "${name}" ${type.name}`, () => {
       expect(browserExports).toHaveProperty(name);
       expect(browserExports[name]).toBeInstanceOf(type);
@@ -33,7 +33,7 @@ describe('browser', () => {
   }
 
   test('does not export any private internals', () => {
-    const publicExportNames = PUBLIC_EXPORTS.map((x) => x[0]);
+    const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in browserExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -46,7 +46,7 @@ describe('browser', () => {
 });
 
 describe('index', () => {
-  const PUBLIC_EXPORTS = [
+  const publicExports = [
     ['h', Function],
     ['collect', Function],
     ['setupSyntheticEvent', Function],
@@ -61,7 +61,7 @@ describe('index', () => {
     ['store', Function],
   ] as const;
 
-  for (const [name, type] of PUBLIC_EXPORTS) {
+  for (const [name, type] of publicExports) {
     test(`exports public "${name}" ${type.name}`, () => {
       expect(indexExports).toHaveProperty(name);
       expect(indexExports[name]).toBeInstanceOf(type);
@@ -69,7 +69,7 @@ describe('index', () => {
   }
 
   test('does not export any private internals', () => {
-    const publicExportNames = PUBLIC_EXPORTS.map((x) => x[0]);
+    const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in indexExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -82,9 +82,9 @@ describe('index', () => {
 });
 
 describe('macro', () => {
-  const PUBLIC_EXPORTS = [['compile', Function]] as const;
+  const publicExports = [['compile', Function]] as const;
 
-  for (const [name, type] of PUBLIC_EXPORTS) {
+  for (const [name, type] of publicExports) {
     test(`exports public "${name}" ${type.name}`, () => {
       expect(macroExports).toHaveProperty(name);
       expect(macroExports[name]).toBeInstanceOf(type);
@@ -92,7 +92,7 @@ describe('macro', () => {
   }
 
   test('does not export any private internals', () => {
-    const publicExportNames = PUBLIC_EXPORTS.map((x) => x[0]);
+    const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in macroExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -104,13 +104,13 @@ describe('macro', () => {
   });
 });
 
-const RECONSILERS = [
+const reconsilers = [
   ['keyed', keyedExports],
   ['non-keyed', nonKeyedExports],
   ['reuse-nodes', reuseNodesExports],
 ] as const;
 
-for (const [reconsiler, exports] of RECONSILERS) {
+for (const [reconsiler, exports] of reconsilers) {
   describe(`reconcile/${reconsiler}`, () => {
     test('exports public "reconcile" Function', () => {
       expect(exports).toHaveProperty('reconcile');

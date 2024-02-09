@@ -18,6 +18,7 @@ const nativeToSyntheticEvent = (event: Event) => {
 
 export const setupSyntheticEvent = (type: keyof DocumentEventMap): void => {
   configuredEvents[type] ??=
+    // biome-ignore lint/style/noCommaOperator: code compactness
     (document.addEventListener(type, nativeToSyntheticEvent), true);
 };
 

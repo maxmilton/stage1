@@ -66,6 +66,7 @@ describe('setupSyntheticEvent', () => {
       button.click();
       expect(callback).toHaveBeenCalledTimes(1);
       deleteSyntheticEvent('click');
+      // biome-ignore lint/performance/noDelete: cleanup
       delete document.body.__click;
     });
 

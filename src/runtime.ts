@@ -31,7 +31,7 @@ export const collect = <R extends Refs>(
   const refs: Refs = {};
   const len = k.length;
   let index = 0;
-  let distance;
+  let distance: number;
   walker.currentNode = root;
 
   for (; index < len; index++) {

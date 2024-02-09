@@ -45,8 +45,8 @@ describe('store', () => {
       v: new TestClass(),
       w: TestClass,
       x: /test/,
-      // eslint-disable-next-line prefer-regex-literals
-      y: new RegExp('test'),
+      // biome-ignore lint/complexity/useRegexLiterals: <explanation>
+      y: new RegExp('test'), // eslint-disable-line prefer-regex-literals
       z: window,
     };
     const state = store(initialState);

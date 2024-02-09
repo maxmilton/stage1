@@ -15,7 +15,7 @@ export interface View extends Node, ChildNode {
 
 const compilerTemplate = create('template');
 const treeWalker = document.createTreeWalker(compilerTemplate);
-let str;
+let str: string | null | undefined;
 
 const collector = (node: Node): string | undefined => {
   // 1 = Node.ELEMENT_NODE
@@ -93,8 +93,8 @@ export const collect = <R extends Refs = Refs>(
   const refs: Refs = {};
   const len = view.$$refs.length;
   let index = 0;
-  let metadata;
-  let distance;
+  let metadata: RefMeta;
+  let distance: number;
   walker.currentNode = root;
 
   for (; index < len; index++) {
