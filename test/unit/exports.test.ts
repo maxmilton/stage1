@@ -27,12 +27,14 @@ describe('browser', () => {
 
   for (const [name, type] of publicExports) {
     test(`exports public "${name}" ${type.name}`, () => {
+      expect.assertions(2);
       expect(browserExports).toHaveProperty(name);
       expect(browserExports[name]).toBeInstanceOf(type);
     });
   }
 
   test('does not export any private internals', () => {
+    expect.assertions(publicExports.length + 1);
     const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in browserExports) {
       expect(publicExportNames).toContain(name);
@@ -41,6 +43,7 @@ describe('browser', () => {
   });
 
   test('has no default export', () => {
+    expect.assertions(1);
     expect(browserExports).not.toHaveProperty('default');
   });
 });
@@ -63,12 +66,14 @@ describe('index', () => {
 
   for (const [name, type] of publicExports) {
     test(`exports public "${name}" ${type.name}`, () => {
+      expect.assertions(2);
       expect(indexExports).toHaveProperty(name);
       expect(indexExports[name]).toBeInstanceOf(type);
     });
   }
 
   test('does not export any private internals', () => {
+    expect.assertions(publicExports.length + 1);
     const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in indexExports) {
       expect(publicExportNames).toContain(name);
@@ -77,6 +82,7 @@ describe('index', () => {
   });
 
   test('has no default export', () => {
+    expect.assertions(1);
     expect(indexExports).not.toHaveProperty('default');
   });
 });
@@ -86,12 +92,14 @@ describe('macro', () => {
 
   for (const [name, type] of publicExports) {
     test(`exports public "${name}" ${type.name}`, () => {
+      expect.assertions(2);
       expect(macroExports).toHaveProperty(name);
       expect(macroExports[name]).toBeInstanceOf(type);
     });
   }
 
   test('does not export any private internals', () => {
+    expect.assertions(publicExports.length + 1);
     const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in macroExports) {
       expect(publicExportNames).toContain(name);
@@ -100,6 +108,7 @@ describe('macro', () => {
   });
 
   test('has no default export', () => {
+    expect.assertions(1);
     expect(macroExports).not.toHaveProperty('default');
   });
 });
@@ -113,11 +122,13 @@ const reconsilers = [
 for (const [reconsiler, exports] of reconsilers) {
   describe(`reconcile/${reconsiler}`, () => {
     test('exports public "reconcile" Function', () => {
+      expect.assertions(2);
       expect(exports).toHaveProperty('reconcile');
       expect(exports.reconcile).toBeInstanceOf(Function);
     });
 
     test('does not export any private internals', () => {
+      expect.assertions(2);
       const publicExportNames = ['reconcile'];
       for (const name in exports) {
         expect(publicExportNames).toContain(name);
@@ -126,6 +137,7 @@ for (const [reconsiler, exports] of reconsilers) {
     });
 
     test('has no default export', () => {
+      expect.assertions(1);
       expect(exports).not.toHaveProperty('default');
     });
   });

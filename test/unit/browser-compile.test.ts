@@ -8,6 +8,7 @@ describe('h', () => {
   afterEach(cleanup);
 
   test('renders basic template', () => {
+    expect.assertions(1);
     const view = h(`
       <ul>
         <li>A</li>
@@ -20,6 +21,7 @@ describe('h', () => {
   });
 
   test('renders basic template with messy whitespace', () => {
+    expect.assertions(1);
     const view = h(`
       <ul>
         <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
@@ -35,6 +37,7 @@ describe('h', () => {
   });
 
   test('renders SVG template', () => {
+    expect.assertions(2);
     const view = h(`
       <svg>
         <circle cx=10 cy='10' r="10" />
@@ -48,6 +51,7 @@ describe('h', () => {
   });
 
   test('returns root element', () => {
+    expect.assertions(3);
     const view = h(`
       <ul id=root>
         <li>A</li>
@@ -62,6 +66,7 @@ describe('h', () => {
   });
 
   test('removes refs in template from output DOM', () => {
+    expect.assertions(1);
     const view = h(`
       <ul @list>
         <li @item-one>A</li>
@@ -81,6 +86,7 @@ describe('html', () => {
   afterEach(cleanup);
 
   test('renders basic template', () => {
+    expect.assertions(1);
     const view = html`
       <ul>
         <li>A</li>
@@ -95,6 +101,7 @@ describe('html', () => {
 
 describe('collect', () => {
   test('collects all refs', () => {
+    expect.assertions(39);
     const view = h(`
       <div @a>
         <header @b>
@@ -164,6 +171,7 @@ describe('collect', () => {
   });
 
   test('collects ref at start of element attributes', () => {
+    expect.assertions(4);
     const view = h(`
       <div>
         <input @search id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off />
@@ -177,6 +185,7 @@ describe('collect', () => {
   });
 
   test('collects ref at end of element attributes', () => {
+    expect.assertions(4);
     const view = h(`
       <div>
         <input id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off @search />
@@ -190,6 +199,7 @@ describe('collect', () => {
   });
 
   test('collects ref in middle of element attributes', () => {
+    expect.assertions(4);
     const view = h(`
       <div>
         <input id=search name=q class="input search" type=search minlength=2 @search maxlength=40 placeholder="Search..." autofocus autocomplete=off />

@@ -4,19 +4,23 @@ import { store } from '../../src/store';
 
 describe('store', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(store).toBeInstanceOf(Function);
   });
 
   test('expects 1 parameter', () => {
+    expect.assertions(1);
     expect(store).toHaveLength(1);
   });
 
   test('returns a Proxy', () => {
+    expect.assertions(1);
     const state = store({});
     expect(isProxy(state)).toBe(true);
   });
 
   test('returns an object with the same properties', () => {
+    expect.assertions(25);
     // eslint-disable-next-line @typescript-eslint/no-extraneous-class
     class TestClass {}
     const s = Symbol('s');
@@ -57,12 +61,14 @@ describe('store', () => {
   });
 
   test('returns an object with an on() function', () => {
+    expect.assertions(2);
     const state = store({});
     expect(state.on).toBeInstanceOf(Function);
     expect(state.on).toHaveLength(2); // 2 parameters
   });
 
   test('returns off() function from on()', () => {
+    expect.assertions(2);
     const state = store({ a: 1 });
     const off = state.on('a', () => {});
     expect(off).toBeInstanceOf(Function);
@@ -70,6 +76,7 @@ describe('store', () => {
   });
 
   test('mutating initial state does not mutate store state', () => {
+    expect.assertions(1);
     const initialState = { a: 1 };
     const state = store(initialState);
     initialState.a = 2;
@@ -77,6 +84,7 @@ describe('store', () => {
   });
 
   test('mutating store state does not mutate initial state', () => {
+    expect.assertions(1);
     const initialState = { a: 1 };
     const state = store(initialState);
     state.a = 2;
@@ -84,6 +92,7 @@ describe('store', () => {
   });
 
   test('mutating store state triggers callback', () => {
+    expect.assertions(4);
     const initialState = { a: 0 };
     const state = store(initialState);
     const callback = mock(() => {});
@@ -98,6 +107,7 @@ describe('store', () => {
   });
 
   test('mutating store state does not trigger callback after off()', () => {
+    expect.assertions(2);
     const initialState = { a: 0 };
     const state = store(initialState);
     const callback = mock(() => {});
@@ -111,6 +121,7 @@ describe('store', () => {
   });
 
   test('calls callback with new value and previous value', () => {
+    expect.assertions(1);
     const initialState = { a: 'old' };
     const state = store(initialState);
     const callback = mock(() => {});
@@ -120,6 +131,7 @@ describe('store', () => {
   });
 
   test('calls all callbacks for mutated property', () => {
+    expect.assertions(9);
     const initialState = { a: 0 };
     const state = store(initialState);
     const callback1 = mock(() => {});
@@ -144,6 +156,7 @@ describe('store', () => {
   });
 
   test('calls only callbacks for mutated property', () => {
+    expect.assertions(12);
     const initialState = { a: 0, b: 0, c: 0 };
     const state = store(initialState);
     const callbackA = mock(() => {});

@@ -9,6 +9,7 @@ describe('h', () => {
   afterEach(cleanup);
 
   test('renders basic template', () => {
+    expect.assertions(1);
     const meta = compile(`
       <ul>
         <li>A</li>
@@ -22,6 +23,7 @@ describe('h', () => {
   });
 
   test('renders basic template with messy whitespace', () => {
+    expect.assertions(1);
     const meta = compile(`
       <ul>
         <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
@@ -38,6 +40,7 @@ describe('h', () => {
   });
 
   test('renders SVG template', () => {
+    expect.assertions(2);
     const meta = compile(`
       <svg>
         <circle cx=10 cy='10' r="10" />
@@ -52,6 +55,7 @@ describe('h', () => {
   });
 
   test('returns root element', () => {
+    expect.assertions(3);
     const meta = compile(`
       <ul id=root>
         <li>A</li>
@@ -67,6 +71,7 @@ describe('h', () => {
   });
 
   test('removes refs in template from output DOM', () => {
+    expect.assertions(1);
     const meta = compile(`
       <ul @list>
         <li @item-one>A</li>
@@ -79,6 +84,7 @@ describe('h', () => {
   });
 
   test('does not minify in whitespace-sensitive blocks', () => {
+    expect.assertions(1);
     const meta = compile(`
       <div>
         <pre>
@@ -115,6 +121,7 @@ describe('h', () => {
 //   afterEach(cleanup);
 //
 //   test('renders basic template', () => {
+//     expect.assertions(1);
 //     const view = html`
 //       <ul>
 //         <li>A</li>
@@ -130,6 +137,7 @@ describe('h', () => {
 
 describe('collect', () => {
   test('collects all refs', () => {
+    expect.assertions(39);
     const meta = compile(`
       <div @a>
         <header @b>
@@ -200,6 +208,7 @@ describe('collect', () => {
   });
 
   test('collects ref at start of element attributes', () => {
+    expect.assertions(4);
     const meta = compile(`
       <div>
         <input @search id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off />
@@ -214,6 +223,7 @@ describe('collect', () => {
   });
 
   test('collects ref at end of element attributes', () => {
+    expect.assertions(4);
     const meta = compile(`
       <div>
         <input id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off @search />
@@ -228,6 +238,7 @@ describe('collect', () => {
   });
 
   test('collects ref in middle of element attributes', () => {
+    expect.assertions(4);
     const meta = compile(`
       <div>
         <input id=search name=q class="input search" type=search minlength=2 @search maxlength=40 placeholder="Search..." autofocus autocomplete=off />
@@ -247,6 +258,7 @@ describe('collect', () => {
 
   describe('keepComments option', () => {
     test('collects refs when option is default', () => {
+      expect.assertions(11);
       const meta = compile(`
         <div>
           <!-- -->
@@ -278,6 +290,7 @@ describe('collect', () => {
     });
 
     test('collects refs when option is true', () => {
+      expect.assertions(13);
       const meta = compile(
         `
           <div>
@@ -314,6 +327,7 @@ describe('collect', () => {
     });
 
     test('collects refs when option is false', () => {
+      expect.assertions(11);
       const meta = compile(
         `
           <div>
@@ -349,6 +363,7 @@ describe('collect', () => {
   });
 
   describe('keepSpaces option', () => {
+    expect.assertions(7);
     test('collects refs when option is default', () => {
       const meta = compile(`
         <div>
@@ -371,6 +386,7 @@ describe('collect', () => {
     });
 
     test('collects refs when option is true', () => {
+      expect.assertions(7);
       const meta = compile(
         `
           <div>
@@ -395,6 +411,7 @@ describe('collect', () => {
     });
 
     test('collects refs when option is false', () => {
+      expect.assertions(7);
       const meta = compile(
         `
           <div>

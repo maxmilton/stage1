@@ -48,42 +48,51 @@ const NOT_DOM_NODES = [
 
 describe('noop', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(noop).toBeInstanceOf(Function);
   });
 
   test('expects no parameters', () => {
+    expect.assertions(1);
     expect(noop).toHaveLength(0);
   });
 
   test('returns undefined', () => {
+    expect.assertions(1);
     expect(noop()).toBeUndefined();
   });
 
   test('is an empty function', () => {
+    expect.assertions(1);
     expect(noop.toString()).toBe('() => {\n}');
   });
 });
 
 describe('createFragment', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(createFragment).toBeInstanceOf(Function);
   });
 
   test('expects no parameters', () => {
+    expect.assertions(1);
     expect(createFragment).toHaveLength(0);
   });
 
   test('returns a DocumentFragment', () => {
+    expect.assertions(1);
     expect(createFragment()).toBeInstanceOf(window.DocumentFragment);
   });
 });
 
 describe('create', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(create).toBeInstanceOf(Function);
   });
 
   test('expects 1 parameter', () => {
+    expect.assertions(1);
     expect(create).toHaveLength(1);
   });
 
@@ -151,6 +160,7 @@ describe('create', () => {
 
   for (const [input, expected] of inputs) {
     test(`returns ${expected.name} for "${input}" argument`, () => {
+      expect.assertions(1);
       // @ts-expect-error - "x" is an intentional invalid element name
       expect(create(input)).toBeInstanceOf(expected);
     });
@@ -159,14 +169,17 @@ describe('create', () => {
 
 describe('append', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(append).toBeInstanceOf(Function);
   });
 
   test('expects 2 parameters', () => {
+    expect.assertions(1);
     expect(append).toHaveLength(2);
   });
 
   test('throws without parameters', () => {
+    expect.assertions(5);
     // @ts-expect-error - intentional invalid parameters
     expect(() => append()).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
@@ -182,6 +195,7 @@ describe('append', () => {
   });
 
   test('throws when parameters are not an element', () => {
+    expect.assertions(NOT_DOM_NODES.length * 2);
     for (const input of NOT_DOM_NODES) {
       // @ts-expect-error - intentional invalid parameters
       expect(() => append(ul.cloneNode(), input)).toThrow(window.TypeError);
@@ -191,6 +205,7 @@ describe('append', () => {
   });
 
   test('appends child element', () => {
+    expect.assertions(1);
     const root = ul.cloneNode() as HTMLUListElement;
     append(liA.cloneNode(), root);
     append(liB.cloneNode(), root);
@@ -203,14 +218,17 @@ describe('append', () => {
 
 describe('prepend', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(prepend).toBeInstanceOf(Function);
   });
 
   test('expects 2 parameters', () => {
+    expect.assertions(1);
     expect(prepend).toHaveLength(2);
   });
 
   test('throws without parameters', () => {
+    expect.assertions(5);
     // @ts-expect-error - intentional invalid parameters
     expect(() => prepend()).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
@@ -226,6 +244,7 @@ describe('prepend', () => {
   });
 
   test('throws when parameters are not an element', () => {
+    expect.assertions(NOT_DOM_NODES.length * 2);
     for (const input of NOT_DOM_NODES) {
       // @ts-expect-error - intentional invalid parameters
       expect(() => prepend(ul.cloneNode(), input)).toThrow(window.TypeError);
@@ -235,6 +254,7 @@ describe('prepend', () => {
   });
 
   test('prepends child element', () => {
+    expect.assertions(1);
     const root = ul.cloneNode() as HTMLUListElement;
     prepend(liA.cloneNode(), root);
     prepend(liB.cloneNode(), root);
@@ -247,14 +267,17 @@ describe('prepend', () => {
 
 describe('clone', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(clone).toBeInstanceOf(Function);
   });
 
   test('expects 1 parameter', () => {
+    expect.assertions(1);
     expect(clone).toHaveLength(1);
   });
 
   test('throws without parameters', () => {
+    expect.assertions(3);
     // @ts-expect-error - intentional invalid parameters
     expect(() => clone()).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
@@ -277,6 +300,7 @@ describe('clone', () => {
 
   for (const input of inputs) {
     test(`returns cloned ${input.tagName} element`, () => {
+      expect.assertions(2);
       const result = clone(input);
       expect(result).not.toBe(input);
       expect(result.tagName).toBe(input.tagName);
@@ -286,14 +310,17 @@ describe('clone', () => {
 
 describe('onRemove', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(onRemove).toBeInstanceOf(Function);
   });
 
   test('expects 2 parameters', () => {
+    expect.assertions(1);
     expect(onRemove).toHaveLength(2);
   });
 
   test('calls callback when watched element is removed', async () => {
+    expect.assertions(1);
     const spy = mock(() => {});
     const root = document.createElement('div');
     document.body.appendChild(root);
@@ -304,6 +331,7 @@ describe('onRemove', () => {
   });
 
   test('calls callback when parent parent element is removed', async () => {
+    expect.assertions(1);
     const spy = mock(() => {});
     const root = document.createElement('div');
     const parent = document.createElement('div');
@@ -318,6 +346,7 @@ describe('onRemove', () => {
   });
 
   test('does not call callback when nested child element is removed', async () => {
+    expect.assertions(1);
     const spy = mock(() => {});
     const root = document.createElement('div');
     const child = document.createElement('div');
@@ -330,6 +359,7 @@ describe('onRemove', () => {
   });
 
   test('does not call callback when element is added or moved', async () => {
+    expect.assertions(1);
     const spy = mock(() => {});
     const root = document.createElement('div');
     const child = document.createElement('div');

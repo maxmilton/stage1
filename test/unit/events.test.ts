@@ -11,14 +11,17 @@ declare global {
 
 describe('setupSyntheticEvent', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(setupSyntheticEvent).toBeInstanceOf(Function);
   });
 
   test('expects 1 parameter', () => {
+    expect.assertions(1);
     expect(setupSyntheticEvent).toHaveLength(1);
   });
 
   test('returns undefined', () => {
+    expect.assertions(1);
     expect(setupSyntheticEvent('abort')).toBeUndefined();
   });
 
@@ -26,6 +29,7 @@ describe('setupSyntheticEvent', () => {
     afterEach(cleanup);
 
     test('calls synthetic click handler on click event', () => {
+      expect.assertions(1);
       const button = document.createElement('button');
       const callback = mock(() => {});
       button.__click = callback;
@@ -39,6 +43,7 @@ describe('setupSyntheticEvent', () => {
     });
 
     test('propagates click event from deeply nested element', () => {
+      expect.assertions(1);
       const button = document.createElement('button');
       const div = document.createElement('div');
       const span = document.createElement('span');
@@ -58,6 +63,7 @@ describe('setupSyntheticEvent', () => {
     });
 
     test('propagates up to document body', () => {
+      expect.assertions(1);
       const button = document.createElement('button');
       const callback = mock(() => {});
       document.body.__click = callback;
@@ -71,6 +77,7 @@ describe('setupSyntheticEvent', () => {
     });
 
     test('no longer propagates click event once handled', () => {
+      expect.assertions(1);
       const div1 = document.createElement('div');
       const div2 = document.createElement('div');
       const callback = mock(() => {});
@@ -85,6 +92,7 @@ describe('setupSyntheticEvent', () => {
     });
 
     test('does not call handler if synthetic event is not setup', () => {
+      expect.assertions(1);
       const button = document.createElement('button');
       const callback = mock(() => {});
       button.__click = callback;
@@ -94,6 +102,7 @@ describe('setupSyntheticEvent', () => {
     });
 
     test('does not call handler if event originates from another DOM tree branch', () => {
+      expect.assertions(2);
       const div = document.createElement('div');
       const button1 = document.createElement('button');
       const button2 = document.createElement('button');
@@ -112,6 +121,7 @@ describe('setupSyntheticEvent', () => {
     });
 
     test('only registers synthetic click handler once', () => {
+      expect.assertions(1);
       const button = document.createElement('button');
       const callback = mock(() => {});
       button.__click = callback;
@@ -127,14 +137,17 @@ describe('setupSyntheticEvent', () => {
 
 describe('deleteSyntheticEvent', () => {
   test('is a function', () => {
+    expect.assertions(1);
     expect(deleteSyntheticEvent).toBeInstanceOf(Function);
   });
 
   test('expects 1 parameter', () => {
+    expect.assertions(1);
     expect(deleteSyntheticEvent).toHaveLength(1);
   });
 
   test('returns undefined', () => {
+    expect.assertions(1);
     expect(deleteSyntheticEvent('abort')).toBeUndefined();
   });
 
@@ -142,6 +155,7 @@ describe('deleteSyntheticEvent', () => {
     afterEach(cleanup);
 
     test('does not call synthetic click handler after delete', () => {
+      expect.assertions(2);
       const button = document.createElement('button');
       const callback = mock(() => {});
       button.__click = callback;
