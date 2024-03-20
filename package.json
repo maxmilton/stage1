@@ -51,20 +51,20 @@
     "test:e2e": "TZ=UTC playwright test"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.5.3",
-    "@playwright/test": "1.41.2",
-    "@types/bun": "1.0.5",
-    "@typescript-eslint/eslint-plugin": "6.21.0",
-    "@typescript-eslint/parser": "6.21.0",
-    "dts-buddy": "0.4.4",
-    "eslint": "8.56.0",
+    "@biomejs/biome": "1.6.1",
+    "@playwright/test": "1.42.1",
+    "@types/bun": "1.0.10",
+    "@typescript-eslint/eslint-plugin": "7.3.1",
+    "@typescript-eslint/parser": "7.3.1",
+    "dts-buddy": "0.4.5",
+    "eslint": "8.57.0",
     "eslint-config-airbnb-base": "15.0.0",
-    "eslint-config-airbnb-typescript": "17.1.0",
+    "eslint-config-airbnb-typescript": "18.0.0",
     "eslint-plugin-import": "2.29.1",
     "eslint-plugin-unicorn": "51.0.1",
-    "happy-dom": "13.3.8",
-    "rollup": "4.9.6",
-    "terser": "5.27.0",
-    "typescript": "5.3.3"
+    "happy-dom": "14.0.0",
+    "rollup": "4.13.0",
+    "terser": "5.29.2",
+    "typescript": "5.4.2"
   }
 }
