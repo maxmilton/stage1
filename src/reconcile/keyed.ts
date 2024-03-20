@@ -136,7 +136,7 @@ export const reconcile = <T, N extends Node>(
     a = renderedData[prevStart];
     b = data[newStart];
     while (a[key] === b[key]) {
-      // @ts-expect-error - FIXME:!
+      // @ts-expect-error - FIXME: prevStartNode type
       updateFn(prevStartNode, b);
       prevStart++;
       newStart++;
@@ -150,7 +150,7 @@ export const reconcile = <T, N extends Node>(
     a = renderedData[prevEnd];
     b = data[newEnd];
     while (a[key] === b[key]) {
-      // @ts-expect-error - FIXME:!
+      // @ts-expect-error - FIXME: prevEndNode type
       updateFn(prevEndNode, b);
       prevEnd--;
       newEnd--;
@@ -166,7 +166,7 @@ export const reconcile = <T, N extends Node>(
     b = data[newStart];
     while (a[key] === b[key]) {
       loop = true;
-      // @ts-expect-error - FIXME:!
+      // @ts-expect-error - FIXME: prevEndNode type
       updateFn(prevEndNode, b);
       tmpNode = prevEndNode!.previousSibling;
       parent.insertBefore(prevEndNode!, newStartNode);
@@ -183,7 +183,7 @@ export const reconcile = <T, N extends Node>(
     b = data[newEnd];
     while (a[key] === b[key]) {
       loop = true;
-      // @ts-expect-error - FIXME:!
+      // @ts-expect-error - FIXME: prevStartNode type
       updateFn(prevStartNode, b);
       tmpNode = prevStartNode!.nextSibling;
       parent.insertBefore(prevStartNode!, afterNode!);
@@ -306,7 +306,7 @@ export const reconcile = <T, N extends Node>(
   for (let i = newEnd; i >= newStart; i--) {
     if (longestSeq[lisIdx] === i) {
       afterNode = nodes[P[longestSeq[lisIdx]]];
-      // @ts-expect-error - FIXME:!
+      // @ts-expect-error - FIXME: afterNode type
       updateFn(afterNode, data[i]);
       lisIdx--;
     } else {
@@ -314,7 +314,7 @@ export const reconcile = <T, N extends Node>(
         tmpD = createFn(data[i]);
       } else {
         tmpD = nodes[P[i]]!;
-        // @ts-expect-error - FIXME:!
+        // @ts-expect-error - FIXME: tmpD type
         updateFn(tmpD, data[i]);
       }
       parent.insertBefore(tmpD, afterNode!);

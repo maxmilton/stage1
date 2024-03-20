@@ -49,10 +49,10 @@ export const reconcile = <T, N extends Node>(
   for (; index < len; index++) {
     item = data[index];
     if (head) {
-      // @ts-expect-error - FIXME:!
+      // @ts-expect-error - FIXME: head type
       updateFn(head, item);
     } else {
-      // @ts-expect-error - FIXME:!
+      // @ts-expect-error - FIXME: head type
       head = createFn(item);
       if (mode) {
         parent.insertBefore(head!, afterNode!);
