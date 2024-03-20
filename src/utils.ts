@@ -9,13 +9,15 @@ export const append = <T extends Node>(node: T, parent: Node): T =>
   parent.appendChild(node);
 export const prepend = <T extends Node>(node: T, parent: Node): T =>
   parent.insertBefore(node, parent.firstChild);
+export const clone = <T extends Node>(node: T): T => node.cloneNode(true) as T;
 
 /**
  * Runs callback function when a specified node is removed from the DOM.
  *
- * @remarks Use sparingly to minimize performance overhead.
+ * @remarks Somewhat computationally expensive, especially when there are many
+ * DOM mutations. Use sparingly to minimize performance overhead.
  */
-export const onNodeRemove = (node: Node, fn: () => void): void => {
+export const onRemove = (node: Node, fn: () => void): void => {
   new MutationObserver((mutations, observer) => {
     for (const mutation of mutations) {
       for (const removedNode of mutation.removedNodes) {
@@ -26,7 +28,7 @@ export const onNodeRemove = (node: Node, fn: () => void): void => {
         }
       }
     }
-  }).observe(document.documentElement, {
+  }).observe(document, {
     childList: true,
     subtree: true,
   });

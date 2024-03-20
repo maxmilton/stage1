@@ -1,70 +1,70 @@
 {
   "name": "stage1",
-  "version": "0.7.2",
+  "version": "0.8.0-next.8",
   "type": "module",
   "description": "High-performance JavaScript micro framework",
   "repository": "maxmilton/stage1",
-  "homepage": "https://github.com/maxmilton/stage1",
   "author": "Max Milton <max@happyhackers.xyz>",
   "license": "MIT",
+  "sideEffects": false,
   "main": "dist/index.js",
+  "browser": "dist/browser.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./reconcile/keyed": "./dist/reconcile/keyed.js",
-    "./reconcile/non-keyed": "./dist/reconcile/non-keyed.js",
-    "./reconcile/reuse-nodes": "./dist/reconcile/reuse-nodes.js",
-    "./store": "./dist/store.js",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./macro": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/macro.js"
+    },
+    "./browser": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/browser.mjs",
+      "require": "./dist/browser.js"
+    },
+    "./reconcile/keyed": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/reconcile/keyed.js"
+    },
+    "./reconcile/non-keyed": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/reconcile/non-keyed.js"
+    },
+    "./reconcile/reuse-nodes": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/reconcile/reuse-nodes.js"
+    },
+    "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
-  "types": "dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "reconcile/keyed": [
-        "dist/reconcile/keyed.d.ts"
-      ],
-      "reconcile/non-keyed": [
-        "dist/reconcile/non-keyed.d.ts"
-      ],
-      "reconcile/reuse-nodes": [
-        "dist/reconcile/reuse-nodes.d.ts"
-      ],
-      "store": [
-        "dist/store.d.ts"
-      ]
-    }
-  },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist", "src"],
   "scripts": {
-    "build": "pnpm run prebuild && node build.mjs && pnpm run postbuild",
-    "dev": "DEV_BUILD=1 node build.mjs",
-    "lint": "pnpm run lint:js && pnpm run lint:ts",
-    "lint:js": "eslint --ignore-path .gitignore --ext .ts,.js,.mjs,.cjs .",
-    "lint:ts": "tsc --project test --noEmit",
-    "postbuild": "tsc --emitDeclarationOnly",
-    "prebuild": "rm -rf dist; mkdir dist",
-    "test": "c8 --all --include=src --reporter=text --reporter=lcovonly uvu -r tsm -r \"$PWD\"/test/setup.ts test '\\.test\\.ts$'"
+    "build": "bun build.ts",
+    "lint": "bun run lint:fmt && bun run lint:js && bun run lint:ts",
+    "lint:fmt": "biome format .",
+    "lint:js": "eslint --ignore-path .gitignore --ignore-pattern bench --ext .ts,.mjs,.js,.cjs .",
+    "lint:ts": "tsc --noEmit",
+    "prebuild": "rm -rf dist",
+    "test": "bun test --preload ./test/setup.ts test/unit --coverage",
+    "test:e2e": "TZ=UTC playwright test"
   },
   "devDependencies": {
-    "@types/jsdom": "21.1.1",
-    "@types/node": "20.4.1",
-    "@typescript-eslint/eslint-plugin": "5.61.0",
-    "@typescript-eslint/parser": "5.61.0",
-    "c8": "8.0.0",
-    "esbuild": "0.18.11",
-    "eslint": "8.44.0",
+    "@biomejs/biome": "1.6.1",
+    "@playwright/test": "1.42.1",
+    "@types/bun": "1.0.10",
+    "@typescript-eslint/eslint-plugin": "7.3.1",
+    "@typescript-eslint/parser": "7.3.1",
+    "dts-buddy": "0.4.5",
+    "eslint": "8.57.0",
     "eslint-config-airbnb-base": "15.0.0",
-    "eslint-config-airbnb-typescript": "17.0.0",
-    "eslint-config-prettier": "8.8.0",
-    "eslint-plugin-import": "2.27.5",
-    "eslint-plugin-prettier": "5.0.0-alpha.2",
-    "jsdom": "22.1.0",
-    "nanospy": "1.0.0",
-    "prettier": "3.0.0",
-    "tsm": "2.3.0",
-    "typescript": "5.1.6",
-    "uvu": "0.5.6"
-  },
-  "sideEffects": false
+    "eslint-config-airbnb-typescript": "18.0.0",
+    "eslint-plugin-import": "2.29.1",
+    "eslint-plugin-unicorn": "51.0.1",
+    "happy-dom": "14.0.0",
+    "rollup": "4.13.0",
+    "terser": "5.29.2",
+    "typescript": "5.4.2"
+  }
 }
