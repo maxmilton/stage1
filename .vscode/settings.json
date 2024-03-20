@@ -11,7 +11,7 @@
   "prettier.enable": false, // use biome instead
   "typescript.tsdk": "node_modules/typescript/lib",
 
-  "[json][jsonc][markdown]": {
+  "[css][html][json][jsonc][markdown][xml]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
   "[javascript][typescript]": {

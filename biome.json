@@ -56,12 +56,15 @@
         "noConstEnum": "off",
         "noExplicitAny": "off",
         "noMisrefactoredShorthandAssign": "error"
+      },
+      "nursery": {
+        "noFocusedTests": "error"
       }
     }
   },
   "overrides": [
     {
-      "include": [".vscode/**"],
+      "include": [".vscode/**", "tsconfig.json", "tsconfig.node.json"],
       "json": {
         "parser": {
           "allowComments": true,
