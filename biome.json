@@ -18,7 +18,7 @@
   "javascript": {
     "formatter": {
       "semicolons": "always",
-      "trailingComma": "all",
+      "trailingCommas": "all",
       "quoteStyle": "single"
     }
   },
@@ -55,10 +55,8 @@
         "noConsoleLog": "warn",
         "noConstEnum": "off",
         "noExplicitAny": "off",
+        "noFocusedTests": "error",
         "noMisrefactoredShorthandAssign": "error"
-      },
-      "nursery": {
-        "noFocusedTests": "error"
       }
     }
   },

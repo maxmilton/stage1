@@ -1,5 +1,3 @@
-'use strict'; // eslint-disable-line
-
 const OFF = 0;
 const WARN = 1;
 const ERROR = 2;
@@ -27,9 +25,11 @@ module.exports = {
     'import/prefer-default-export': OFF,
     'no-restricted-syntax': OFF,
     'unicorn/filename-case': OFF,
+    'unicorn/import-style': WARN,
     'unicorn/no-abusive-eslint-disable': WARN,
     'unicorn/no-null': OFF,
     'unicorn/prefer-module': WARN,
+    'unicorn/prefer-string-raw': WARN,
     'unicorn/prefer-top-level-await': WARN,
     'unicorn/prevent-abbreviations': OFF,
 
