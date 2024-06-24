@@ -78,6 +78,7 @@ await Bun.build({
   ],
   outdir: 'dist/reconcile',
   target: 'browser',
+  minify: true,
   sourcemap: 'external',
 });
 
