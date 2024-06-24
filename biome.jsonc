@@ -1,13 +1,6 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
-  "organizeImports": {
-    "enabled": false
-  },
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "formatter": {
     "formatWithErrors": true,
     "indentStyle": "space",
@@ -15,6 +8,7 @@
     "lineEnding": "lf",
     "lineWidth": 80
   },
+  "organizeImports": { "enabled": true },
   "javascript": {
     "formatter": {
       "semicolons": "always",
@@ -23,12 +17,15 @@
     }
   },
   "linter": {
-    "ignore": ["bench/**", "src/reconcile/*.ts"],
     "rules": {
       "recommended": true,
       "complexity": {
         "noForEach": "off",
-        "useSimplifiedLogicExpression": "warn"
+        "useSimplifiedLogicExpression": "info"
+      },
+      "performance": {
+        "noBarrelFile": "info",
+        "noReExportAll": "info"
       },
       "style": {
         "noNamespace": "error",
@@ -45,7 +42,7 @@
         },
         "useShorthandArrayType": "error",
         "useShorthandAssign": "error",
-        "useSingleCaseStatement": "off",
+        "useSingleCaseStatement": "error",
         "useTemplate": "off"
       },
       "suspicious": {
@@ -88,6 +85,20 @@
           }
         }
       }
+    },
+    {
+      "include": ["src/reconcile/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noParameterAssign": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["bench/**"],
+      "linter": { "enabled": false }
     }
   ]
 }
