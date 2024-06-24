@@ -43,8 +43,8 @@
   "scripts": {
     "build": "bun build.ts",
     "lint": "bun run lint:fmt && bun run lint:js && bun run lint:ts",
-    "lint:fmt": "biome format .",
-    "lint:js": "eslint --ignore-path .gitignore --ignore-pattern bench --ext .ts,.mjs,.js,.cjs .",
+    "lint:fmt": "biome check",
+    "lint:js": "eslint",
     "lint:ts": "tsc --noEmit",
     "prebuild": "rm -rf dist",
     "test": "bun test --preload ./test/setup.ts test/unit --coverage",
