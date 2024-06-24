@@ -1,4 +1,4 @@
-import type { LowercaseKeys, Refs } from '../types';
+import type { InferRefs, LowercaseKeys, Refs } from '../types';
 import { create } from '../utils';
 
 interface RefMeta {
@@ -87,7 +87,7 @@ export const html = (
  * typed key names to bring awareness to this.
  */
 /* @__NOINLINE__ */
-export const collect = <R extends Refs = Refs>(
+export const collect = <R extends InferRefs<R> = Refs>(
   root: Node,
   view: View,
 ): LowercaseKeys<R> => {

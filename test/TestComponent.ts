@@ -7,9 +7,9 @@ interface TestProps {
   text: string;
 }
 
-type Refs = {
+interface Refs {
   t: Text;
-};
+}
 
 const meta = compile(`
   <div id=test>

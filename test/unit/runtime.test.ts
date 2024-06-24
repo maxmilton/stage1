@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { compile } from '../../src/macro' assert { type: 'macro' };
 import { collect, h } from '../../src/runtime';
+import type { Refs } from '../../src/types';
 import { cleanup, render } from './utils';
 
 describe('h', () => {
@@ -165,7 +166,7 @@ describe('collect', () => {
       </div>
     `);
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
+    const refs = collect<Refs>(view, meta.k, meta.d);
     expect(refs.a.nodeName).toEqual('DIV');
     expect(refs.a).toBeInstanceOf(window.HTMLDivElement);
     expect(refs.b.nodeName).toEqual('HEADER');
@@ -275,7 +276,7 @@ describe('collect', () => {
         </div>
       `);
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
+      const refs = collect<Refs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toEqual('#text');
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b).toBeUndefined();
@@ -310,7 +311,7 @@ describe('collect', () => {
         { keepComments: true },
       );
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
+      const refs = collect<Refs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toEqual('#text');
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b.nodeName).toEqual('#comment');
@@ -347,7 +348,7 @@ describe('collect', () => {
         { keepComments: false },
       );
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
+      const refs = collect<Refs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toEqual('#text');
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b).toBeUndefined();
@@ -375,7 +376,7 @@ describe('collect', () => {
         </div>
       `);
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
+      const refs = collect<Refs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toEqual('#text');
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b.nodeName).toEqual('DIV');
@@ -400,7 +401,7 @@ describe('collect', () => {
         { keepSpaces: true },
       );
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
+      const refs = collect<Refs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toEqual('#text');
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b.nodeName).toEqual('DIV');
@@ -425,7 +426,7 @@ describe('collect', () => {
         { keepSpaces: false },
       );
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
+      const refs = collect<Refs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toEqual('#text');
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b.nodeName).toEqual('DIV');

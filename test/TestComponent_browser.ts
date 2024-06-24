@@ -6,9 +6,9 @@ interface TestProps {
   text: string;
 }
 
-type Refs = {
+interface Refs {
   t: Text;
-};
+}
 
 const view = h<HTMLDivElement>(`
   <div id=test>

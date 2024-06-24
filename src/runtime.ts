@@ -1,4 +1,4 @@
-import type { LowercaseKeys, Refs } from './types';
+import type { InferRefs, LowercaseKeys, Refs } from './types';
 import { create } from './utils';
 
 const template = create('template');
@@ -23,7 +23,7 @@ export const h = <T extends Node & ChildNode = Element>(html: string): T => {
  * typed key names to bring awareness to this.
  */
 /* @__NOINLINE__ */
-export const collect = <R extends Refs>(
+export const collect = <R extends InferRefs<R>>(
   root: Node,
   k: readonly string[],
   d: readonly number[],
