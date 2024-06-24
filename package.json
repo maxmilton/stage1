@@ -43,7 +43,7 @@
   "scripts": {
     "build": "bun build.ts",
     "lint": "bun run lint:fmt && bun run lint:js && bun run lint:ts",
-    "lint:fmt": "biome check",
+    "lint:fmt": "biome check --diagnostic-level=warn",
     "lint:js": "eslint",
     "lint:ts": "tsc --noEmit",
     "prebuild": "rm -rf dist",
