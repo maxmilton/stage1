@@ -29,7 +29,7 @@ export const store = <T extends Record<string | symbol, unknown>>(
         (handlers[key] ??= []).push(fn);
         return /** off */ () => {
           // eslint-disable-next-line no-bitwise
-          handlers[key]?.splice(handlers[key]!.indexOf(fn) >>> 0, 1);
+          handlers[key]?.splice(handlers[key].indexOf(fn) >>> 0, 1);
         };
       },
     },
