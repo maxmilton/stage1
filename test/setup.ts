@@ -4,9 +4,7 @@ import { GlobalWindow, type Window } from 'happy-dom';
 /* eslint-disable no-var, vars-on-top */
 declare global {
   /** Real bun console. `console` is mapped to happy-dom's virtual console. */
-  // biome-ignore lint/style/noVar: define global
-  var console2: Console;
-  // biome-ignore lint/style/noVar: define global
+  var $console: Console;
   var happyDOM: Window['happyDOM'];
 }
 /* eslint-enable */
@@ -36,13 +34,13 @@ const noop = () => {};
 function setupDOM() {
   const dom = new GlobalWindow();
   global.happyDOM = dom.happyDOM;
-  global.console2 = originalConsole;
+  global.$console = originalConsole;
   // @ts-expect-error - happy-dom only implements a subset of the DOM API
   global.window = dom.window.document.defaultView;
   global.document = window.document;
   global.console = window.console; // https://github.com/capricorn86/happy-dom/wiki/Virtual-Console
-  global.DocumentFragment = window.DocumentFragment;
   global.MutationObserver = window.MutationObserver;
+  global.DocumentFragment = window.DocumentFragment;
 }
 
 function setupMocks(): void {
@@ -60,15 +58,5 @@ function setupMocks(): void {
   window.HTMLLIElement = window.HTMLElement;
 }
 
-export async function reset(): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (global.happyDOM) {
-    await happyDOM.abort();
-    window.close();
-  }
-
-  setupDOM();
-  setupMocks();
-}
-
-await reset();
+setupDOM();
+setupMocks();
