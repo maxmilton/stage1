@@ -17,6 +17,7 @@ const compilerTemplate = create('template');
 const treeWalker = document.createTreeWalker(compilerTemplate);
 let str: string | null | undefined;
 
+/* @__NOINLINE__ */
 const collector = (node: Node): string | undefined => {
   // 1 = Node.ELEMENT_NODE
   if (node.nodeType === 1) {
@@ -85,6 +86,7 @@ export const html = (
  * browsers lowercase rendered HTML element attribute names so we lowercase the
  * typed key names to bring awareness to this.
  */
+/* @__NOINLINE__ */
 export const collect = <R extends Refs = Refs>(
   root: Node,
   view: View,
