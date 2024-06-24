@@ -86,7 +86,7 @@ export const reconcile = <T, N extends Node>(
     if (beforeNode !== undefined || afterNode !== undefined) {
       let node =
         beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
-      let tmp;
+      let tmp: ChildNode | null;
 
       if (afterNode === undefined) afterNode = null;
 
@@ -105,7 +105,7 @@ export const reconcile = <T, N extends Node>(
   if (renderedData.length === 0) {
     const insert = afterNode !== undefined;
     let index = 0;
-    let node;
+    let node: Node;
     for (; index < dataLen; index++) {
       node = createFn(data[index]);
       if (insert) {
@@ -122,15 +122,19 @@ export const reconcile = <T, N extends Node>(
   let loop = true;
   let prevEnd = renderedData.length - 1;
   let newEnd = dataLen - 1;
-  let a;
-  let b;
-  let prevStartNode = beforeNode ? beforeNode.nextSibling : parent.firstChild;
+  let a: T;
+  let b: T;
+  let prevStartNode: Node | null = beforeNode
+    ? beforeNode.nextSibling
+    : parent.firstChild;
   let newStartNode = prevStartNode;
-  let prevEndNode = afterNode ? afterNode.previousSibling : parent.lastChild;
+  let prevEndNode: Node | null = afterNode
+    ? afterNode.previousSibling
+    : parent.lastChild;
 
   fixes: while (loop) {
     loop = false;
-    let tmpNode;
+    let tmpNode: ChildNode | null;
 
     // Skip prefix
     a = renderedData[prevStart];
@@ -150,8 +154,7 @@ export const reconcile = <T, N extends Node>(
     a = renderedData[prevEnd];
     b = data[newEnd];
     while (a[key] === b[key]) {
-      // @ts-expect-error - FIXME: prevEndNode type
-      updateFn(prevEndNode, b);
+      updateFn(prevEndNode as N, b);
       prevEnd--;
       newEnd--;
       afterNode = prevEndNode;
@@ -166,8 +169,7 @@ export const reconcile = <T, N extends Node>(
     b = data[newStart];
     while (a[key] === b[key]) {
       loop = true;
-      // @ts-expect-error - FIXME: prevEndNode type
-      updateFn(prevEndNode, b);
+      updateFn(prevEndNode as N, b);
       tmpNode = prevEndNode!.previousSibling;
       parent.insertBefore(prevEndNode!, newStartNode);
       prevEndNode = tmpNode;
@@ -183,8 +185,7 @@ export const reconcile = <T, N extends Node>(
     b = data[newEnd];
     while (a[key] === b[key]) {
       loop = true;
-      // @ts-expect-error - FIXME: prevStartNode type
-      updateFn(prevStartNode, b);
+      updateFn(prevStartNode as N, b);
       tmpNode = prevStartNode!.nextSibling;
       parent.insertBefore(prevStartNode!, afterNode!);
       prevStart++;
@@ -200,13 +201,13 @@ export const reconcile = <T, N extends Node>(
   // Fast path for shrink
   if (newEnd < newStart) {
     if (prevStart <= prevEnd) {
-      let next;
+      let next: ChildNode | null;
       while (prevStart <= prevEnd) {
         if (prevEnd === 0) {
-          prevEndNode!.remove();
+          (prevEndNode as ChildNode).remove();
         } else {
           next = prevEndNode!.previousSibling;
-          prevEndNode!.remove();
+          (prevEndNode as ChildNode).remove();
           prevEndNode = next;
         }
         prevEnd--;
@@ -218,7 +219,7 @@ export const reconcile = <T, N extends Node>(
   // Fast path for add
   if (prevEnd < prevStart) {
     if (newStart <= newEnd) {
-      let node;
+      let node: Node;
       const mode = afterNode ? 1 : 0;
       while (newStart <= newEnd) {
         node = createFn(data[newStart]);
@@ -258,7 +259,7 @@ export const reconcile = <T, N extends Node>(
     if (beforeNode !== undefined || afterNode !== undefined) {
       let node =
         beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
-      let tmp;
+      let tmp: ChildNode | null;
 
       if (afterNode === undefined) afterNode = null;
 
@@ -272,7 +273,7 @@ export const reconcile = <T, N extends Node>(
       parent.textContent = '';
     }
 
-    let node;
+    let node: Node;
     const mode = afterNode ? 1 : 0;
     for (let i = newStart; i <= newEnd; i++) {
       node = createFn(data[i]);
@@ -298,7 +299,7 @@ export const reconcile = <T, N extends Node>(
   }
 
   for (let i = 0; i < toRemove.length; i++) {
-    nodes[toRemove[i]]!.remove();
+    (nodes[toRemove[i]] as ChildNode).remove();
   }
 
   let lisIdx = longestSeq.length - 1;
@@ -306,16 +307,14 @@ export const reconcile = <T, N extends Node>(
   for (let i = newEnd; i >= newStart; i--) {
     if (longestSeq[lisIdx] === i) {
       afterNode = nodes[P[longestSeq[lisIdx]]];
-      // @ts-expect-error - FIXME: afterNode type
-      updateFn(afterNode, data[i]);
+      updateFn(afterNode as N, data[i]);
       lisIdx--;
     } else {
       if (P[i] === -1) {
         tmpD = createFn(data[i]);
       } else {
         tmpD = nodes[P[i]]!;
-        // @ts-expect-error - FIXME: tmpD type
-        updateFn(tmpD, data[i]);
+        updateFn(tmpD as N, data[i]);
       }
       parent.insertBefore(tmpD, afterNode!);
       afterNode = tmpD;

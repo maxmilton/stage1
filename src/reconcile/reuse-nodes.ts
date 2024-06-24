@@ -14,7 +14,7 @@ export const reconcile = <T, N extends Node>(
     if (beforeNode !== undefined || afterNode !== undefined) {
       let node =
         beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
-      let tmp;
+      let tmp: ChildNode | null;
 
       if (afterNode === undefined) afterNode = null;
 
@@ -31,7 +31,7 @@ export const reconcile = <T, N extends Node>(
   if (renderedData.length > len) {
     let index = renderedData.length;
     let tail = afterNode == null ? parent.lastChild : afterNode.previousSibling;
-    let tmp;
+    let tmp: ChildNode | null;
     while (index > len) {
       tmp = tail!.previousSibling;
       tail!.remove();
@@ -40,27 +40,27 @@ export const reconcile = <T, N extends Node>(
     }
   }
 
-  let head = beforeNode ? beforeNode.nextSibling : parent.firstChild;
+  let head: Node | null = beforeNode
+    ? beforeNode.nextSibling
+    : parent.firstChild;
   if (head === afterNode) head = null;
 
   const mode = afterNode ? 1 : 0;
   let index = 0;
-  let item;
+  let item: T;
   for (; index < len; index++) {
     item = data[index];
     if (head) {
-      // @ts-expect-error - FIXME: head type
-      updateFn(head, item);
+      updateFn(head as N, item);
     } else {
-      // @ts-expect-error - FIXME: head type
       head = createFn(item);
       if (mode) {
-        parent.insertBefore(head!, afterNode!);
+        parent.insertBefore(head, afterNode!);
       } else {
-        parent.appendChild(head!);
+        parent.appendChild(head);
       }
     }
-    head = head!.nextSibling;
+    head = head.nextSibling;
     if (head === afterNode) head = null;
   }
 };
