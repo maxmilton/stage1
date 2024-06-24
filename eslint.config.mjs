@@ -61,7 +61,8 @@ export default tseslint.config(
       'unicorn/no-abusive-eslint-disable': WARN,
       'unicorn/no-null': OFF,
       'unicorn/prefer-module': WARN,
-      'unicorn/prefer-string-raw': WARN,
+      // 'unicorn/prefer-string-raw': WARN,
+      'unicorn/prefer-string-raw': OFF, // TODO: Remove once it not longer crashes bun macros
       'unicorn/prefer-top-level-await': WARN,
       'unicorn/prevent-abbreviations': OFF,
 
@@ -76,16 +77,16 @@ export default tseslint.config(
 
       /* Performance and byte savings */
       // byte savings
-      '@typescript-eslint/no-confusing-void-expression': OFF,
+      '@typescript-eslint/no-confusing-void-expression': WARN,
       // byte savings (but reduces debugging ability)
-      '@typescript-eslint/restrict-plus-operands': OFF,
+      '@typescript-eslint/restrict-plus-operands': WARN,
       // byte savings (but reduces debugging ability)
-      '@typescript-eslint/restrict-template-expressions': OFF,
+      '@typescript-eslint/restrict-template-expressions': WARN,
       // byte savings with same performance
-      'prefer-template': OFF,
-      // worse performance
+      'prefer-template': WARN,
+      // indexOf is faster
       '@typescript-eslint/prefer-includes': OFF,
-      // worse performance
+      // worse for performance-critical code
       '@typescript-eslint/prefer-for-of': OFF,
       // alternatives offer byte savings and better performance
       '@typescript-eslint/prefer-string-starts-ends-with': OFF,
@@ -94,30 +95,26 @@ export default tseslint.config(
       // useful for compact and memory efficient code... but be careful!
       'no-cond-assign': OFF,
       // more compact at the cost of being harder to read... but be careful!
-      'no-multi-assign': OFF,
+      'no-multi-assign': WARN,
       // can be used for efficient code... but be careful!
       'no-param-reassign': WARN,
       // byte savings
       'no-plusplus': OFF,
       // useful for compact and memory efficient code... but be careful!
-      'no-return-assign': OFF,
+      'no-return-assign': WARN,
       // byte savings + faster
       'unicorn/explicit-length-check': OFF,
       'unicorn/no-array-callback-reference': WARN,
       // forEach is often faster (in Chrome and Bun but not Firefox)
       'unicorn/no-array-for-each': OFF,
-      'unicorn/no-await-expression-member': OFF,
       // indexOf is faster (in Chrome)
       'unicorn/prefer-includes': OFF,
-      // saves 3 bytes to use arrow function
-      'unicorn/prefer-native-coercion-functions': OFF,
       // slower and worse browser support
       'unicorn/prefer-string-replace-all': OFF,
       // byte savings (minification doesn't currently automatically remove)
       'unicorn/switch-case-braces': [ERROR, 'avoid'],
 
       /* stage1 */
-      '@typescript-eslint/consistent-type-definitions': OFF, // FIXME: Issue with stage1 collect Refs
       // underscores in synthetic event handler names
       'no-underscore-dangle': OFF,
       'unicorn/prefer-add-event-listener': OFF,
