@@ -12,18 +12,27 @@ jobs:
     steps:
       - name: Check valid version tag
         run: |
-          [[ "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)? ]] || exit 1
+          [[ "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-next.[0-9]+)? ]] || exit 1
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run test
       - uses: actions/setup-node@v4
         with:
           node-version: latest
           registry-url: 'https://registry.npmjs.org'
-      - run: bun install --frozen-lockfile
-      - run: bun run lint
-      - run: bun run test
-      - run: npm publish --provenance --access public
+      - name: Determine npm tag
+        id: npm_tag
+        run: |
+          if [[ "${{ github.ref }}" == *"-next."* ]]; then
+            echo "::set-output name=tag_name::next"
+          else
+            echo "::set-output name=tag_name::latest"
+          fi
+      - run: npm publish --provenance --access public --tag ${{ steps.npm_tag.outputs.tag_name }}
+        shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
