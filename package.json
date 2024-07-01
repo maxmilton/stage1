@@ -13,6 +13,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "bun": "./src/index.ts",
       "default": "./dist/index.js"
     },
     "./macro": {
@@ -21,19 +22,23 @@
     },
     "./browser": {
       "types": "./dist/index.d.ts",
+      "bun": "./src/browser/index.ts",
       "import": "./dist/browser.mjs",
       "require": "./dist/browser.js"
     },
     "./reconcile/keyed": {
       "types": "./dist/index.d.ts",
+      "bun": "./src/reconcile/keyed.ts",
       "default": "./dist/reconcile/keyed.js"
     },
     "./reconcile/non-keyed": {
       "types": "./dist/index.d.ts",
+      "bun": "./src/reconcile/non-keyed.ts",
       "default": "./dist/reconcile/non-keyed.js"
     },
     "./reconcile/reuse-nodes": {
       "types": "./dist/index.d.ts",
+      "bun": "./src/reconcile/reuse-nodes.ts",
       "default": "./dist/reconcile/reuse-nodes.js"
     },
     "./dist/*": "./dist/*",
