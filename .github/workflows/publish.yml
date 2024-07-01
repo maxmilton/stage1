@@ -25,14 +25,13 @@ jobs:
           node-version: latest
           registry-url: 'https://registry.npmjs.org'
       - name: Determine npm tag
-        id: npm_tag
         run: |
           if [[ "${{ github.ref }}" == *"-next."* ]]; then
-            echo "::set-output name=tag_name::next"
+            echo "NPM_TAG=next" >> $GITHUB_ENV
           else
-            echo "::set-output name=tag_name::latest"
+            echo "NPM_TAG=latest" >> $GITHUB_ENV
           fi
-      - run: npm publish --provenance --access public --tag ${{ steps.npm_tag.outputs.tag_name }}
+      - run: npm publish --provenance --access public --tag ${{ env.NPM_TAG }}
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
