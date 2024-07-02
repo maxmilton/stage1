@@ -15,9 +15,9 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
 ## TODO
 
 - Add documentation about:
-  - Internal use of `innerHTML` — potencial risk of XSS etc.; never use `h` and `html` functions with untrusted input
+  - Internal use of `innerHTML` — potential risk of XSS etc.; never use `h` and `html` functions with untrusted input
     - In future we may have `Sanitizer.sanitizeFor(...)` which could be used to sanitize untrusted input
-      - It's unlikely we'll use it internally due to performance overhead but developers should definately sanitize input when untrusted before passing it in... although we could create light wrapper functions
+      - It's unlikely we'll use it internally due to performance overhead but developers should definitely sanitize input when untrusted before passing it in... although we could create light wrapper functions
       - <https://developer.mozilla.org/en-US/docs/Web/API/Sanitizer/sanitizeFor>
       - <https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API>
   - New DOM utility functions
@@ -30,11 +30,11 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
   - Differences from the original `stage0` project:
     - There are now 2 runtime modes:
       - New precompiled runtime mode for ultimate performance. Compiles templates at build-time via a bun macro that minifies templates, generates metadata, and then includes minimal runtime code in your JS bundle. Currently only works with [Bun.build](https://bun.sh/docs/bundler).
-      - The regular mode is still availiable which generates metadata when your JS is run in the browser. Regular mode can be used with or without a build process.
+      - The regular mode is still available which generates metadata when your JS is run in the browser. Regular mode can be used with or without a build process.
     - Ref nodes are now marked with `@` rather than `#`
     - `h` is now `function h(template: string): S1Node` e.g., `h('<p>@key<p>')`
     - `html` is available to use as a string template literal tag function e.g., `` html`<p>@key<p>` `` (regular mode only)
-    - `view.collect` is now a `collect` function that needs to be imported seperately
+    - `view.collect` is now a `collect` function that needs to be imported separately
     - Extra DOM utils
     - New reactive `store` factory can be imported from `stage1/store`
     - Improved TypeScript support
