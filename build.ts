@@ -4,6 +4,8 @@ import { createBundle } from 'dts-buddy';
 import { rollup } from 'rollup';
 import { minify } from 'terser';
 
+await Bun.$`rm -rf dist`;
+
 console.time('build');
 
 const out = await Bun.build({
