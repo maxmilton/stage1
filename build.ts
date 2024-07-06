@@ -4,9 +4,11 @@ import { createBundle } from 'dts-buddy';
 import { rollup } from 'rollup';
 import { minify } from 'terser';
 
+console.time('prebuild');
 await Bun.$`rm -rf dist`;
+console.timeEnd('prebuild');
 
-console.time('build');
+console.time('build1');
 
 const out = await Bun.build({
   entrypoints: ['src/browser/index.ts'],
@@ -47,6 +49,9 @@ await bundle.write({
   ],
 });
 
+console.timeEnd('build1');
+console.time('build2');
+
 await Bun.build({
   entrypoints: ['src/browser/index.ts'],
   outdir: 'dist',
@@ -84,7 +89,7 @@ await Bun.build({
   sourcemap: 'external',
 });
 
-console.timeEnd('build');
+console.timeEnd('build2');
 console.time('dts');
 
 await createBundle({
