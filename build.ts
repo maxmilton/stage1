@@ -38,11 +38,6 @@ await bundle.write({
             reduce_funcs: false, // prevent functions being inlined
             passes: 2,
           },
-          mangle: {
-            properties: {
-              regex: /^\$\$/,
-            },
-          },
         });
       },
     },
