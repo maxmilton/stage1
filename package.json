@@ -56,23 +56,23 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.3",
-    "@eslint/compat": "1.1.0",
+    "@eslint/compat": "1.1.1",
     "@eslint/eslintrc": "3.1.0",
-    "@eslint/js": "9.6.0",
+    "@eslint/js": "9.7.0",
     "@playwright/test": "1.45.1",
     "@types/bun": "1.1.6",
     "@types/eslint__eslintrc": "2.1.1",
     "@types/eslint__js": "8.42.3",
     "dts-buddy": "0.5.1",
-    "eslint": "9.6.0",
+    "eslint": "9.7.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-config-airbnb-typescript": "18.0.0",
     "eslint-plugin-import": "2.29.1",
     "eslint-plugin-unicorn": "54.0.0",
     "happy-dom": "14.12.3",
-    "rollup": "4.18.0",
-    "terser": "5.31.1",
+    "rollup": "4.18.1",
+    "terser": "5.31.2",
     "typescript": "5.5.3",
-    "typescript-eslint": "7.15.0"
+    "typescript-eslint": "7.16.0"
   }
 }
