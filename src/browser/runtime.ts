@@ -73,10 +73,10 @@ export const h = <T extends Node & ChildNode = Element>(
   return node;
 };
 
-export const html = (
+export const html = <T extends Node & ChildNode = Element>(
   template: TemplateStringsArray,
   ...substitutions: unknown[]
-): View => h(String.raw(template, ...substitutions));
+): View & T => h(String.raw(template, ...substitutions));
 
 /**
  * Collects node refs from a compiled template view.
