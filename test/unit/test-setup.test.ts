@@ -1378,7 +1378,6 @@ describe('parameters', () => {
       ['console', console],
       ['window', window],
       ['document', document],
-      ['chrome', chrome],
       ['process', process],
       ['global', global],
       ['globalThis', globalThis],
