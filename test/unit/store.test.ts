@@ -17,7 +17,7 @@ describe('store', () => {
   test('returns a Proxy', () => {
     expect.assertions(1);
     const state = store({});
-    expect(isProxy(state)).toBe(true);
+    expect(isProxy(state)).toBeTrue();
   });
 
   test('returns an object with the same properties', () => {
