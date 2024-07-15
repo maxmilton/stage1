@@ -24,8 +24,8 @@
         "useSimplifiedLogicExpression": "info"
       },
       "performance": {
-        "noBarrelFile": "info",
-        "noReExportAll": "info"
+        "noBarrelFile": "warn",
+        "noReExportAll": "warn"
       },
       "style": {
         "noNamespace": "error",
@@ -54,12 +54,53 @@
         "noExplicitAny": "off",
         "noFocusedTests": "error",
         "noMisrefactoredShorthandAssign": "error"
+      },
+      "nursery": {
+        "noDoneCallback": "warn",
+        "noDuplicateAtImportRules": "error",
+        "noDuplicateElseIf": "error",
+        "noDuplicateFontNames": "error",
+        "noDuplicateJsonKeys": "error",
+        "noDuplicateSelectorsKeyframeBlock": "error",
+        "noEmptyBlock": "warn",
+        "noEvolvingTypes": "warn",
+        "noImportantInKeyframe": "error",
+        "noInvalidDirectionInLinearGradient": "error",
+        "noInvalidPositionAtImportRule": "error",
+        "noLabelWithoutControl": "warn",
+        "noMisplacedAssertion": "error",
+        "noShorthandPropertyOverrides": "warn",
+        "noSubstr": "warn",
+        "noUndeclaredDependencies": "warn",
+        "noUnknownFunction": "warn",
+        "noUnknownMediaFeatureName": "warn",
+        "noUnknownProperty": "warn",
+        "noUnknownPseudoClassSelector": "warn",
+        "noUnknownSelectorPseudoElement": "warn",
+        "noUnknownUnit": "error",
+        "noUnmatchableAnbSelector": "warn",
+        "noUnusedFunctionParameters": "warn",
+        "noUselessStringConcat": "warn",
+        "noUselessUndefinedInitialization": "warn",
+        "noYodaExpression": "warn",
+        "useAdjacentOverloadSignatures": "error",
+        "useConsistentBuiltinInstantiation": "error",
+        "useConsistentGridAreas": "warn",
+        "useDateNow": "error",
+        "useDefaultSwitchClause": "warn",
+        "useErrorMessage": "warn",
+        "useExplicitLengthCheck": "warn",
+        "useFocusableInteractive": "warn",
+        "useGenericFontNames": "error",
+        "useThrowNewError": "error",
+        "useThrowOnlyError": "warn",
+        "useValidAutocomplete": "warn"
       }
     }
   },
   "overrides": [
     {
-      "include": [".vscode/**", "tsconfig.json", "tsconfig.node.json"],
+      "include": [".vscode/*.json", "tsconfig*.json"],
       "json": {
         "parser": {
           "allowComments": true,
@@ -68,7 +109,7 @@
       }
     },
     {
-      "include": ["**/*.spec.ts", "**/*.test.ts", "test/**/*.ts"],
+      "include": ["**/*.spec.ts", "**/*.test.ts", "test/**"],
       "formatter": {
         "lineWidth": 100
       }
@@ -92,6 +133,17 @@
         "rules": {
           "style": {
             "noParameterAssign": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["src/browser/index.ts", "src/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off",
+            "noReExportAll": "off"
           }
         }
       }

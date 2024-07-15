@@ -127,16 +127,16 @@ export default tseslint.config(
       '*.config.mjs',
       '*.config.ts',
       '*.d.ts',
-      '*.spec.ts',
-      '*.test.ts',
+      '**/*.spec.ts',
+      '**/*.test.ts',
       'build.ts',
-      'test/**',
+      'test',
     ],
     rules: {
       'import/no-extraneous-dependencies': OFF,
     },
   },
   {
-    ignores: ['*.bak', 'bench', 'dist/**'],
+    ignores: ['**/*.bak', 'bench', 'dist'],
   },
 );
