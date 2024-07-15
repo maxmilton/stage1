@@ -31,8 +31,8 @@ const longestPositiveIncreasingSubsequence = (
   ns: number[],
   newStart: number,
 ) => {
-  const seq = [];
-  const is = [];
+  const seq: number[] = [];
+  const is: number[] = [];
   const pre = new Array<number>(ns.length);
   const len = ns.length;
   let i = newStart;
@@ -243,7 +243,7 @@ export const reconcile = <T, N extends Node>(
   for (let i = newStart; i <= newEnd; i++) I.set(data[i][key], i);
 
   let reusingNodes = newStart + dataLen - 1 - newEnd;
-  const toRemove = [];
+  const toRemove: number[] = [];
 
   for (let i = prevStart; i <= prevEnd; i++) {
     if (I.has(renderedData[i][key])) {
@@ -291,7 +291,7 @@ export const reconcile = <T, N extends Node>(
   const longestSeq = longestPositiveIncreasingSubsequence(P, newStart);
 
   // Collect nodes to work with them
-  const nodes = [];
+  const nodes: (Node | null)[] = [];
   let tmpC = prevStartNode;
   for (let i = prevStart; i <= prevEnd; i++) {
     nodes[i] = tmpC;
