@@ -1,117 +1,130 @@
 // XXX: This file has the same tests as test/unit/compile.test.ts, keep them in sync.
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import { compile } from '../../src/macro' assert { type: 'macro' };
+import { compile } from '../../src/macro' with { type: 'macro' };
 import { collect, h } from '../../src/runtime';
 import type { Refs } from '../../src/types';
 import { cleanup, render } from './utils';
 
 describe('h', () => {
-  afterEach(cleanup);
-
-  test('renders basic template', () => {
-    expect.assertions(1);
-    const meta = compile(`
-      <ul>
-        <li>A</li>
-        <li>B</li>
-        <li>C</li>
-      </ul>
-    `);
-    const view = h(meta.html);
-    const rendered = render(view);
-    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
-  });
-
-  test('renders basic template with messy whitespace', () => {
-    expect.assertions(1);
-    const meta = compile(`
-      <ul>
-        <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
-        <li
-          >
-            B</li>
-        <li>C
-          </li>
-      </ul>
-    `);
-    const view = h(meta.html);
-    const rendered = render(view);
-    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
-  });
-
-  test('renders SVG template', () => {
+  test('is a function', () => {
     expect.assertions(2);
-    const meta = compile(`
-      <svg>
-        <circle cx=10 cy='10' r="10" />
-      </svg>
-    `);
-    const view = h(meta.html);
-    const rendered = render(view);
-    expect(view).toBeInstanceOf(window.SVGSVGElement);
-    expect(rendered.container.innerHTML).toBe(
-      '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
-    );
+    expect(h).toBeFunction();
+    expect(h).not.toBeClass();
   });
 
-  test('returns root element', () => {
-    expect.assertions(3);
-    const meta = compile(`
-      <ul id=root>
-        <li>A</li>
-        <li>B</li>
-        <li>C</li>
-      </ul>
-    `);
-    const view = h(meta.html);
-    const rendered = render(view);
-    expect(view).toBeInstanceOf(window.HTMLUListElement);
-    expect(view.id).toBe('root');
-    expect(rendered.container.firstChild).toBe(view);
-  });
-
-  test('removes refs in template from output DOM', () => {
+  test('expects 1 parameters', () => {
     expect.assertions(1);
-    const meta = compile(`
-      <ul @list>
-        <li @item-one>A</li>
-        <li @item-two>B</li>
-      </ul>
-    `);
-    const view = h(meta.html);
-    const rendered = render(view);
-    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
+    expect(h).toHaveParameters(1, 0);
   });
 
-  test('does not minify in whitespace-sensitive blocks', () => {
-    expect.assertions(1);
-    const meta = compile(`
-      <div>
-        <pre>
-          a
-           b
-          c
+  describe('render', () => {
+    afterEach(cleanup);
+
+    test('renders basic template', () => {
+      expect.assertions(1);
+      const meta = compile(`
+        <ul>
+          <li>A</li>
+          <li>B</li>
+          <li>C</li>
+        </ul>
+      `);
+      const view = h(meta.html);
+      const rendered = render(view);
+      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+    });
+
+    test('renders basic template with messy whitespace', () => {
+      expect.assertions(1);
+      const meta = compile(`
+        <ul>
+          <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
+          <li
+            >
+              B</li>
+          <li>C
+            </li>
+        </ul>
+      `);
+      const view = h(meta.html);
+      const rendered = render(view);
+      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+    });
+
+    test('renders SVG template', () => {
+      expect.assertions(2);
+      const meta = compile(`
+        <svg>
+          <circle cx=10 cy='10' r="10" />
+        </svg>
+      `);
+      const view = h(meta.html);
+      const rendered = render(view);
+      expect(view).toBeInstanceOf(window.SVGSVGElement);
+      expect(rendered.container.innerHTML).toBe(
+        '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
+      );
+    });
+
+    test('returns root element', () => {
+      expect.assertions(3);
+      const meta = compile(`
+        <ul id=root>
+          <li>A</li>
+          <li>B</li>
+          <li>C</li>
+        </ul>
+      `);
+      const view = h(meta.html);
+      const rendered = render(view);
+      expect(view).toBeInstanceOf(window.HTMLUListElement);
+      expect(view.id).toBe('root');
+      expect(rendered.container.firstChild).toBe(view);
+    });
+
+    test('removes refs in template from output DOM', () => {
+      expect.assertions(1);
+      const meta = compile(`
+        <ul @list>
+          <li @item-one>A</li>
+          <li @item-two>B</li>
+        </ul>
+      `);
+      const view = h(meta.html);
+      const rendered = render(view);
+      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
+    });
+
+    test('does not minify in whitespace-sensitive blocks', () => {
+      expect.assertions(1);
+      const meta = compile(`
+        <div>
+          <pre>
+            a
+            b
+            c
 
 
-          &lt;span&gt; Foo  &lt;/span&gt;
-        </pre>
-        <span>
-          Bar
-        </span>
-        <code>
-          &lt;span&gt;
-            Baz
-          &lt;/span&gt;
-        </code>
+            &lt;span&gt; Foo  &lt;/span&gt;
+          </pre>
+          <span>
+            Bar
+          </span>
+          <code>
+            &lt;span&gt;
+              Baz
+            &lt;/span&gt;
+          </code>
 
-      </div>
-    `);
-    const view = h(meta.html);
-    const rendered = render(view);
-    expect(rendered.container.innerHTML).toBe(
-      '<div><pre>\n          a\n           b\n          c\n\n\n          <span> Foo  </span>\n        </pre><span>Bar</span><code>\n          <span>\n            Baz\n          </span>\n        </code></div>',
-    );
+        </div>
+      `);
+      const view = h(meta.html);
+      const rendered = render(view);
+      expect(rendered.container.innerHTML).toBe(
+        '<div><pre>\n            a\n            b\n            c\n\n\n            <span> Foo  </span>\n          </pre><span>Bar</span><code>\n            <span>\n              Baz\n            </span>\n          </code></div>',
+      );
+    });
   });
 });
 
@@ -119,24 +132,48 @@ describe('h', () => {
 // could consider adding a html function similar to the standard runtime.
 
 // describe('html', () => {
-//   afterEach(cleanup);
+//   test('is a function', () => {
+//     expect.assertions(2);
+//     expect(html).toBeFunction();
+//     expect(html).not.toBeClass();
+//   });
 //
-//   test('renders basic template', () => {
+//   test('expects 2 parameters (1 optional)', () => {
 //     expect.assertions(1);
-//     const view = html`
-//       <ul>
-//         <li>A</li>
-//         <li>B</li>
-//         <li>C</li>
-//       </ul>
-//     `;
-//     const view = h(meta.html);
-//     const rendered = render(view);
-//     expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+//     expect(html).toHaveParameters(1, 1);
+//   });
+//
+//   describe('render', () => {
+//     afterEach(cleanup);
+//
+//     test('renders basic template', () => {
+//       expect.assertions(1);
+//       const view = html`
+//         <ul>
+//           <li>A</li>
+//           <li>B</li>
+//           <li>C</li>
+//         </ul>
+//       `;
+//       const view = h(meta.html);
+//       const rendered = render(view);
+//       expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+//     });
 //   });
 // });
 
 describe('collect', () => {
+  test('is a function', () => {
+    expect.assertions(2);
+    expect(collect).toBeFunction();
+    expect(collect).not.toBeClass();
+  });
+
+  test('expects 3 parameters', () => {
+    expect.assertions(1);
+    expect(collect).toHaveParameters(3, 0);
+  });
+
   test('collects all refs', () => {
     expect.assertions(39);
     const meta = compile(`
@@ -364,8 +401,8 @@ describe('collect', () => {
   });
 
   describe('keepSpaces option', () => {
-    expect.assertions(7);
     test('collects refs when option is default', () => {
+      expect.assertions(7);
       const meta = compile(`
         <div>
           @a

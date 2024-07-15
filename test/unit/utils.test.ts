@@ -29,6 +29,7 @@ const NOT_DOM_NODES = [
   Number.POSITIVE_INFINITY,
   Number.NEGATIVE_INFINITY,
   Number.NaN,
+  BigInt(Number.MAX_SAFE_INTEGER + 1),
   true,
   false,
   {},
@@ -48,17 +49,19 @@ const NOT_DOM_NODES = [
 
 describe('noop', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(noop).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(noop).toBeFunction();
+    expect(noop).not.toBeClass();
   });
 
   test('expects no parameters', () => {
     expect.assertions(1);
-    expect(noop).toHaveLength(0);
+    expect(noop).toHaveParameters(0, 0);
   });
 
   test('returns undefined', () => {
     expect.assertions(1);
+    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
     expect(noop()).toBeUndefined();
   });
 
@@ -70,13 +73,14 @@ describe('noop', () => {
 
 describe('createFragment', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(createFragment).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(createFragment).toBeFunction();
+    expect(createFragment).not.toBeClass();
   });
 
   test('expects no parameters', () => {
     expect.assertions(1);
-    expect(createFragment).toHaveLength(0);
+    expect(createFragment).toHaveParameters(0, 0);
   });
 
   test('returns a DocumentFragment', () => {
@@ -87,13 +91,14 @@ describe('createFragment', () => {
 
 describe('create', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(create).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(create).toBeFunction();
+    expect(create).not.toBeClass();
   });
 
   test('expects 1 parameter', () => {
     expect.assertions(1);
-    expect(create).toHaveLength(1);
+    expect(create).toHaveParameters(1, 0);
   });
 
   const inputs = [
@@ -169,13 +174,14 @@ describe('create', () => {
 
 describe('append', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(append).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(append).toBeFunction();
+    expect(append).not.toBeClass();
   });
 
   test('expects 2 parameters', () => {
     expect.assertions(1);
-    expect(append).toHaveLength(2);
+    expect(append).toHaveParameters(2, 0);
   });
 
   test('throws without parameters', () => {
@@ -218,13 +224,14 @@ describe('append', () => {
 
 describe('prepend', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(prepend).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(prepend).toBeFunction();
+    expect(prepend).not.toBeClass();
   });
 
   test('expects 2 parameters', () => {
     expect.assertions(1);
-    expect(prepend).toHaveLength(2);
+    expect(prepend).toHaveParameters(2, 0);
   });
 
   test('throws without parameters', () => {
@@ -270,13 +277,14 @@ describe('prepend', () => {
 
 describe('clone', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(clone).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(clone).toBeFunction();
+    expect(clone).not.toBeClass();
   });
 
   test('expects 1 parameter', () => {
     expect.assertions(1);
-    expect(clone).toHaveLength(1);
+    expect(clone).toHaveParameters(1, 0);
   });
 
   test('throws without parameters', () => {
@@ -313,13 +321,14 @@ describe('clone', () => {
 
 describe('onRemove', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(onRemove).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(onRemove).toBeFunction();
+    expect(onRemove).not.toBeClass();
   });
 
   test('expects 2 parameters', () => {
     expect.assertions(1);
-    expect(onRemove).toHaveLength(2);
+    expect(onRemove).toHaveParameters(2, 0);
   });
 
   test('calls callback when watched element is removed', async () => {
@@ -359,6 +368,7 @@ describe('onRemove', () => {
     child.remove();
     await happyDOM.waitUntilComplete();
     expect(spy).not.toHaveBeenCalled();
+    root.remove(); // cleanup
   });
 
   test('does not call callback when element is added or moved', async () => {
@@ -372,5 +382,6 @@ describe('onRemove', () => {
     document.body.appendChild(root);
     await happyDOM.waitUntilComplete();
     expect(spy).not.toHaveBeenCalled();
+    root.remove(); // cleanup
   });
 });

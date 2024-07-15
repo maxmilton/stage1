@@ -4,13 +4,14 @@ import { store } from '../../src/store';
 
 describe('store', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(store).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(store).toBeFunction();
+    expect(store).not.toBeClass();
   });
 
   test('expects 1 parameter', () => {
     expect.assertions(1);
-    expect(store).toHaveLength(1);
+    expect(store).toHaveParameters(1, 0);
   });
 
   test('returns a Proxy', () => {
@@ -61,18 +62,20 @@ describe('store', () => {
   });
 
   test('returns an object with an on() function', () => {
-    expect.assertions(2);
+    expect.assertions(3);
     const state = store({});
-    expect(state.on).toBeInstanceOf(Function);
-    expect(state.on).toHaveLength(2); // 2 parameters
+    expect(state.on).toBeFunction();
+    expect(state.on).not.toBeClass();
+    expect(state.on).toHaveParameters(2, 0);
   });
 
   test('returns off() function from on()', () => {
-    expect.assertions(2);
+    expect.assertions(3);
     const state = store({ a: 1 });
     const off = state.on('a', () => {});
-    expect(off).toBeInstanceOf(Function);
-    expect(off).toHaveLength(0); // 0 parameters
+    expect(off).toBeFunction();
+    expect(off).not.toBeClass();
+    expect(off).toHaveParameters(0, 0);
   });
 
   test('mutating initial state does not mutate store state', () => {

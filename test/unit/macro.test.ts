@@ -2,7 +2,7 @@
 
 import { describe, expect, spyOn, test } from 'bun:test';
 // eslint-disable-next-line import/no-duplicates
-import { compile } from '../../src/macro' assert { type: 'macro' };
+import { compile } from '../../src/macro' with { type: 'macro' };
 // eslint-disable-next-line import/no-duplicates
 import { compile as compileNoMacro } from '../../src/macro';
 
@@ -11,28 +11,28 @@ describe('compile', () => {
   //  ↳ When keepComments, check refs metadata calculations are still correct.
   //  ↳ Currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
 
-  test('outputs an object', () => {
+  test('returns an object', () => {
     expect.assertions(1);
     const meta = compile('<div></div>');
-    expect(meta).toBeInstanceOf(Object);
+    expect(meta).toBePlainObject();
   });
-  test('outputs html property with string value', () => {
+  test('returns html property with string value', () => {
     expect.assertions(2);
     const meta = compile('<div></div>');
     expect(meta).toHaveProperty('html');
     expect(typeof meta.html).toBe('string');
   });
-  test('outputs k property with array value', () => {
+  test('returns k property with array value', () => {
     expect.assertions(2);
     const meta = compile('<div></div>');
     expect(meta).toHaveProperty('k');
-    expect(meta.k).toBeInstanceOf(Array);
+    expect(meta.k).toBeArray();
   });
-  test('outputs d property with array value', () => {
+  test('returns d property with array value', () => {
     expect.assertions(2);
     const meta = compile('<div></div>');
     expect(meta).toHaveProperty('d');
-    expect(meta.d).toBeInstanceOf(Array);
+    expect(meta.d).toBeArray();
   });
 
   test('has empty k and d properties when no node refs', () => {

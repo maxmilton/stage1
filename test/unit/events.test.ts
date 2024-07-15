@@ -5,23 +5,26 @@ import { cleanup, render } from './utils';
 declare global {
   interface HTMLElement {
     /** `stage1` synthetic click event handler. */
-    __click?(event: MouseEvent): void;
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    __click?(event: MouseEvent): void | false | Promise<void>;
   }
 }
 
 describe('setupSyntheticEvent', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(setupSyntheticEvent).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(setupSyntheticEvent).toBeFunction();
+    expect(setupSyntheticEvent).not.toBeClass();
   });
 
   test('expects 1 parameter', () => {
     expect.assertions(1);
-    expect(setupSyntheticEvent).toHaveLength(1);
+    expect(setupSyntheticEvent).toHaveParameters(1, 0);
   });
 
   test('returns undefined', () => {
     expect.assertions(1);
+    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
     expect(setupSyntheticEvent('abort')).toBeUndefined();
   });
 
@@ -137,17 +140,19 @@ describe('setupSyntheticEvent', () => {
 
 describe('deleteSyntheticEvent', () => {
   test('is a function', () => {
-    expect.assertions(1);
-    expect(deleteSyntheticEvent).toBeInstanceOf(Function);
+    expect.assertions(2);
+    expect(deleteSyntheticEvent).toBeFunction();
+    expect(deleteSyntheticEvent).not.toBeClass();
   });
 
   test('expects 1 parameter', () => {
     expect.assertions(1);
-    expect(deleteSyntheticEvent).toHaveLength(1);
+    expect(setupSyntheticEvent).toHaveParameters(1, 0);
   });
 
   test('returns undefined', () => {
     expect.assertions(1);
+    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
     expect(deleteSyntheticEvent('abort')).toBeUndefined();
   });
 

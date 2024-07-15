@@ -1,4 +1,4 @@
-import { compile } from '../src/macro' assert { type: 'macro' };
+import { compile } from '../src/macro' with { type: 'macro' };
 import { collect, h } from '../src/runtime';
 
 type TestComponent = HTMLDivElement;

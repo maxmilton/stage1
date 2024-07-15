@@ -5,101 +5,138 @@ import { collect, h, html } from '../../src/browser/runtime';
 import { cleanup, render } from './utils';
 
 describe('h', () => {
-  afterEach(cleanup);
-
-  test('renders basic template', () => {
-    expect.assertions(1);
-    const view = h(`
-      <ul>
-        <li>A</li>
-        <li>B</li>
-        <li>C</li>
-      </ul>
-    `);
-    const rendered = render(view);
-    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
-  });
-
-  test('renders basic template with messy whitespace', () => {
-    expect.assertions(1);
-    const view = h(`
-      <ul>
-        <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
-        <li
-          >
-            B</li>
-        <li>C
-          </li>
-      </ul>
-    `);
-    const rendered = render(view);
-    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
-  });
-
-  test('renders SVG template', () => {
+  test('is a function', () => {
     expect.assertions(2);
-    const view = h(`
-      <svg>
-        <circle cx=10 cy='10' r="10" />
-      </svg>
-    `);
-    const rendered = render(view);
-    expect(view).toBeInstanceOf(window.SVGSVGElement);
-    expect(rendered.container.innerHTML).toBe(
-      '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
-    );
+    expect(h).toBeFunction();
+    expect(h).not.toBeClass();
   });
 
-  test('returns root element', () => {
-    expect.assertions(3);
-    const view = h(`
-      <ul id=root>
-        <li>A</li>
-        <li>B</li>
-        <li>C</li>
-      </ul>
-    `);
-    const rendered = render(view);
-    expect(view).toBeInstanceOf(window.HTMLUListElement);
-    expect(view.id).toBe('root');
-    expect(rendered.container.firstChild).toBe(view);
-  });
-
-  test('removes refs in template from output DOM', () => {
+  test('expects 1 parameters', () => {
     expect.assertions(1);
-    const view = h(`
-      <ul @list>
-        <li @item-one>A</li>
-        <li @item-two>B</li>
-      </ul>
-    `);
-    const rendered = render(view);
-    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
+    expect(h).toHaveParameters(1, 0);
   });
 
-  // NOTE: This is not supported by the current implementation of the h()
-  // function because it would be too slow.
-  test.skip('does not minify in whitespace-sensitive blocks', () => {});
+  describe('render', () => {
+    afterEach(cleanup);
+
+    test('renders basic template', () => {
+      expect.assertions(1);
+      const view = h(`
+        <ul>
+          <li>A</li>
+          <li>B</li>
+          <li>C</li>
+        </ul>
+      `);
+      const rendered = render(view);
+      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+    });
+
+    test('renders basic template with messy whitespace', () => {
+      expect.assertions(1);
+      const view = h(`
+        <ul>
+          <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
+          <li
+            >
+              B</li>
+          <li>C
+            </li>
+        </ul>
+      `);
+      const rendered = render(view);
+      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+    });
+
+    test('renders SVG template', () => {
+      expect.assertions(2);
+      const view = h(`
+        <svg>
+          <circle cx=10 cy='10' r="10" />
+        </svg>
+      `);
+      const rendered = render(view);
+      expect(view).toBeInstanceOf(window.SVGSVGElement);
+      expect(rendered.container.innerHTML).toBe(
+        '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
+      );
+    });
+
+    test('returns root element', () => {
+      expect.assertions(3);
+      const view = h(`
+        <ul id=root>
+          <li>A</li>
+          <li>B</li>
+          <li>C</li>
+        </ul>
+      `);
+      const rendered = render(view);
+      expect(view).toBeInstanceOf(window.HTMLUListElement);
+      expect(view.id).toBe('root');
+      expect(rendered.container.firstChild).toBe(view);
+    });
+
+    test('removes refs in template from output DOM', () => {
+      expect.assertions(1);
+      const view = h(`
+        <ul @list>
+          <li @item-one>A</li>
+          <li @item-two>B</li>
+        </ul>
+      `);
+      const rendered = render(view);
+      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
+    });
+
+    // NOTE: This is not supported by the current implementation of the h()
+    // function because it would be too slow.
+    test.skip('does not minify in whitespace-sensitive blocks', () => {});
+  });
 });
 
 describe('html', () => {
-  afterEach(cleanup);
+  test('is a function', () => {
+    expect.assertions(2);
+    expect(html).toBeFunction();
+    expect(html).not.toBeClass();
+  });
 
-  test('renders basic template', () => {
+  test('expects 2 parameters (1 optional)', () => {
     expect.assertions(1);
-    const view = html`
-      <ul>
-        <li>A</li>
-        <li>B</li>
-        <li>C</li>
-      </ul>
-    `;
-    const rendered = render(view);
-    expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+    expect(html).toHaveParameters(1, 1);
+  });
+
+  describe('render', () => {
+    afterEach(cleanup);
+
+    test('renders basic template', () => {
+      expect.assertions(1);
+      const view = html`
+        <ul>
+          <li>A</li>
+          <li>B</li>
+          <li>C</li>
+        </ul>
+      `;
+      const rendered = render(view);
+      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+    });
   });
 });
 
 describe('collect', () => {
+  test('is a function', () => {
+    expect.assertions(2);
+    expect(collect).toBeFunction();
+    expect(collect).not.toBeClass();
+  });
+
+  test('expects 2 parameters', () => {
+    expect.assertions(1);
+    expect(collect).toHaveParameters(2, 0);
+  });
+
   test('collects all refs', () => {
     expect.assertions(39);
     const view = h(`
