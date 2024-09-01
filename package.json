@@ -59,7 +59,7 @@
     "eslint-config-prettier": "8.8.0",
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-prettier": "5.0.0-alpha.2",
-    "jsdom": "22.1.0",
+    "jsdom": "25.0.0",
     "nanospy": "1.0.0",
     "prettier": "3.0.0",
     "tsm": "2.3.0",
