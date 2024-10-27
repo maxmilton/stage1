@@ -1,8 +1,8 @@
 // XXX: This file has the same tests as test/unit/runtime.test.ts, keep them in sync.
 
 import { afterEach, describe, expect, test } from 'bun:test';
+import { cleanup, render } from '@maxmilton/test-utils/dom';
 import { collect, h, html } from '../../src/browser/runtime';
-import { cleanup, render } from './utils';
 
 describe('h', () => {
   test('is a function', () => {
