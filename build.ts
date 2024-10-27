@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 import { createBundle } from 'dts-buddy';
 import { rollup } from 'rollup';
 import { minify } from 'terser';
@@ -18,6 +16,7 @@ const out = await Bun.build({
   minify: true,
   sourcemap: 'inline',
 });
+// TODO: Once bun supports compact iife output, remove this rollup build step.
 const bundle = await rollup({
   input: out.outputs[0].path,
 });
@@ -53,7 +52,7 @@ await Bun.build({
   target: 'browser',
   naming: '[dir]/browser.mjs',
   minify: true,
-  sourcemap: 'external',
+  sourcemap: 'linked',
 });
 
 await Bun.build({
@@ -61,7 +60,7 @@ await Bun.build({
   outdir: 'dist',
   target: 'browser',
   minify: true,
-  sourcemap: 'external',
+  sourcemap: 'linked',
 });
 
 await Bun.build({
@@ -69,7 +68,7 @@ await Bun.build({
   outdir: 'dist',
   target: 'bun',
   minify: true,
-  sourcemap: 'external',
+  sourcemap: 'linked',
 });
 
 await Bun.build({
@@ -81,7 +80,7 @@ await Bun.build({
   outdir: 'dist/reconcile',
   target: 'browser',
   minify: true,
-  sourcemap: 'external',
+  sourcemap: 'linked',
 });
 
 console.timeEnd('build2');
