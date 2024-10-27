@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { cleanup, render } from '@maxmilton/test-utils/dom';
 import { deleteSyntheticEvent, setupSyntheticEvent } from '../../src/events';
-import { cleanup, render } from './utils';
 
 declare global {
   interface HTMLElement {

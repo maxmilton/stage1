@@ -1,9 +1,7 @@
 // XXX: This file has the same tests as test/unit/compile.test.ts, keep them in sync.
 
 import { describe, expect, spyOn, test } from 'bun:test';
-// eslint-disable-next-line import/no-duplicates
 import { compile } from '../../src/macro' with { type: 'macro' };
-// eslint-disable-next-line import/no-duplicates
 import { compile as compileNoMacro } from '../../src/macro';
 
 describe('compile', () => {

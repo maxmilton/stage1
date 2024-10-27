@@ -1,10 +1,10 @@
 // XXX: This file has the same tests as test/unit/compile.test.ts, keep them in sync.
 
 import { afterEach, describe, expect, test } from 'bun:test';
+import { cleanup, render } from '@maxmilton/test-utils/dom';
 import { compile } from '../../src/macro' with { type: 'macro' };
 import { collect, h } from '../../src/runtime';
 import type { Refs } from '../../src/types';
-import { cleanup, render } from './utils';
 
 describe('h', () => {
   test('is a function', () => {
