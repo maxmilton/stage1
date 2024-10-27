@@ -6,6 +6,7 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
+    "**/*.cjs",
     "package.json" // included in package.json#exports
   ]
 }
