@@ -1,79 +1,40 @@
-// FIXME: eslint-plugin-import seems broken here
-/* eslint-disable import/no-unresolved */
-
-import { fixupPluginRules } from '@eslint/compat';
-import { FlatCompat } from '@eslint/eslintrc';
 import eslint from '@eslint/js';
+import mm from '@maxmilton/eslint-config';
 import unicorn from 'eslint-plugin-unicorn';
-import tseslint from 'typescript-eslint';
-
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-});
+import ts from 'typescript-eslint';
 
 const OFF = 0;
 const WARN = 1;
 const ERROR = 2;
 
-export default tseslint.config(
+export default ts.config(
   eslint.configs.recommended,
-  ...compat.extends('airbnb-base').map((config) => ({
-    ...config,
-    plugins: {}, // delete
-  })),
-  ...compat.extends('airbnb-typescript/base'),
-  ...tseslint.configs.strictTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
-  // @ts-expect-error - no types
-  // eslint-disable-next-line
+  ...ts.configs.strictTypeChecked,
+  ...ts.configs.stylisticTypeChecked,
   unicorn.configs['flat/recommended'],
+  mm.configs.recommended,
   {
     linterOptions: {
-      reportUnusedDisableDirectives: WARN,
+      reportUnusedDisableDirectives: ERROR,
     },
     languageOptions: {
       parserOptions: {
         project: ['tsconfig.json', 'tsconfig.node.json'],
+        projectService: {
+          allowDefaultProject: ['*.js', '*.cjs', '*.mjs'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    // settings: {
-    //   'import/resolver': {
-    //     typescript: {
-    //       alwaysTryTypes: true,
-    //       project: ['tsconfig.json', 'tsconfig.node.json'],
-    //       // project: true,
-    //     },
-    //   },
-    // },
-    plugins: {
-      import: fixupPluginRules(
-        compat.plugins('eslint-plugin-import')[0].plugins?.import ?? {},
-      ),
-    },
     rules: {
-      '@typescript-eslint/explicit-module-boundary-types': ERROR,
-      '@typescript-eslint/no-non-null-assertion': WARN,
-      'import/prefer-default-export': OFF,
-      'no-restricted-syntax': OFF,
-      'unicorn/filename-case': OFF,
-      'unicorn/import-style': WARN,
-      'unicorn/no-abusive-eslint-disable': WARN,
-      'unicorn/no-null': OFF,
-      'unicorn/prefer-module': WARN,
-      // 'unicorn/prefer-string-raw': WARN,
-      'unicorn/prefer-string-raw': OFF, // TODO: Remove once it not longer crashes bun macros
-      'unicorn/prefer-top-level-await': WARN,
-      'unicorn/prevent-abbreviations': OFF,
+      // TODO: Remove once String.raw doesn't crash bun macros
+      'unicorn/prefer-string-raw': OFF,
 
-      /* Covered by biome formatter */
-      '@typescript-eslint/indent': OFF,
-      'function-paren-newline': OFF,
-      'implicit-arrow-linebreak': OFF,
-      'max-len': OFF,
-      'object-curly-newline': OFF,
-      'operator-linebreak': OFF,
-      'unicorn/no-nested-ternary': OFF,
+      // somewhat unstable and not always useful
+      '@typescript-eslint/no-unnecessary-type-parameters': WARN,
+
+      // prefer to clearly separate Bun and DOM
+      'unicorn/prefer-global-this': OFF,
 
       /* Performance and byte savings */
       // byte savings
@@ -123,17 +84,9 @@ export default tseslint.config(
     },
   },
   {
-    files: [
-      '*.config.mjs',
-      '*.config.ts',
-      '*.d.ts',
-      '**/*.spec.ts',
-      '**/*.test.ts',
-      'build.ts',
-      'test',
-    ],
+    files: ['build.ts'],
     rules: {
-      'import/no-extraneous-dependencies': OFF,
+      'no-console': OFF,
     },
   },
   {
