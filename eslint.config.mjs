@@ -21,7 +21,7 @@ export default ts.config(
       parserOptions: {
         project: ['tsconfig.json', 'tsconfig.node.json'],
         projectService: {
-          allowDefaultProject: ['*.js', '*.cjs', '*.mjs'],
+          allowDefaultProject: ['*.mjs'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
@@ -90,6 +90,6 @@ export default ts.config(
     },
   },
   {
-    ignores: ['**/*.bak', 'bench', 'dist'],
+    ignores: ['**/*.bak', 'bench/**', 'coverage/**', 'dist/**'],
   },
 );

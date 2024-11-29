@@ -23,7 +23,7 @@
         "noUndeclaredDependencies": "warn",
         "noUndeclaredVariables": "warn",
         "noUnusedFunctionParameters": "warn",
-        "noUnusedImports": "error"
+        "noUnusedImports": { "level": "error", "fix": "none" }
       },
       "performance": {
         "noBarrelFile": "error",
@@ -46,11 +46,11 @@
         "useExplicitLengthCheck": "warn",
         "useNamingConvention": {
           "level": "error",
-          "options": { "strictCase": false }
+          "options": { "enumMemberCase": "CONSTANT_CASE", "strictCase": false }
         },
         "useShorthandArrayType": "error",
         "useShorthandAssign": "error",
-        "useSingleCaseStatement": "error",
+        "useSingleCaseStatement": "info",
         "useTemplate": "off",
         "useThrowNewError": "error",
         "useThrowOnlyError": "warn"
