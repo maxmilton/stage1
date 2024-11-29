@@ -1,5 +1,15 @@
 import { describe, expect, mock, test } from 'bun:test';
-import { append, clone, create, createFragment, noop, onRemove, prepend } from '../../src/utils';
+import {
+  append,
+  clone,
+  create,
+  fragment,
+  insert,
+  noop,
+  onRemove,
+  prepend,
+  text,
+} from '../../src/utils';
 
 const ul = document.createElement('ul');
 const liA = document.createElement('li');
@@ -71,21 +81,44 @@ describe('noop', () => {
   });
 });
 
-describe('createFragment', () => {
+describe('fragment', () => {
   test('is a function', () => {
     expect.assertions(2);
-    expect(createFragment).toBeFunction();
-    expect(createFragment).not.toBeClass();
+    expect(fragment).toBeFunction();
+    expect(fragment).not.toBeClass();
   });
 
   test('expects no parameters', () => {
     expect.assertions(1);
-    expect(createFragment).toHaveParameters(0, 0);
+    expect(fragment).toHaveParameters(0, 0);
   });
 
   test('returns a DocumentFragment', () => {
     expect.assertions(1);
-    expect(createFragment()).toBeInstanceOf(window.DocumentFragment);
+    expect(fragment()).toBeInstanceOf(window.DocumentFragment);
+  });
+});
+
+describe('text', () => {
+  test('is a function', () => {
+    expect.assertions(2);
+    expect(text).toBeFunction();
+    expect(text).not.toBeClass();
+  });
+
+  test('expects 1 parameter', () => {
+    expect.assertions(1);
+    expect(text).toHaveParameters(1, 0);
+  });
+
+  test('returns a Text node', () => {
+    expect.assertions(1);
+    expect(text('test')).toBeInstanceOf(window.Text);
+  });
+
+  test('sets text content', () => {
+    expect.assertions(1);
+    expect(text('test').textContent).toBe('test');
   });
 });
 
@@ -168,6 +201,50 @@ describe('create', () => {
       expect.assertions(1);
       // @ts-expect-error - "x" is an intentional invalid element name
       expect(create(input)).toBeInstanceOf(expected);
+    });
+  }
+});
+
+describe('clone', () => {
+  test('is a function', () => {
+    expect.assertions(2);
+    expect(clone).toBeFunction();
+    expect(clone).not.toBeClass();
+  });
+
+  test('expects 1 parameter', () => {
+    expect.assertions(1);
+    expect(clone).toHaveParameters(1, 0);
+  });
+
+  test('throws without parameters', () => {
+    expect.assertions(3);
+    // @ts-expect-error - intentional invalid parameters
+    expect(() => clone()).toThrow(window.TypeError);
+    // @ts-expect-error - intentional invalid parameters
+    expect(() => clone(null)).toThrow(window.TypeError);
+    // @ts-expect-error - intentional invalid parameters
+    // eslint-disable-next-line unicorn/no-useless-undefined
+    expect(() => clone(undefined)).toThrow(window.TypeError);
+  });
+
+  const inputs = [
+    document.createElement('div'),
+    document.createElement('span'),
+    document.createElement('p'),
+    document.createElement('a'),
+    document.createElement('button'),
+    document.createElement('input'),
+    document.createElement('textarea'),
+    document.createElement('select'),
+  ] as const;
+
+  for (const input of inputs) {
+    test(`returns cloned ${input.tagName} element`, () => {
+      expect.assertions(2);
+      const result = clone(input);
+      expect(result).not.toBe(input);
+      expect(result.tagName).toBe(input.tagName);
     });
   }
 });
@@ -275,48 +352,62 @@ describe('prepend', () => {
   });
 });
 
-describe('clone', () => {
+describe('insert', () => {
   test('is a function', () => {
     expect.assertions(2);
-    expect(clone).toBeFunction();
-    expect(clone).not.toBeClass();
+    expect(insert).toBeFunction();
+    expect(insert).not.toBeClass();
   });
 
-  test('expects 1 parameter', () => {
+  test('expects 2 parameters', () => {
     expect.assertions(1);
-    expect(clone).toHaveParameters(1, 0);
+    expect(insert).toHaveParameters(2, 0);
   });
 
   test('throws without parameters', () => {
-    expect.assertions(3);
+    expect.assertions(5);
     // @ts-expect-error - intentional invalid parameters
-    expect(() => clone()).toThrow(window.TypeError);
+    expect(() => insert()).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    expect(() => clone(null)).toThrow(window.TypeError);
+    expect(() => insert(null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
     // eslint-disable-next-line unicorn/no-useless-undefined
-    expect(() => clone(undefined)).toThrow(window.TypeError);
+    expect(() => insert(undefined)).toThrow(window.TypeError);
+    // @ts-expect-error - intentional invalid parameters
+    expect(() => insert(null, null)).toThrow(window.TypeError);
+    // @ts-expect-error - intentional invalid parameters
+    // eslint-disable-next-line unicorn/no-useless-undefined
+    expect(() => insert(undefined, undefined)).toThrow(window.TypeError);
   });
 
-  const inputs = [
-    document.createElement('div'),
-    document.createElement('span'),
-    document.createElement('p'),
-    document.createElement('a'),
-    document.createElement('button'),
-    document.createElement('input'),
-    document.createElement('textarea'),
-    document.createElement('select'),
-  ] as const;
+  test('throws when parameters are not an element', () => {
+    expect.assertions(NOT_DOM_NODES.length * 2);
+    for (const input of NOT_DOM_NODES) {
+      // @ts-expect-error - intentional invalid parameters
+      expect(() => insert(ul.cloneNode(), input)).toThrow(window.TypeError);
+      // @ts-expect-error - intentional invalid parameters
+      expect(() => insert(input, ul.cloneNode())).toThrow(window.TypeError);
+    }
+  });
 
-  for (const input of inputs) {
-    test(`returns cloned ${input.tagName} element`, () => {
-      expect.assertions(2);
-      const result = clone(input);
-      expect(result).not.toBe(input);
-      expect(result.tagName).toBe(input.tagName);
-    });
-  }
+  test('throws when target element has no parent', () => {
+    expect.assertions(1);
+    const target = ul.cloneNode() as HTMLUListElement;
+    const node = liA.cloneNode() as HTMLLIElement;
+    expect(() => insert(node, target)).toThrow(window.DOMException);
+  });
+
+  test('inserts child element after target element', () => {
+    expect.assertions(1);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const target = liA.cloneNode() as HTMLLIElement;
+    root.appendChild(target);
+    insert(liB.cloneNode(), target);
+    insert(liC.cloneNode(), target);
+    expect(root.outerHTML).toBe(
+      '<ul><li class="a"></li><li class="c"></li><li class="b"></li></ul>',
+    );
+  });
 });
 
 describe('onRemove', () => {
@@ -340,6 +431,18 @@ describe('onRemove', () => {
     root.remove();
     await happyDOM.waitUntilComplete();
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  test('calls callback when watched element is moved (remove + add)', async () => {
+    expect.assertions(1);
+    const spy = mock(() => {});
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    onRemove(root, spy);
+    document.body.appendChild(root);
+    await happyDOM.waitUntilComplete();
+    expect(spy).toHaveBeenCalledTimes(1);
+    root.remove(); // cleanup
   });
 
   test('calls callback when parent parent element is removed', async () => {
@@ -371,7 +474,20 @@ describe('onRemove', () => {
     root.remove(); // cleanup
   });
 
-  test('does not call callback when element is added or moved', async () => {
+  test('does not call callback when element is added', async () => {
+    expect.assertions(1);
+    const spy = mock(() => {});
+    const root = document.createElement('div');
+    const child = document.createElement('div');
+    onRemove(root, spy);
+    document.body.appendChild(root);
+    root.appendChild(child);
+    await happyDOM.waitUntilComplete();
+    expect(spy).not.toHaveBeenCalled();
+    root.remove(); // cleanup
+  });
+
+  test('does not call callback when child element is moved', async () => {
     expect.assertions(1);
     const spy = mock(() => {});
     const root = document.createElement('div');
@@ -379,7 +495,7 @@ describe('onRemove', () => {
     document.body.appendChild(root);
     onRemove(root, spy);
     root.appendChild(child);
-    document.body.appendChild(root);
+    root.appendChild(child);
     await happyDOM.waitUntilComplete();
     expect(spy).not.toHaveBeenCalled();
     root.remove(); // cleanup

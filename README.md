@@ -21,10 +21,13 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
       - <https://developer.mozilla.org/en-US/docs/Web/API/Sanitizer/sanitizeFor>
       - <https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API>
   - New DOM utility functions
-    - `createFragment`
+    - `fragment`
+    - `text`
     - `create`
+    - `clone`
     - `append`
     - `prepend`
+    - `insert`
     - `onRemove`
   - New reactive store feature
   - Differences from the original `stage0` project:
@@ -59,6 +62,8 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
 
 Minimum browser version required:
 
+<!-- Note: The limiting factor is use of <template> element. -->
+
 - Chrome 26
 - Edge 13
 - Firefox 22
@@ -68,7 +73,6 @@ Minimum browser version required:
 Some optional features require a higher browser version:
 
 - `html` tagged template literal function uses `String.raw`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw#browser_compatibility)
-- `createFragment` utility function uses `DocumentFragment`; [requirements](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment/DocumentFragment#browser_compatibility)
 - `onRemove` utility function uses `for...of` and `MutationObserver`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#browser_compatibility), [requirements](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver/)
 - `store` uses `Proxy`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/Proxy#browser_compatibility)
   - Also uses [logical nullish assignment](<(https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_nullish_assignment#browser_compatibility)>) and [optional chaining operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining#browser_compatibility), however, build tools can transform these for old browser targets
