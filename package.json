@@ -1,6 +1,6 @@
 {
   "name": "stage1",
-  "version": "0.8.0-next.14",
+  "version": "0.8.0-next.15",
   "description": "High-performance JavaScript micro framework",
   "repository": "maxmilton/stage1",
   "author": "Max Milton <max@happyhackers.xyz>",
