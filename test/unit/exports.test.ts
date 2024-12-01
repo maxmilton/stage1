@@ -23,6 +23,7 @@ describe('browser', () => {
     ['append', Function],
     ['prepend', Function],
     ['insert', Function],
+    ['replace', Function],
     ['onRemove', Function],
     ['store', Function],
   ] as const;
@@ -64,6 +65,7 @@ describe('index', () => {
     ['append', Function],
     ['prepend', Function],
     ['insert', Function],
+    ['replace', Function],
     ['onRemove', Function],
     ['store', Function],
   ] as const;

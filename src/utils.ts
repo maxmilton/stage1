@@ -9,15 +9,21 @@ export const create = <K extends keyof HTMLElementTagNameMap>(
   tagName: K,
 ): HTMLElementTagNameMap[K] => document.createElement(tagName);
 export const clone = <T extends Node>(node: T): T => node.cloneNode(true) as T;
-/** Append a node to the end of the parent element. */
+/** Append a node to the end of the parent node. */
 export const append = <T extends Node>(node: T, parent: Node): T =>
   parent.appendChild(node);
-/** Prepend a node to the beginning of the parent element. */
+/** Prepend a node to the beginning of the parent node. */
 export const prepend = <T extends Node>(node: T, parent: Node): T =>
   parent.insertBefore(node, parent.firstChild);
-/** Insert a node after the target element. Target must have a parent element! */
+/** Insert a node after the target node. Target must have a parent node! */
 export const insert = <T extends Node>(node: T, target: Node): T =>
   target.parentNode!.insertBefore(node, target.nextSibling);
+/** Replace a target node with a new node. Target must have a parent node! */
+export const replace = <T extends Node>(node: T, target: Node): T =>
+  (
+    // biome-ignore lint/style/noCommaOperator: save bytes on return statement
+    target.parentNode!.replaceChild(node, target), node // eslint-disable-line no-sequences
+  );
 
 /**
  * Runs callback function when a specified node is removed from the DOM.

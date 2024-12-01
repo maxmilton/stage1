@@ -8,6 +8,7 @@ import {
   noop,
   onRemove,
   prepend,
+  replace,
   text,
 } from '../../src/utils';
 
@@ -394,7 +395,7 @@ describe('insert', () => {
     expect.assertions(1);
     const target = ul.cloneNode() as HTMLUListElement;
     const node = liA.cloneNode() as HTMLLIElement;
-    expect(() => insert(node, target)).toThrow(window.DOMException);
+    expect(() => insert(node, target)).toThrow(window.TypeError);
   });
 
   test('inserts child element after target element', () => {
@@ -408,6 +409,88 @@ describe('insert', () => {
       '<ul><li class="a"></li><li class="c"></li><li class="b"></li></ul>',
     );
   });
+
+  // FIXME: Check DOM node is moved to new parent and is in fact the same node + removed from old parent.
+  // test('moves existing element to new parent', () => {
+  //   expect.assertions(1);
+  //   const root = ul.cloneNode() as HTMLUListElement;
+  //   const target = liA.cloneNode() as HTMLLIElement;
+  //   root.appendChild(target);
+  //   const newParent = ul.cloneNode() as HTMLUListElement;
+  //   newParent.appendChild(target);
+  //   insert(liB.cloneNode(), target);
+  //   insert(liC.cloneNode(), target);
+  //   expect(root.outerHTML).toBe('<ul><li class="b"></li><li class="c"></li></ul>');
+  // });
+});
+
+describe('replace', () => {
+  test('is a function', () => {
+    expect.assertions(2);
+    expect(replace).toBeFunction();
+    expect(replace).not.toBeClass();
+  });
+
+  test('expects 2 parameters', () => {
+    expect.assertions(1);
+    expect(replace).toHaveParameters(2, 0);
+  });
+
+  test('throws without parameters', () => {
+    expect.assertions(5);
+    // @ts-expect-error - intentional invalid parameters
+    expect(() => replace()).toThrow(window.TypeError);
+    // @ts-expect-error - intentional invalid parameters
+    expect(() => replace(null)).toThrow(window.TypeError);
+    // @ts-expect-error - intentional invalid parameters
+    // eslint-disable-next-line unicorn/no-useless-undefined
+    expect(() => replace(undefined)).toThrow(window.TypeError);
+    // @ts-expect-error - intentional invalid parameters
+    expect(() => replace(null, null)).toThrow(window.TypeError);
+    // @ts-expect-error - intentional invalid parameters
+    // eslint-disable-next-line unicorn/no-useless-undefined
+    expect(() => replace(undefined, undefined)).toThrow(window.TypeError);
+  });
+
+  test('throws when parameters are not an element', () => {
+    expect.assertions(NOT_DOM_NODES.length * 2);
+    for (const input of NOT_DOM_NODES) {
+      // @ts-expect-error - intentional invalid parameters
+      expect(() => replace(ul.cloneNode(), input)).toThrow(window.TypeError);
+      // @ts-expect-error - intentional invalid parameters
+      expect(() => replace(input, ul.cloneNode())).toThrow(window.TypeError);
+    }
+  });
+
+  test('throws when target element has no parent', () => {
+    expect.assertions(1);
+    const target = ul.cloneNode() as HTMLUListElement;
+    const node = liA.cloneNode() as HTMLLIElement;
+    expect(() => replace(node, target)).toThrow(window.TypeError);
+  });
+
+  test('replaces target element with child element', () => {
+    expect.assertions(1);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const target = liA.cloneNode() as HTMLLIElement;
+    root.appendChild(target);
+    replace(liB.cloneNode(), target);
+    replace(liC.cloneNode(), target);
+    expect(root.outerHTML).toBe('<ul><li class="c"></li><li class="b"></li></ul>');
+  });
+
+  // FIXME: Check DOM node is moved to new parent and is in fact the same node + removed from old parent.
+  // test('moves existing element to new parent', () => {
+  //   expect.assertions(1);
+  //   const root = ul.cloneNode() as HTMLUListElement;
+  //   const target = liA.cloneNode() as HTMLLIElement;
+  //   root.appendChild(target);
+  //   const newParent = ul.cloneNode() as HTMLUListElement;
+  //   newParent.appendChild(target);
+  //   replace(liB.cloneNode(), target);
+  //   replace(liC.cloneNode(), target);
+  //   expect(root.outerHTML).toBe('<ul><li class="b"></li><li class="c"></li></ul>');
+  // });
 });
 
 describe('onRemove', () => {
