@@ -1,6 +1,6 @@
 {
   "name": "stage1",
-  "version": "0.8.0-next.15",
+  "version": "0.8.0-next.16",
   "description": "High-performance JavaScript micro framework",
   "repository": "git+https://github.com/maxmilton/stage1.git",
   "bugs": "https://github.com/maxmilton/stage1/issues",
