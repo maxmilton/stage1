@@ -8,7 +8,7 @@ console.timeEnd('prebuild');
 
 console.time('build1');
 
-const out = await Bun.build({
+const out1 = await Bun.build({
   entrypoints: ['src/browser/index.ts'],
   outdir: 'dist',
   naming: '[dir]/browser.js',
@@ -16,13 +16,15 @@ const out = await Bun.build({
   minify: true,
   sourcemap: 'inline',
 });
-// TODO: Once bun supports compact iife output, remove this rollup build step.
+if (!out1.success) throw new AggregateError(out1.logs, 'Build failed');
+
+// Also use rollup + terser because they generate IIFE code much better than Bun
 const bundle = await rollup({
-  input: out.outputs[0].path,
+  input: out1.outputs[0].path,
 });
 await bundle.write({
-  file: out.outputs[0].path,
-  format: 'iife',
+  file: out1.outputs[0].path,
+  format: 'iife', // must not mutate global scope
   name: 'stage1',
   sourcemap: true,
   plugins: [
@@ -34,8 +36,14 @@ await bundle.write({
           ecma: 2015,
           sourceMap: true,
           compress: {
-            reduce_funcs: false, // prevent functions being inlined
+            comparisons: false,
+            negate_iife: false,
+            reduce_funcs: false, // prevent function inlining
             passes: 2,
+          },
+          format: {
+            wrap_func_args: true,
+            wrap_iife: true,
           },
         });
       },
@@ -46,7 +54,7 @@ await bundle.write({
 console.timeEnd('build1');
 console.time('build2');
 
-await Bun.build({
+const out2 = await Bun.build({
   entrypoints: ['src/browser/index.ts'],
   outdir: 'dist',
   target: 'browser',
@@ -54,24 +62,27 @@ await Bun.build({
   minify: true,
   sourcemap: 'linked',
 });
+if (!out2.success) throw new AggregateError(out2.logs, 'Build failed');
 
-await Bun.build({
+const out3 = await Bun.build({
   entrypoints: ['src/index.ts'],
   outdir: 'dist',
   target: 'browser',
   minify: true,
   sourcemap: 'linked',
 });
+if (!out3.success) throw new AggregateError(out3.logs, 'Build failed');
 
-await Bun.build({
+const out4 = await Bun.build({
   entrypoints: ['src/macro.ts'],
   outdir: 'dist',
   target: 'bun',
   minify: true,
   sourcemap: 'linked',
 });
+if (!out4.success) throw new AggregateError(out4.logs, 'Build failed');
 
-await Bun.build({
+const out5 = await Bun.build({
   entrypoints: [
     'src/reconcile/keyed.ts',
     'src/reconcile/non-keyed.ts',
@@ -82,6 +93,7 @@ await Bun.build({
   minify: true,
   sourcemap: 'linked',
 });
+if (!out5.success) throw new AggregateError(out5.logs, 'Build failed');
 
 console.timeEnd('build2');
 console.time('dts');
