@@ -31,13 +31,20 @@ export const collect = <R extends InferRefs<R>>(
   const len = k.length;
   let index = 0;
   let distance: number;
-  let node = root;
+  let node: Node | null = root;
+  let current: Node;
 
   for (; index < len; index++) {
     distance = d[index];
     while (distance--) {
+      current = node;
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-      node = node.firstChild || node.nextSibling!;
+      node = node.firstChild || node.nextSibling;
+
+      while (!node) {
+        current = current.parentNode!;
+        node = current.nextSibling;
+      }
     }
     refs[k[index]] = node;
   }
