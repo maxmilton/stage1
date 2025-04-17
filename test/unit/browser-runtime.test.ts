@@ -177,7 +177,7 @@ describe('collect', () => {
     expect(refs.e.nodeName).toEqual('A');
     expect(refs.e).toBeInstanceOf(window.HTMLAnchorElement);
     expect(refs.f.nodeName).toEqual('MAIN');
-    expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
+    expect(refs.f).toBeInstanceOf(window.HTMLElement);
     expect(refs.g.nodeName).toEqual('H1');
     expect(refs.g).toBeInstanceOf(window.HTMLHeadingElement);
     expect(refs.h.nodeName).toEqual('P');

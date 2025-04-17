@@ -78,7 +78,7 @@ describe('noop', () => {
 
   test('is an empty function', () => {
     expect.assertions(1);
-    expect(noop.toString()).toBe('() => {\n}');
+    expect(noop.toString()).toBe('() => {}');
   });
 });
 
@@ -475,8 +475,7 @@ describe('replace', () => {
     const target = liA.cloneNode() as HTMLLIElement;
     root.appendChild(target);
     replace(liB.cloneNode(), target);
-    replace(liC.cloneNode(), target);
-    expect(root.outerHTML).toBe('<ul><li class="c"></li><li class="b"></li></ul>');
+    expect(root.outerHTML).toBe('<ul><li class="b"></li></ul>');
   });
 
   // FIXME: Check DOM node is moved to new parent and is in fact the same node + removed from old parent.

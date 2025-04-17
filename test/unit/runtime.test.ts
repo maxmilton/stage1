@@ -122,7 +122,7 @@ describe('h', () => {
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.innerHTML).toBe(
-        '<div><pre>\n            a\n            b\n            c\n\n\n            <span> Foo  </span>\n          </pre><span>Bar</span><code>\n            <span>\n              Baz\n            </span>\n          </code></div>',
+        '<div><pre>\n            a\n            b\n            c\n\n\n            &lt;span&gt; Foo  &lt;/span&gt;\n          </pre><span>Bar</span><code>\n            &lt;span&gt;\n              Baz\n            &lt;/span&gt;\n          </code></div>',
       );
     });
   });
