@@ -2,7 +2,6 @@ import type { InferRefs, LowercaseKeys, Refs } from './types';
 import { create } from './utils';
 
 const template = create('template');
-const treeWalker = document.createTreeWalker(template);
 
 /**
  * Creates a DOM node from a compiled template.
@@ -28,17 +27,19 @@ export const collect = <R extends InferRefs<R>>(
   k: readonly string[],
   d: readonly number[],
 ): LowercaseKeys<R> => {
-  const walker = treeWalker; // local var is faster in some JS engines
   const refs: Refs = {};
   const len = k.length;
   let index = 0;
   let distance: number;
-  walker.currentNode = root;
+  let node = root;
 
   for (; index < len; index++) {
     distance = d[index];
-    while (distance--) walker.nextNode();
-    refs[k[index]] = walker.currentNode;
+    while (distance--) {
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      node = node.firstChild || node.nextSibling!;
+    }
+    refs[k[index]] = node;
   }
 
   return refs as LowercaseKeys<R>;

@@ -29,7 +29,9 @@ export const replace = <T extends Node>(node: T, target: Node): T =>
  * Runs callback function when a specified node is removed from the DOM.
  *
  * @remarks Somewhat computationally expensive, especially when there are many
- * DOM mutations. Use sparingly to minimize performance overhead.
+ * DOM mutations. Use sparingly to minimize performance overhead. For larger
+ * apps running in modern browsers, consider using a custom element and the
+ * `disconnectedCallback` lifecycle callback instead.
  */
 export const onRemove = (node: Node, fn: () => void): void => {
   new MutationObserver((mutations, observer) => {
