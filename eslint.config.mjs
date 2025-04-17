@@ -11,7 +11,7 @@ export default ts.config(
   eslint.configs.recommended,
   ...ts.configs.strictTypeChecked,
   ...ts.configs.stylisticTypeChecked,
-  unicorn.configs['flat/recommended'],
+  unicorn.configs.recommended,
   mm.configs.recommended,
   {
     linterOptions: {
