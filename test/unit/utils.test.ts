@@ -204,6 +204,12 @@ describe('create', () => {
       expect(create(input)).toBeInstanceOf(expected);
     });
   }
+
+  test('throws when parameter is an empty string', () => {
+    expect.assertions(1);
+    // @ts-expect-error - intentional invalid parameters
+    expect(() => create('')).toThrow(window.DOMException);
+  });
 });
 
 describe('clone', () => {
@@ -216,6 +222,14 @@ describe('clone', () => {
   test('expects 1 parameter', () => {
     expect.assertions(1);
     expect(clone).toHaveParameters(1, 0);
+  });
+
+  test('returns new node (with same properties)', () => {
+    expect.assertions(2);
+    const newNode = liA.cloneNode() as HTMLLIElement;
+    const result = clone(newNode);
+    expect(result).not.toBe(newNode);
+    expect(result).toEqual(newNode);
   });
 
   test('throws without parameters', () => {
@@ -260,6 +274,14 @@ describe('append', () => {
   test('expects 2 parameters', () => {
     expect.assertions(1);
     expect(append).toHaveParameters(2, 0);
+  });
+
+  test('returns appended node', () => {
+    expect.assertions(1);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const newNode = liA.cloneNode() as HTMLLIElement;
+    const result = append(newNode, root);
+    expect(result).toBe(newNode);
   });
 
   test('throws without parameters', () => {
@@ -310,6 +332,14 @@ describe('prepend', () => {
   test('expects 2 parameters', () => {
     expect.assertions(1);
     expect(prepend).toHaveParameters(2, 0);
+  });
+
+  test('returns prepended node', () => {
+    expect.assertions(1);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const newNode = liA.cloneNode() as HTMLLIElement;
+    const result = prepend(newNode, root);
+    expect(result).toBe(newNode);
   });
 
   test('throws without parameters', () => {
@@ -363,6 +393,16 @@ describe('insert', () => {
   test('expects 2 parameters', () => {
     expect.assertions(1);
     expect(insert).toHaveParameters(2, 0);
+  });
+
+  test('returns inserted node', () => {
+    expect.assertions(1);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const target = liA.cloneNode() as HTMLLIElement;
+    root.appendChild(target);
+    const newNode = liB.cloneNode() as HTMLLIElement;
+    const result = insert(newNode, target);
+    expect(result).toBe(newNode);
   });
 
   test('throws without parameters', () => {
@@ -436,6 +476,16 @@ describe('replace', () => {
     expect(replace).toHaveParameters(2, 0);
   });
 
+  test('returns new node', () => {
+    expect.assertions(1);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const target = liA.cloneNode() as HTMLLIElement;
+    root.appendChild(target);
+    const newNode = liB.cloneNode() as HTMLLIElement;
+    const result = replace(newNode, target);
+    expect(result).toBe(newNode);
+  });
+
   test('throws without parameters', () => {
     expect.assertions(5);
     // @ts-expect-error - intentional invalid parameters
@@ -502,6 +552,13 @@ describe('onRemove', () => {
   test('expects 2 parameters', () => {
     expect.assertions(1);
     expect(onRemove).toHaveParameters(2, 0);
+  });
+
+  test('returns undefined', () => {
+    expect.assertions(1);
+    const root = document.createElement('div');
+    const result = onRemove(root, () => {});
+    expect(result).toBeUndefined();
   });
 
   test('calls callback when watched element is removed', async () => {
