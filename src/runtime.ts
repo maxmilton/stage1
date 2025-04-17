@@ -31,8 +31,8 @@ export const collect = <R extends InferRefs<R>>(
   const len = k.length;
   let index = 0;
   let distance: number;
-  let node: Node | null = root;
   let current: Node;
+  let node: Node | null = root;
 
   for (; index < len; index++) {
     distance = d[index];
