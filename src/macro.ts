@@ -1,3 +1,5 @@
+import type { IndicesOf, InferRefs, TupleOfKeys } from './types';
+
 export interface CompileOptions {
   /**
    * Whether to keep HTML comments in output HTML. When keepComments is true,
@@ -19,10 +21,15 @@ export interface CompileOptions {
  * @param template - HTML template string.
  * @param options - Compile options.
  */
-export function compile(
+export function compile<R extends InferRefs<R> = object>(
   template: string,
   { keepComments, keepSpaces }: CompileOptions = {},
-): { html: string; k: readonly string[]; d: readonly number[] } {
+): {
+  html: string;
+  k: readonly string[];
+  d: readonly number[];
+  idx: IndicesOf<TupleOfKeys<R>>;
+} {
   const k: string[] = [];
   const d: number[] = [];
   let distance = 0;
@@ -40,7 +47,7 @@ export function compile(
             k.push(text.slice(1));
             d.push(distance);
             distance = 0;
-            // TODO: use node.replace() once lol-html fixes it for comments
+            // TODO: Use `node.replace()` once lol-html fixes it for comments.
             // node.replace('<!-->', { html: true });
             node.remove();
             node.after('<!-->', { html: true });
@@ -87,7 +94,7 @@ export function compile(
       },
       // This text handler is invoked twice for each Text node: first with the
       // actual text, then with an empty last chunk. This behaviour stems from
-      // the fact that the data provided to HTMLRewriter.transform() can be
+      // the fact that the data provided to `HTMLRewriter.transform()` can be
       // streamed; where the last empty chunk signals the end of the text.
       text(chunk) {
         if (!chunk.lastInTextNode) {
@@ -117,5 +124,16 @@ export function compile(
     })
     .transform(template.trim());
 
-  return { html, k, d };
+  // Check k entries are unique
+  if (new Set(k).size !== k.length) {
+    throw new Error('Duplicate ref keys found in template');
+  }
+
+  return {
+    html,
+    k,
+    d,
+    // @ts-expect-error - TODO: Fix idx type
+    idx: Object.fromEntries(d.map((_, i) => [k[i], i])),
+  };
 }
