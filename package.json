@@ -42,7 +42,7 @@
       "bun": "./src/reconcile/reuse-nodes.ts",
       "default": "./dist/reconcile/reuse-nodes.js"
     },
-    "./fast": "./src/runtime-fast.ts",
+    "./fast": "./src/fast/index.ts",
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },

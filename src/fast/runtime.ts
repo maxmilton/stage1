@@ -1,5 +1,5 @@
-import type { FlatRefs, InferRefs } from './types';
-import { create } from './utils';
+import type { FlatRefs, InferRefs } from '../types';
+import { create } from '../utils';
 
 const template = create('template');
 
