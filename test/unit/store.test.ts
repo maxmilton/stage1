@@ -50,7 +50,7 @@ describe('store', () => {
       v: new TestClass(),
       w: TestClass,
       x: /test/,
-      // biome-ignore lint/complexity/useRegexLiterals: <explanation>
+      // biome-ignore lint/complexity/useRegexLiterals: intentional use of constructor
       y: new RegExp('test'), // eslint-disable-line prefer-regex-literals
       z: window,
     };

@@ -82,7 +82,7 @@ SSR (server-side rendering) is not supported and is not the intended use of this
 
 ## Build environment JS runtime support
 
-The default precompiled runtime requires [bun](https://bun.sh/) version 1.0.20 or above.
+The default precompiled mode runtime requires [bun](https://bun.sh/) version 1.0.20 or above.
 
 The regular mode browser bundle does not have any specific build requirements.
 
