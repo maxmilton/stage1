@@ -34,8 +34,9 @@ export const collect = <R extends InferRefs<R>>(
   let current: Node;
   let node: Node | null = root;
 
-  for (; index < len; index++) {
+  for (; index < len; ++index) {
     distance = d[index];
+
     while (distance--) {
       current = node;
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
