@@ -31,6 +31,7 @@ describe('browser', () => {
     test(`exports public "${name}" ${type.name}`, () => {
       expect.assertions(2);
       expect(browserExports).toHaveProperty(name);
+      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
       expect(browserExports[name]).toBeInstanceOf(type);
     });
   }
@@ -72,6 +73,7 @@ describe('index', () => {
     test(`exports public "${name}" ${type.name}`, () => {
       expect.assertions(2);
       expect(indexExports).toHaveProperty(name);
+      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
       expect(indexExports[name]).toBeInstanceOf(type);
     });
   }
@@ -98,6 +100,7 @@ describe('macro', () => {
     test(`exports public "${name}" ${type.name}`, () => {
       expect.assertions(2);
       expect(macroExports).toHaveProperty(name);
+      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
       expect(macroExports[name]).toBeInstanceOf(type);
     });
   }
