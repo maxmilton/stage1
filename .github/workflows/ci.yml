@@ -41,7 +41,7 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - run: bun playwright install chromium
+      - run: bun playwright install chromium firefox webkit
       - run: bun run build
       - run: bun run test:e2e --reporter=github,html
       - uses: actions/upload-artifact@v4
