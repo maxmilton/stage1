@@ -3,7 +3,6 @@
 *.bak
 *.lock
 !bun.lock
-*.log
 /coverage/
 /dist/
 /node_modules/
