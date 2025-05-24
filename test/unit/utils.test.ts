@@ -6,7 +6,6 @@ import {
   fragment,
   insert,
   noop,
-  onRemove,
   prepend,
   replace,
   text,
@@ -540,103 +539,4 @@ describe('replace', () => {
   //   replace(liC.cloneNode(), target);
   //   expect(root.outerHTML).toBe('<ul><li class="b"></li><li class="c"></li></ul>');
   // });
-});
-
-describe('onRemove', () => {
-  test('is a function', () => {
-    expect.assertions(2);
-    expect(onRemove).toBeFunction();
-    expect(onRemove).not.toBeClass();
-  });
-
-  test('expects 2 parameters', () => {
-    expect.assertions(1);
-    expect(onRemove).toHaveParameters(2, 0);
-  });
-
-  test('returns undefined', () => {
-    expect.assertions(1);
-    const root = document.createElement('div');
-    const result = onRemove(root, () => {});
-    expect(result).toBeUndefined();
-  });
-
-  test('calls callback when watched element is removed', async () => {
-    expect.assertions(1);
-    const spy = mock(() => {});
-    const root = document.createElement('div');
-    document.body.appendChild(root);
-    onRemove(root, spy);
-    root.remove();
-    await happyDOM.waitUntilComplete();
-    expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  test('calls callback when watched element is moved (remove + add)', async () => {
-    expect.assertions(1);
-    const spy = mock(() => {});
-    const root = document.createElement('div');
-    document.body.appendChild(root);
-    onRemove(root, spy);
-    document.body.appendChild(root);
-    await happyDOM.waitUntilComplete();
-    expect(spy).toHaveBeenCalledTimes(1);
-    root.remove(); // cleanup
-  });
-
-  test('calls callback when parent parent element is removed', async () => {
-    expect.assertions(1);
-    const spy = mock(() => {});
-    const root = document.createElement('div');
-    const parent = document.createElement('div');
-    const child = document.createElement('div');
-    parent.appendChild(child);
-    root.appendChild(parent);
-    document.body.appendChild(root);
-    onRemove(child, spy);
-    root.remove();
-    await happyDOM.waitUntilComplete();
-    expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  test('does not call callback when nested child element is removed', async () => {
-    expect.assertions(1);
-    const spy = mock(() => {});
-    const root = document.createElement('div');
-    const child = document.createElement('div');
-    root.appendChild(child);
-    document.body.appendChild(root);
-    onRemove(root, spy);
-    child.remove();
-    await happyDOM.waitUntilComplete();
-    expect(spy).not.toHaveBeenCalled();
-    root.remove(); // cleanup
-  });
-
-  test('does not call callback when element is added', async () => {
-    expect.assertions(1);
-    const spy = mock(() => {});
-    const root = document.createElement('div');
-    const child = document.createElement('div');
-    onRemove(root, spy);
-    document.body.appendChild(root);
-    root.appendChild(child);
-    await happyDOM.waitUntilComplete();
-    expect(spy).not.toHaveBeenCalled();
-    root.remove(); // cleanup
-  });
-
-  test('does not call callback when child element is moved', async () => {
-    expect.assertions(1);
-    const spy = mock(() => {});
-    const root = document.createElement('div');
-    const child = document.createElement('div');
-    document.body.appendChild(root);
-    onRemove(root, spy);
-    root.appendChild(child);
-    root.appendChild(child);
-    await happyDOM.waitUntilComplete();
-    expect(spy).not.toHaveBeenCalled();
-    root.remove(); // cleanup
-  });
 });
