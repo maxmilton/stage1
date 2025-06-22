@@ -7,14 +7,19 @@
     "indentStyle": "space"
   },
   "linter": {
+    "domains": {
+      "project": "all"
+    },
     "rules": {
       "recommended": true,
       "style": {
-        "noNonNullAssertion": "off",
-        "useTemplate": "off"
+        "noNonNullAssertion": "off"
       },
       "suspicious": {
         "noAssignInExpressions": "off"
+      },
+      "nursery": {
+        "noUnresolvedImports": "off" // covered by TypeScript
       }
     }
   },
@@ -25,20 +30,6 @@
     }
   },
   "overrides": [
-    {
-      "includes": [
-        ".vscode/*.json",
-        ".oxlintrc.json",
-        "package.json",
-        "tsconfig*.json"
-      ],
-      "json": {
-        "parser": {
-          "allowComments": true,
-          "allowTrailingCommas": true
-        }
-      }
-    },
     {
       "includes": ["**/*.spec.ts", "**/*.test.ts", "test/**"],
       "formatter": {
@@ -51,28 +42,6 @@
       },
       "javascript": {
         "globals": ["$console", "Bun", "happyDOM", "Loader"]
-      }
-    },
-    {
-      "includes": ["src/reconcile/*.ts"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noNonNullAssertion": "off",
-            "noParameterAssign": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/browser/index.ts", "src/index.ts"],
-      "linter": {
-        "rules": {
-          "performance": {
-            "noBarrelFile": "off",
-            "noReExportAll": "off"
-          }
-        }
       }
     }
   ]
