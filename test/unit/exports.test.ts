@@ -10,29 +10,24 @@ import * as reuseNodesExports from '../../src/reconcile/reuse-nodes.ts';
 
 describe('browser', () => {
   const publicExports = [
-    ['h', Function],
-    ['html', Function],
-    ['collect', Function],
-    ['setupSyntheticEvent', Function],
-    ['deleteSyntheticEvent', Function],
-    ['noop', Function],
-    ['fragment', Function],
-    ['text', Function],
-    ['create', Function],
-    ['clone', Function],
-    ['append', Function],
-    ['prepend', Function],
-    ['insert', Function],
-    ['replace', Function],
-    ['store', Function],
+    ['h', 'Function'],
+    ['html', 'Function'],
+    ['collect', 'Function'],
+    ['ONCLICK', 'Symbol'],
+    ['setupSyntheticClick', 'Function'],
+    ['fragment', 'Function'],
+    ['text', 'Function'],
+    ['create', 'Function'],
+    ['clone', 'Function'],
+    ['append', 'Function'],
   ] as const;
 
   for (const [name, type] of publicExports) {
-    test(`exports public "${name}" ${type.name}`, () => {
+    test(`exports public "${name}" ${type}`, () => {
       expect.assertions(2);
       expect(browserExports).toHaveProperty(name);
       // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(browserExports[name]).toBeInstanceOf(type);
+      expect(Object.prototype.toString.call(browserExports[name])).toBe(`[object ${type}]`);
     });
   }
 
@@ -53,28 +48,30 @@ describe('browser', () => {
 
 describe('index', () => {
   const publicExports = [
-    ['h', Function],
-    ['collect', Function],
-    ['setupSyntheticEvent', Function],
-    ['deleteSyntheticEvent', Function],
-    ['noop', Function],
-    ['fragment', Function],
-    ['text', Function],
-    ['clone', Function],
-    ['create', Function],
-    ['append', Function],
-    ['prepend', Function],
-    ['insert', Function],
-    ['replace', Function],
-    ['store', Function],
+    ['h', 'Function'],
+    ['collect', 'Function'],
+    ['ONCLICK', 'Symbol'],
+    ['handleClick', 'Function'],
+    ['setupSyntheticClick', 'Function'],
+    ['removeSyntheticClick', 'Function'],
+    ['noop', 'Function'],
+    ['fragment', 'Function'],
+    ['text', 'Function'],
+    ['create', 'Function'],
+    ['clone', 'Function'],
+    ['append', 'Function'],
+    ['prepend', 'Function'],
+    ['insert', 'Function'],
+    ['replace', 'Function'],
+    ['store', 'Function'],
   ] as const;
 
   for (const [name, type] of publicExports) {
-    test(`exports public "${name}" ${type.name}`, () => {
+    test(`exports public "${name}" ${type}`, () => {
       expect.assertions(2);
       expect(indexExports).toHaveProperty(name);
       // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(indexExports[name]).toBeInstanceOf(type);
+      expect(Object.prototype.toString.call(indexExports[name])).toBe(`[object ${type}]`);
     });
   }
 
@@ -131,7 +128,7 @@ for (const [reconsiler, exports] of reconsilers) {
     test('exports public "reconcile" Function', () => {
       expect.assertions(2);
       expect(exports).toHaveProperty('reconcile');
-      expect(exports.reconcile).toBeInstanceOf(Function);
+      expect(Object.prototype.toString.call(exports.reconcile)).toBe('[object Function]');
     });
 
     test('does not export any private internals', () => {
