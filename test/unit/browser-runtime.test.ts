@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { cleanup, render } from '@maxmilton/test-utils/dom';
 import { collect, h, html } from '../../src/browser/runtime.ts';
+import { Test } from '../TestComponent_browser.ts';
 
 describe('h', () => {
   test('is a function', () => {
@@ -251,4 +252,12 @@ describe('collect', () => {
 
   // NOTE: The regular mode h() function does not support options like the
   // runtime mode compile() macro does. So there's no need to test them here.
+});
+
+describe('Test component', () => {
+  test('renders basic template', () => {
+    expect.assertions(1);
+    const rendered = render(Test({ text: 'Hello' }));
+    expect(rendered.container.innerHTML).toBe('<div id="test">Hello</div>');
+  });
 });

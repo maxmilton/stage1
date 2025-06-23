@@ -5,6 +5,7 @@ import { cleanup, render } from '@maxmilton/test-utils/dom';
 import { compile } from '../../src/macro.ts' with { type: 'macro' };
 import { collect, h } from '../../src/runtime.ts';
 import type { Refs } from '../../src/types.ts';
+import { Test } from '../TestComponent.ts';
 
 describe('h', () => {
   test('is a function', () => {
@@ -473,5 +474,13 @@ describe('collect', () => {
       expect(refs.c).toBeInstanceOf(window.Text);
       expect(Object.keys(refs)).toHaveLength(4);
     });
+  });
+});
+
+describe('Test component', () => {
+  test('renders basic template', () => {
+    expect.assertions(1);
+    const rendered = render(Test({ text: 'Hello' }));
+    expect(rendered.container.innerHTML).toBe('<div id="test">Hello</div>');
   });
 });

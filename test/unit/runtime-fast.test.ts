@@ -5,6 +5,7 @@ import { cleanup, render } from '@maxmilton/test-utils/dom';
 import { collect, h } from '../../src/fast/runtime.ts';
 import { compile } from '../../src/macro.ts' with { type: 'macro' };
 import type { Refs } from '../../src/types.ts';
+import { Test } from '../TestComponent_fast.ts';
 
 describe('h', () => {
   test('is a function', () => {
@@ -449,5 +450,13 @@ describe('collect', () => {
       expect(Object.keys(refs)).toHaveLength(4);
       expect(Object.keys(meta.idx)).toHaveLength(4);
     });
+  });
+});
+
+describe('Test component', () => {
+  test('renders basic template', () => {
+    expect.assertions(1);
+    const rendered = render(Test({ text: 'Hello' }));
+    expect(rendered.container.innerHTML).toBe('<div id="test">Hello</div>');
   });
 });
