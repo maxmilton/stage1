@@ -18,8 +18,7 @@ const treeWalker = document.createTreeWalker(compilerTemplate);
 let str: string | null | undefined;
 
 const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
-  // 1 = Node.ELEMENT_NODE
-  if (node.nodeType === 1) {
+  if (node.nodeType === Node.ELEMENT_NODE) {
     const attrs = (node as Element).attributes;
     let index = attrs.length;
 
