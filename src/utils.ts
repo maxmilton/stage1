@@ -4,7 +4,7 @@ export const noop = (): void => {};
 
 export const fragment = (): DocumentFragment =>
   document.createDocumentFragment();
-export const text = (str: string): Text => document.createTextNode(str);
+export const text = (data: string): Text => document.createTextNode(data);
 export const create = <K extends keyof HTMLElementTagNameMap>(
   tagName: K,
 ): HTMLElementTagNameMap[K] => document.createElement(tagName);
@@ -22,6 +22,6 @@ export const insert = <T extends Node>(node: T, target: Node): T =>
 /** Replace a target node with a new node. Target must have a parent node! */
 export const replace = <T extends Node>(node: T, target: Node): T =>
   (
-    // biome-ignore lint/style/noCommaOperator: save bytes on return statement
+    // biome-ignore lint/complexity/noCommaOperator: save bytes on return statement
     target.parentNode!.replaceChild(node, target), node // eslint-disable-line no-sequences
   );
