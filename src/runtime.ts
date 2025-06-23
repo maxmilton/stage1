@@ -21,8 +21,7 @@ export const h = <T extends Node = Element>(html: string): ChildNode & T => {
  * browsers lowercase rendered HTML element attribute names so we lowercase the
  * typed key names to bring awareness to this fact.
  */
-/* @__NOINLINE__ */
-export const collect = <R extends InferRefs<R>>(
+export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R>>(
   root: Node,
   k: readonly string[],
   d: readonly number[],

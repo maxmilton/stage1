@@ -17,8 +17,7 @@ const compilerTemplate = create('template');
 const treeWalker = document.createTreeWalker(compilerTemplate);
 let str: string | null | undefined;
 
-/* @__NOINLINE__ */
-const collector = (node: Node): string | undefined => {
+const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
   // 1 = Node.ELEMENT_NODE
   if (node.nodeType === 1) {
     const attrs = (node as Element).attributes;
@@ -84,8 +83,7 @@ export const html = <T extends Node = Element>(
  * browsers lowercase rendered HTML element attribute names so we lowercase the
  * typed key names to bring awareness to this.
  */
-/* @__NOINLINE__ */
-export const collect = <R extends InferRefs<R> = Refs>(
+export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R> = Refs>(
   root: Node,
   view: View,
 ): LowercaseKeys<R> => {
