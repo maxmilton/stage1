@@ -14,12 +14,27 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
 
 ## TODO
 
+- Decide whether to keep multiple implementations
+  - Browser "live" compile, browser runtime mode
+  - Bun default precompiled mode
+  - Bun "fast" precompiled mode (use this as the default implementation and remove "normal" precompiled mode?)
+    - Downside is the API is different to the other modes (`collect` function return type)
+- Keep only the most used functionality in `stage1` and move less used but still useful functionality to `stage2`
+  - Should the reactive store be in `stage1` or `stage2`?
+  - Should less used DOM utilities be moved to `stage2`?
+    - `prepend`
+    - `insert`
+    - `replace`
+    - `text`?
+  - How much focus should be given to `stage1` used as a prebuilt/CDN browser/live package vs a build-time library?
+    - Maybe we can actually include more functionality when used as a lib but intentionally reduce what's included in the prebuilt browser/live package.
 - Add documentation about:
-  - Internal use of `innerHTML` — potential risk of XSS etc.; never use `h` and `html` functions with untrusted input
-    - In future we may have `Sanitizer.sanitizeFor(...)` which could be used to sanitize untrusted input
-      - It's unlikely we'll use it internally due to performance overhead but developers should definitely sanitize input when untrusted before passing it in... although we could create light wrapper functions
-      - <https://developer.mozilla.org/en-US/docs/Web/API/Sanitizer/sanitizeFor>
-      - <https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API>
+  - Security:
+    - Internal use of `innerHTML` — potential risk of XSS etc.; never use `h` and `html` functions with untrusted input
+      - In future we may have `Sanitizer.sanitizeFor(...)` which could be used to sanitize untrusted input
+        - It's unlikely we'll use it internally due to performance overhead but developers should definitely sanitize input when untrusted before passing it in... although we could create light wrapper functions
+        - <https://developer.mozilla.org/en-US/docs/Web/API/Sanitizer/sanitizeFor>
+        - <https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API>
   - New DOM utility functions
     - `fragment`
     - `text`
@@ -32,8 +47,9 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
     - `onRemove`
   - New reactive store feature
   - Differences from the original `stage0` project:
-    - There are now 2 runtime modes:
-      - New precompiled runtime mode for ultimate performance. Compiles templates at build-time via a bun macro that minifies templates, generates metadata, and then includes minimal runtime code in your JS bundle. Currently only works with [Bun.build](https://bun.sh/docs/bundler).
+    - There are now 3 runtime modes:
+      - New precompiled runtime mode and a fast variant for ultimate performance. Compiles templates at build-time via a bun macro that minifies templates, generates metadata, and then includes minimal runtime code in your JS bundle. Currently only works with [Bun.build](https://bun.sh/docs/bundler).
+        - The fast mode is a variant of the precompiled mode that uses a different API and is further optimized for performance.
       - The regular mode is still available which generates metadata when your JS is run in the browser. Regular mode can be used with or without a build process.
     - Ref nodes are now marked with `@` rather than `#`
     - `h` is now `function h(template: string): S1Node` e.g., `h('<p>@key<p>')`
@@ -49,7 +65,9 @@ Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
       - `/keyed` --> `/reconcile/keyed`
       - `/reconcile` --> `/reconcile/non-keyed`
       - `/reuse-nodes` --> `/reconcile/reuse-nodes`
-  - Ref names must be lowercase because some browsers normalise element attribute names when rendering HTML
+  - Ref names must be lowercase because some browsers normalize element attribute names when rendering HTML
+    - Note: No longer the case in "fast" mode (different API).
+  - Comments may be used as refs
 - Add API and usage documentation
   - The regular mode `h()` function does not support skipping minification in whitespace sensitive HTML blocks like `<pre>` and `<code>` because it would be too slow. The precompiled mode `compile()` macro does however. Same for the other compile options.
 - Add more tests
@@ -71,10 +89,21 @@ Minimum browser version required:
 - Safari 8
 - Opera 15
 
+If using the browser runtime mode or synthetic click events:
+
+<!-- Note: The limiting factor is use of Symbol. -->
+
+- Chrome 38
+- Edge 13
+- Firefox 36
+- Safari 9
+- Opera 25
+
 Some optional features require a higher browser version:
 
 - `html` tagged template literal function uses `String.raw`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw#browser_compatibility)
 - `onRemove` utility function uses `for...of` and `MutationObserver`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of#browser_compatibility), [requirements](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver/)
+  - NOTE: Moved to `stage2` package
 - `store` uses `Proxy`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/Proxy#browser_compatibility)
   - Also uses [logical nullish assignment](<(https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_nullish_assignment#browser_compatibility)>) and [optional chaining operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining#browser_compatibility), however, build tools can transform these for old browser targets
 
