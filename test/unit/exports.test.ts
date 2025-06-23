@@ -1,12 +1,12 @@
 /* eslint-disable guard-for-in */
 
 import { describe, expect, test } from 'bun:test';
-import * as browserExports from '../../src/browser/index';
-import * as indexExports from '../../src/index';
-import * as macroExports from '../../src/macro';
-import * as keyedExports from '../../src/reconcile/keyed';
-import * as nonKeyedExports from '../../src/reconcile/non-keyed';
-import * as reuseNodesExports from '../../src/reconcile/reuse-nodes';
+import * as browserExports from '../../src/browser/index.ts';
+import * as indexExports from '../../src/index.ts';
+import * as macroExports from '../../src/macro.ts';
+import * as keyedExports from '../../src/reconcile/keyed.ts';
+import * as nonKeyedExports from '../../src/reconcile/non-keyed.ts';
+import * as reuseNodesExports from '../../src/reconcile/reuse-nodes.ts';
 
 describe('browser', () => {
   const publicExports = [

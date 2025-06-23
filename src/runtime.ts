@@ -1,5 +1,5 @@
-import type { InferRefs, LowercaseKeys, Refs } from './types';
-import { create } from './utils';
+import type { InferRefs, LowercaseKeys, Refs } from './types.ts';
+import { create } from './utils.ts';
 
 const template = create('template');
 

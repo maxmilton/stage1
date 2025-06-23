@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { isProxy } from 'node:util/types';
-import { store } from '../../src/store';
+import { store } from '../../src/store.ts';
 
 describe('store', () => {
   test('is a function', () => {

@@ -1,7 +1,7 @@
 import { resolve } from 'node:path'; // eslint-disable-line unicorn/import-style
 import { expect, test } from '@playwright/test';
 
-type Stage1 = typeof import('../../src/browser');
+type Stage1 = typeof import('../../src/browser/index.ts');
 
 declare global {
   interface Window {

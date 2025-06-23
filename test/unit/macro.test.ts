@@ -1,8 +1,8 @@
 // XXX: This file has the same tests as test/unit/compile.test.ts, keep them in sync.
 
 import { describe, expect, spyOn, test } from 'bun:test';
-import { compile } from '../../src/macro' with { type: 'macro' };
-import { compile as compileNoMacro } from '../../src/macro';
+import { compile } from '../../src/macro.ts' with { type: 'macro' };
+import { compile as compileNoMacro } from '../../src/macro.ts';
 
 describe('compile', () => {
   // FIXME: Test for each of the compile macro options; keepComments, keepSpace

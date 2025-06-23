@@ -2,9 +2,9 @@
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import { cleanup, render } from '@maxmilton/test-utils/dom';
-import { compile } from '../../src/macro' with { type: 'macro' };
-import { collect, h } from '../../src/runtime';
-import type { Refs } from '../../src/types';
+import { compile } from '../../src/macro.ts' with { type: 'macro' };
+import { collect, h } from '../../src/runtime.ts';
+import type { Refs } from '../../src/types.ts';
 
 describe('h', () => {
   test('is a function', () => {

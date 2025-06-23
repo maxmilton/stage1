@@ -9,7 +9,7 @@ import {
   prepend,
   replace,
   text,
-} from '../../src/utils';
+} from '../../src/utils.ts';
 
 const ul = document.createElement('ul');
 const liA = document.createElement('li');

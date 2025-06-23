@@ -1,4 +1,4 @@
-import { noop } from '../utils';
+import { noop } from '../utils.ts';
 
 export const reconcile = <T, N extends Node>(
   parent: Element,

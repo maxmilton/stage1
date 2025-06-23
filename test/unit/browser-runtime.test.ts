@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import { cleanup, render } from '@maxmilton/test-utils/dom';
-import { collect, h, html } from '../../src/browser/runtime';
+import { collect, h, html } from '../../src/browser/runtime.ts';
 
 describe('h', () => {
   test('is a function', () => {

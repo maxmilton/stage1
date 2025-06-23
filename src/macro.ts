@@ -1,4 +1,4 @@
-import type { IndicesOf, InferRefs, TupleOfKeys } from './types';
+import type { IndicesOf, InferRefs, TupleOfKeys } from './types.ts';
 
 export interface CompileOptions {
   /**
