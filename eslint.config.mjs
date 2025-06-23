@@ -19,7 +19,6 @@ export default ts.config(
     },
     languageOptions: {
       parserOptions: {
-        project: ['tsconfig.json', 'tsconfig.node.json'],
         projectService: {
           allowDefaultProject: ['*.mjs'],
         },
@@ -90,6 +89,6 @@ export default ts.config(
     },
   },
   {
-    ignores: ['**/*.bak', 'bench/**', 'coverage/**', 'dist/**'],
+    ignores: ['**/*.bak', 'coverage', 'dist'],
   },
 );
