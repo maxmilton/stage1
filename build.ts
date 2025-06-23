@@ -6,7 +6,7 @@ console.time('prebuild');
 await Bun.$`rm -rf dist`;
 console.timeEnd('prebuild');
 
-console.time('build1');
+console.time('build:1');
 
 // Use rollup and terser to generate compact IIFE code
 const { outputs } = await Bun.build({
@@ -14,6 +14,9 @@ const { outputs } = await Bun.build({
   outdir: 'dist',
   naming: '[dir]/browser.js',
   target: 'browser',
+  define: {
+    'Node.ELEMENT_NODE': '1',
+  },
   minify: true,
   sourcemap: 'inline',
 });
@@ -48,14 +51,17 @@ await bundle.write({
   ],
 });
 
-console.timeEnd('build1');
-console.time('build2');
+console.timeEnd('build:1');
+console.time('build:2');
 
 await Bun.build({
   entrypoints: ['src/browser/index.ts'],
   outdir: 'dist',
-  target: 'browser',
   naming: '[dir]/browser.mjs',
+  target: 'browser',
+  define: {
+    'Node.ELEMENT_NODE': '1',
+  },
   minify: true,
   sourcemap: 'linked',
 });
@@ -88,7 +94,7 @@ await Bun.build({
   sourcemap: 'linked',
 });
 
-console.timeEnd('build2');
+console.timeEnd('build:2');
 console.time('dts');
 
 await createBundle({
