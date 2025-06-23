@@ -23,7 +23,7 @@ describe('h', () => {
     afterEach(cleanup);
 
     test('renders basic template', () => {
-      expect.assertions(1);
+      expect.assertions(2);
       const meta = compile(`
         <ul>
           <li>A</li>
@@ -34,10 +34,11 @@ describe('h', () => {
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+      expect(meta.success).toBeTrue();
     });
 
     test('renders basic template with messy whitespace', () => {
-      expect.assertions(1);
+      expect.assertions(2);
       const meta = compile(`
         <ul>
           <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
@@ -51,10 +52,11 @@ describe('h', () => {
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+      expect(meta.success).toBeTrue();
     });
 
     test('renders SVG template', () => {
-      expect.assertions(2);
+      expect.assertions(3);
       const meta = compile(`
         <svg>
           <circle cx=10 cy='10' r="10" />
@@ -66,10 +68,11 @@ describe('h', () => {
       expect(rendered.container.innerHTML).toBe(
         '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
       );
+      expect(meta.success).toBeTrue();
     });
 
     test('returns root element', () => {
-      expect.assertions(3);
+      expect.assertions(4);
       const meta = compile(`
         <ul id=root>
           <li>A</li>
@@ -82,10 +85,11 @@ describe('h', () => {
       expect(view).toBeInstanceOf(window.HTMLUListElement);
       expect(view.id).toBe('root');
       expect(rendered.container.firstChild).toBe(view);
+      expect(meta.success).toBeTrue();
     });
 
     test('removes refs in template from output DOM', () => {
-      expect.assertions(1);
+      expect.assertions(2);
       const meta = compile(`
         <ul @list>
           <li @item-one>A</li>
@@ -95,10 +99,11 @@ describe('h', () => {
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
+      expect(meta.success).toBeTrue();
     });
 
     test('does not minify in whitespace-sensitive blocks', () => {
-      expect.assertions(1);
+      expect.assertions(2);
       const meta = compile(`
         <div>
           <pre>
@@ -125,6 +130,7 @@ describe('h', () => {
       expect(rendered.container.innerHTML).toBe(
         '<div><pre>\n            a\n            b\n            c\n\n\n            &lt;span&gt; Foo  &lt;/span&gt;\n          </pre><span>Bar</span><code>\n            &lt;span&gt;\n              Baz\n            &lt;/span&gt;\n          </code></div>',
       );
+      expect(meta.success).toBeTrue();
     });
   });
 });
@@ -142,7 +148,7 @@ describe('collect', () => {
   });
 
   test('collects all refs', () => {
-    expect.assertions(42);
+    expect.assertions(43);
     const meta = compile<Refs>(`
       <div @a>
         <header @b>
@@ -214,10 +220,11 @@ describe('collect', () => {
     expect(refs[meta.ref.t]).toBeInstanceOf(window.Text);
     expect(Object.keys(refs)).toHaveLength(20);
     expect(Object.keys(meta.ref)).toHaveLength(20);
+    expect(meta.success).toBeTrue();
   });
 
   test('collects ref at start of element attributes', () => {
-    expect.assertions(5);
+    expect.assertions(6);
     const meta = compile<{ search: HTMLInputElement }>(`
       <div>
         <input @search id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off />
@@ -230,10 +237,11 @@ describe('collect', () => {
     expect(refs[meta.ref.search].name).toBe('q');
     expect(Object.keys(refs)).toHaveLength(1);
     expect(Object.keys(meta.ref)).toHaveLength(1);
+    expect(meta.success).toBeTrue();
   });
 
   test('collects ref at end of element attributes', () => {
-    expect.assertions(5);
+    expect.assertions(6);
     const meta = compile<{ search: HTMLInputElement }>(`
       <div>
         <input id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off @search />
@@ -246,10 +254,11 @@ describe('collect', () => {
     expect(refs[meta.ref.search].name).toBe('q');
     expect(Object.keys(refs)).toHaveLength(1);
     expect(Object.keys(meta.ref)).toHaveLength(1);
+    expect(meta.success).toBeTrue();
   });
 
   test('collects ref in middle of element attributes', () => {
-    expect.assertions(5);
+    expect.assertions(6);
     const meta = compile<{ search: HTMLInputElement }>(`
       <div>
         <input id=search name=q class="input search" type=search minlength=2 @search maxlength=40 placeholder="Search..." autofocus autocomplete=off />
@@ -262,28 +271,31 @@ describe('collect', () => {
     expect(refs[meta.ref.search].name).toBe('q');
     expect(Object.keys(refs)).toHaveLength(1);
     expect(Object.keys(meta.ref)).toHaveLength(1);
+    expect(meta.success).toBeTrue();
   });
 
   test('collects ref from template with only text', () => {
-    expect.assertions(2);
+    expect.assertions(3);
     const meta = compile<{ a: Text }>('@a');
     const view = h(meta.html);
     const refs = collect<{ a: Text }>(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toEqual('#text');
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
+    expect(meta.success).toBeTrue();
   });
 
   test('collects ref from template with only comment', () => {
-    expect.assertions(2);
+    expect.assertions(3);
     const meta = compile<{ a: Comment }>('<!-- @a -->');
     const view = h(meta.html);
     const refs = collect<{ a: Comment }>(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toEqual('#comment');
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
+    expect(meta.success).toBeTrue();
   });
 
   test('collects refs from template with many comments', () => {
-    expect.assertions(15);
+    expect.assertions(16);
     const meta = compile<Refs>(`
         <div>
           <!-- -->
@@ -316,11 +328,12 @@ describe('collect', () => {
     expect(Object.keys(refs)).toHaveLength(6);
     expect(Object.keys(meta.ref)).toHaveLength(6);
     expect(Object.keys(meta.d)).toHaveLength(6);
+    expect(meta.success).toBeTrue();
   });
 
   describe('keepSpaces option', () => {
     test('collects refs when option is default', () => {
-      expect.assertions(8);
+      expect.assertions(9);
       const meta = compile<Refs>(`
         <div>
           @a
@@ -340,10 +353,11 @@ describe('collect', () => {
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
       expect(Object.keys(refs)).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
+      expect(meta.success).toBeTrue();
     });
 
     test('collects refs when option is true', () => {
-      expect.assertions(8);
+      expect.assertions(9);
       const meta = compile<Refs>(
         `
           <div>
@@ -366,10 +380,11 @@ describe('collect', () => {
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
       expect(Object.keys(refs)).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
+      expect(meta.success).toBeTrue();
     });
 
     test('collects refs when option is false', () => {
-      expect.assertions(8);
+      expect.assertions(9);
       const meta = compile<Refs>(
         `
           <div>
@@ -392,6 +407,7 @@ describe('collect', () => {
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
       expect(Object.keys(refs)).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
+      expect(meta.success).toBeTrue();
     });
   });
 });
