@@ -45,9 +45,7 @@ const collector = (node: Node): string | undefined => {
  * Creates a DOM node from a template and collects ref node metadata.
  * @param template - HTML template string.
  */
-export const h = <T extends Node & ChildNode = Element>(
-  template: string,
-): View & T => {
+export const h = <T extends Node = Element>(template: string): View & T => {
   compilerTemplate.innerHTML = template
     // reduce any whitespace to a single space
     .replace(/\s+/g, ' ')
@@ -73,7 +71,7 @@ export const h = <T extends Node & ChildNode = Element>(
   return node;
 };
 
-export const html = <T extends Node & ChildNode = Element>(
+export const html = <T extends Node = Element>(
   template: TemplateStringsArray,
   ...substitutions: unknown[]
 ): View & T => h(String.raw(template, ...substitutions));

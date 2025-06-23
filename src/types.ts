@@ -32,6 +32,10 @@ export type IndicesOf<T> = {
     : never;
 };
 
+/**
+ * @typeParam T - `Refs` type. **Order of keys is preserved** and must match
+ * the order of refs in the template!
+ */
 export type FlatRefs<T> = UnionToTuple<keyof T> extends infer K
   ? K extends (keyof T)[]
     ? { [P in keyof K]: T[K[P] & keyof T] }
