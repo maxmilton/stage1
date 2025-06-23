@@ -13,3 +13,5 @@ function setupMocks(): void {
 
 setupDOM();
 setupMocks();
+
+global.Node = window.Node;
