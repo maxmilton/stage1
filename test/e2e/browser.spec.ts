@@ -18,23 +18,18 @@ test('exports', async ({ page }) => {
   const result = await page.evaluate(() => Object.keys(window.stage1));
 
   expect(result).toEqual([
+    'ONCLICK',
     'append',
     'clone',
     'collect',
     'create',
-    'deleteSyntheticEvent',
     'fragment',
     'h',
     'html',
-    'insert',
-    'noop',
-    'prepend',
-    'replace',
-    'setupSyntheticEvent',
-    'store',
+    'setupSyntheticClick',
     'text',
   ]);
-  expect(result).toHaveLength(15);
+  expect(result).toHaveLength(10);
 });
 
 // test('onRemove WIP', async ({ page }) => {
