@@ -161,6 +161,7 @@ describe('collect', () => {
             <button @q>Submit</button>
           </form>
         </main>
+        <!-- -->
         <footer @r>
           @s
         </footer>

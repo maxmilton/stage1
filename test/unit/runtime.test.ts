@@ -176,7 +176,7 @@ describe('collect', () => {
   });
 
   test('collects all refs', () => {
-    expect.assertions(39);
+    expect.assertions(41);
     const meta = compile(`
       <div @a>
         <header @b>
@@ -198,8 +198,9 @@ describe('collect', () => {
             <button @q>Submit</button>
           </form>
         </main>
-        <footer @r>
-          @s
+        <!-- @r -->
+        <footer @s>
+          @t
         </footer>
       </div>
     `);
@@ -239,11 +240,13 @@ describe('collect', () => {
     expect(refs.p).toBeInstanceOf(window.HTMLTextAreaElement);
     expect(refs.q.nodeName).toEqual('BUTTON');
     expect(refs.q).toBeInstanceOf(window.HTMLButtonElement);
-    expect(refs.r.nodeName).toEqual('FOOTER');
-    expect(refs.r).toBeInstanceOf(window.HTMLElement);
-    expect(refs.s.nodeName).toEqual('#text');
-    expect(refs.s).toBeInstanceOf(window.Text);
-    expect(Object.keys(refs)).toHaveLength(19);
+    expect(refs.r.nodeName).toEqual('#comment');
+    expect(refs.r).toBeInstanceOf(window.Comment);
+    expect(refs.s.nodeName).toEqual('FOOTER');
+    expect(refs.s).toBeInstanceOf(window.HTMLElement);
+    expect(refs.t.nodeName).toEqual('#text');
+    expect(refs.t).toBeInstanceOf(window.Text);
+    expect(Object.keys(refs)).toHaveLength(20);
   });
 
   test('collects ref at start of element attributes', () => {
@@ -291,48 +294,27 @@ describe('collect', () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
-  // TODO: Instead of repeating similar tests multiple times, we should create
-  // a reusable test suite and create a test matrix that covers all the
-  // different combinations of options.
+  test('collects ref from template with only text', () => {
+    expect.assertions(2);
+    const meta = compile<{ a: Text }>('@a');
+    const view = h(meta.html);
+    const refs = collect<{ a: Text }>(view, meta.k, meta.d);
+    expect(refs.a.nodeName).toEqual('#text');
+    expect(refs.a).toBeInstanceOf(window.Text);
+  });
 
-  describe('keepComments option', () => {
-    test('collects refs when option is default', () => {
-      expect.assertions(11);
-      const meta = compile(`
-        <div>
-          <!-- -->
-          @a
-          <!-- -->
-          <!-- @b -->
-          <div @c>
-            <!-- -->
-            @d
-            <!-- @e -->
-            <!-- -->
-            <div @f></div>
-          </div>
-        </div>
-      `);
-      const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.k, meta.d);
-      expect(refs.a.nodeName).toEqual('#text');
-      expect(refs.a).toBeInstanceOf(window.Text);
-      expect(refs.b).toBeUndefined();
-      expect(refs.c.nodeName).toEqual('DIV');
-      expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs.d.nodeName).toEqual('#text');
-      expect(refs.d).toBeInstanceOf(window.Text);
-      expect(refs.e).toBeUndefined();
-      expect(refs.f.nodeName).toEqual('DIV');
-      expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
-      expect(Object.keys(refs)).toHaveLength(4);
-    });
+  test('collects ref from template with only comment', () => {
+    expect.assertions(2);
+    const meta = compile<{ a: Comment }>('<!-- @a -->');
+    const view = h(meta.html);
+    const refs = collect<{ a: Comment }>(view, meta.k, meta.d);
+    expect(refs.a.nodeName).toEqual('#comment');
+    expect(refs.a).toBeInstanceOf(window.Comment);
+  });
 
-    // FIXME: It seems happy-dom has a HTML parser bug. Remove skip when fixed.
-    test.skip('collects refs when option is true', () => {
-      expect.assertions(13);
-      const meta = compile(
-        `
+  test('collects refs from template with many comments', () => {
+    expect.assertions(15);
+    const meta = compile<Refs>(`
           <div>
             <!-- -->
             @a
@@ -346,60 +328,24 @@ describe('collect', () => {
               <div @f></div>
             </div>
           </div>
-        `,
-        { keepComments: true },
-      );
-      const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.k, meta.d);
-      expect(refs.a.nodeName).toEqual('#text');
-      expect(refs.a).toBeInstanceOf(window.Text);
-      expect(refs.b.nodeName).toEqual('#comment');
-      expect(refs.b).toBeInstanceOf(window.Comment);
-      expect(refs.c.nodeName).toEqual('DIV');
-      expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs.d.nodeName).toEqual('#text');
-      expect(refs.d).toBeInstanceOf(window.Text);
-      expect(refs.e.nodeName).toEqual('#comment');
-      expect(refs.e).toBeInstanceOf(window.Comment);
-      expect(refs.f.nodeName).toEqual('DIV');
-      expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
-      expect(Object.keys(refs)).toHaveLength(6);
-    });
-
-    test('collects refs when option is false', () => {
-      expect.assertions(11);
-      const meta = compile(
-        `
-          <div>
-            <!-- -->
-            @a
-            <!-- -->
-            <!-- @b -->
-            <div @c>
-              <!-- -->
-              @d
-              <!-- @e -->
-              <!-- -->
-              <div @f></div>
-            </div>
-          </div>
-        `,
-        { keepComments: false },
-      );
-      const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.k, meta.d);
-      expect(refs.a.nodeName).toEqual('#text');
-      expect(refs.a).toBeInstanceOf(window.Text);
-      expect(refs.b).toBeUndefined();
-      expect(refs.c.nodeName).toEqual('DIV');
-      expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs.d.nodeName).toEqual('#text');
-      expect(refs.d).toBeInstanceOf(window.Text);
-      expect(refs.e).toBeUndefined();
-      expect(refs.f.nodeName).toEqual('DIV');
-      expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
-      expect(Object.keys(refs)).toHaveLength(4);
-    });
+        `);
+    const view = h(meta.html);
+    const refs = collect<Refs>(view, meta.k, meta.d);
+    expect(refs.a.nodeName).toEqual('#text');
+    expect(refs.a).toBeInstanceOf(window.Text);
+    expect(refs.b.nodeName).toEqual('#comment');
+    expect(refs.b).toBeInstanceOf(window.Comment);
+    expect(refs.c.nodeName).toEqual('DIV');
+    expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
+    expect(refs.d.nodeName).toEqual('#text');
+    expect(refs.d).toBeInstanceOf(window.Text);
+    expect(refs.e.nodeName).toEqual('#comment');
+    expect(refs.e).toBeInstanceOf(window.Comment);
+    expect(refs.f.nodeName).toEqual('DIV');
+    expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
+    expect(Object.keys(refs)).toHaveLength(6);
+    expect(Object.keys(meta.k)).toHaveLength(6);
+    expect(Object.keys(meta.d)).toHaveLength(6);
   });
 
   describe('keepSpaces option', () => {
