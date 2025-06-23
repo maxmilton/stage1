@@ -1,6 +1,9 @@
 import type { InferRefs, LowercaseKeys, Refs } from '../types.ts';
 import { create } from '../utils.ts';
 
+// eslint-disable-next-line symbol-description
+const REFS = Symbol();
+
 interface RefMeta {
   /** Ref key name. */
   readonly k: string;
@@ -8,9 +11,9 @@ interface RefMeta {
   readonly d: number;
 }
 
-export interface View extends Node, ChildNode {
+interface View extends Node, ChildNode {
   /** @private */
-  $$refs: readonly RefMeta[];
+  [REFS]: readonly RefMeta[];
 }
 
 const compilerTemplate = create('template');
@@ -45,14 +48,14 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
  */
 export const h = <T extends Node = Element>(template: string): View & T => {
   compilerTemplate.innerHTML = template
-    // reduce any whitespace to a single space
+    // Reduce any whitespace to a single space
     .replace(/\s+/g, ' ')
-    // remove space adjacent to tags
+    // Remove space adjacent to tags
     .replace(/> /g, '>')
     .replace(/ </g, '<');
 
   const node = compilerTemplate.content.firstChild as View & T;
-  const metadata: RefMeta[] = (node.$$refs = []);
+  const metadata: RefMeta[] = (node[REFS] = []);
   let current: Node | null = (treeWalker.currentNode = node);
   let distance = 0;
 
@@ -86,16 +89,16 @@ export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R> = Refs>(
   root: Node,
   view: View,
 ): LowercaseKeys<R> => {
-  const walker = treeWalker; // local var is faster in some JS engines
+  const walker = treeWalker; // Local var is faster in some JS engines
   const refs: Refs = {};
-  const len = view.$$refs.length;
+  const len = view[REFS].length;
   let index = 0;
   let metadata: RefMeta;
   let distance: number;
   walker.currentNode = root;
 
   for (; index < len; index++) {
-    metadata = view.$$refs[index];
+    metadata = view[REFS][index];
     distance = metadata.d;
     while (distance--) walker.nextNode();
     refs[metadata.k] = walker.currentNode;
