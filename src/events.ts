@@ -1,28 +1,26 @@
-const configuredEvents: Record<string, true | null> = {};
+// eslint-disable-next-line symbol-description
+export const ONCLICK = Symbol();
 
-const nativeToSyntheticEvent = (event: Event) => {
-  // eslint-disable-next-line prefer-template
-  const eventKey = '__' + event.type;
-  let node = event.target as Node | null;
+// eslint-disable-next-line consistent-return
+export const handleClick = (event: Event): false | undefined => {
+  let node = event.target as
+    | (Node & { [ONCLICK]?(event: Event): false | undefined })
+    | null;
 
   while (node) {
-    // @ts-expect-error - unavoidable string indexing
-    if (node[eventKey]) {
-      // @ts-expect-error - unavoidable string indexing
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return
-      return node[eventKey](event);
+    if (node[ONCLICK]) {
+      return node[ONCLICK](event);
     }
     node = node.parentNode;
   }
 };
 
-export const setupSyntheticEvent = (type: keyof DocumentEventMap): void => {
-  configuredEvents[type] ??=
-    // biome-ignore lint/style/noCommaOperator: code compactness
-    (document.addEventListener(type, nativeToSyntheticEvent), true);
+// TODO: Add documentation: If you want to save bytes and you are sure no code
+// will override it, use `document.onclick = handleClick` instead.
+export const setupSyntheticClick = (): void => {
+  document.addEventListener('click', handleClick);
 };
 
-export const deleteSyntheticEvent = (type: keyof DocumentEventMap): void => {
-  configuredEvents[type] = null;
-  document.removeEventListener(type, nativeToSyntheticEvent);
+export const removeSyntheticClick = (): void => {
+  document.removeEventListener('click', handleClick);
 };
