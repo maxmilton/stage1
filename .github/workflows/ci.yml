@@ -24,6 +24,12 @@ jobs:
       - run: bun run test --coverage-reporter=lcov --coverage-reporter=text
       - name: Report coverage
         if: ${{ github.repository_owner == 'maxmilton' }}
+        uses: qltysh/qlty-action/coverage@v1
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: coverage/lcov.info
+      - name: Report coverage (old)
+        if: ${{ github.repository_owner == 'maxmilton' }}
         run: |
           curl -LO https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 \
                -LO https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64.sha256
