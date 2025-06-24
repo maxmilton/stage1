@@ -1,8 +1,13 @@
-[![Build status](https://img.shields.io/github/actions/workflow/status/maxmilton/stage1/ci.yml?branch=master)](https://github.com/maxmilton/stage1/actions)
-[![Coverage status](https://img.shields.io/codeclimate/coverage/maxmilton/stage1)](https://codeclimate.com/github/maxmilton/stage1)
-[![NPM version](https://img.shields.io/npm/v/stage1.svg)](https://www.npmjs.com/package/stage1)
-[![NPM bundle size (minified + gzip)](https://img.shields.io/bundlephobia/minzip/stage1.svg)](https://bundlephobia.com/result?p=stage1)
-[![Licence](https://img.shields.io/github/license/maxmilton/stage1.svg)](https://github.com/maxmilton/stage1/blob/master/LICENSE)
+[![CI status](https://badgen.net/github/checks/maxmilton/stage1?label=ci)](https://github.com/maxmilton/stage1/actions)
+[![Coverage %](https://badgen.net/codeclimate/coverage/maxmilton/stage1)](https://codeclimate.com/github/maxmilton/stage1)
+[![NPM version](https://badgen.net/npm/v/stage1)](https://www.npmjs.com/package/stage1)
+[![Licence](https://badgen.net/github/license/maxmilton/stage1)](./LICENSE)
+
+<!-- TODO: Migrate to badgen.net once it supports qlty.sh -->
+<!-- [![Coverage %](https://qlty.sh/badges/71ce5b0f-6642-4ea1-9e5a-e558bc1f6169/test_coverage.svg)](https://qlty.sh/gh/maxmilton/projects/stage1) -->
+
+[![Minified size](https://badgen.net/bundlephobia/minzip/stage1)](https://bundlephobia.com/package/stage1)
+![Dependency count](https://badgen.net/bundlephobia/dependency-count/stage1)
 
 # stage1
 
