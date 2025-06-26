@@ -19,7 +19,7 @@
         "noAssignInExpressions": "off"
       },
       "nursery": {
-        "noUnresolvedImports": "off" // covered by TypeScript
+        "noUnresolvedImports": "off" // covered by typescript
       }
     }
   },

@@ -63,7 +63,7 @@
     "@biomejs/biome": "2.0.5",
     "@eslint/js": "9.29.0",
     "@maxmilton/eslint-config": "0.2.1",
-    "@maxmilton/test-utils": "0.0.11",
+    "@maxmilton/test-utils": "0.0.12",
     "@playwright/test": "1.53.1",
     "@types/bun": "1.2.17",
     "dts-buddy": "0.6.2",
