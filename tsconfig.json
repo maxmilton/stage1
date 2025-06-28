@@ -6,10 +6,10 @@
     "moduleResolution": "bundler",
     "esModuleInterop": false,
     "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "allowJs": false,
-
     "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": true,
     "noEmit": true,
 
     "strict": true,

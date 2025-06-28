@@ -1,4 +1,4 @@
-import eslint from '@eslint/js';
+import js from '@eslint/js';
 import mm from '@maxmilton/eslint-config';
 import unicorn from 'eslint-plugin-unicorn';
 import ts from 'typescript-eslint';
@@ -8,9 +8,9 @@ const WARN = 1;
 const ERROR = 2;
 
 export default ts.config(
-  eslint.configs.recommended,
-  ...ts.configs.strictTypeChecked,
-  ...ts.configs.stylisticTypeChecked,
+  js.configs.recommended,
+  ts.configs.strictTypeChecked,
+  ts.configs.stylisticTypeChecked,
   unicorn.configs.recommended,
   mm.configs.recommended,
   {
@@ -19,9 +19,7 @@ export default ts.config(
     },
     languageOptions: {
       parserOptions: {
-        projectService: {
-          allowDefaultProject: ['*.mjs'],
-        },
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -29,10 +27,11 @@ export default ts.config(
       // TODO: Remove once String.raw doesn't crash bun macros
       'unicorn/prefer-string-raw': OFF,
 
-      // somewhat unstable and not always useful
+      // Somewhat unstable and not always useful
       '@typescript-eslint/no-unnecessary-type-parameters': WARN,
-
-      // prefer to clearly separate Bun and DOM
+      // Bad browser support
+      'unicorn/prefer-at': OFF,
+      // Prefer to clearly separate Bun and DOM
       'unicorn/prefer-global-this': OFF,
 
       /* Performance and byte savings */
