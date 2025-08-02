@@ -1,25 +1,25 @@
 /* eslint-disable guard-for-in */
 
-import { describe, expect, test } from 'bun:test';
-import * as browserExports from '../../src/browser/index.ts';
-import * as indexExports from '../../src/index.ts';
-import * as macroExports from '../../src/macro.ts';
-import * as keyedExports from '../../src/reconcile/keyed.ts';
-import * as nonKeyedExports from '../../src/reconcile/non-keyed.ts';
-import * as reuseNodesExports from '../../src/reconcile/reuse-nodes.ts';
+import { describe, expect, test } from "bun:test";
+import * as browserExports from "../../src/browser/index.ts";
+import * as indexExports from "../../src/index.ts";
+import * as macroExports from "../../src/macro.ts";
+import * as keyedExports from "../../src/reconcile/keyed.ts";
+import * as nonKeyedExports from "../../src/reconcile/non-keyed.ts";
+import * as reuseNodesExports from "../../src/reconcile/reuse-nodes.ts";
 
-describe('browser', () => {
+describe("browser", () => {
   const publicExports = [
-    ['h', 'Function'],
-    ['html', 'Function'],
-    ['collect', 'Function'],
-    ['ONCLICK', 'Symbol'],
-    ['setupSyntheticClick', 'Function'],
-    ['fragment', 'Function'],
-    ['text', 'Function'],
-    ['create', 'Function'],
-    ['clone', 'Function'],
-    ['append', 'Function'],
+    ["h", "Function"],
+    ["html", "Function"],
+    ["collect", "Function"],
+    ["ONCLICK", "Symbol"],
+    ["setupSyntheticClick", "Function"],
+    ["fragment", "Function"],
+    ["text", "Function"],
+    ["create", "Function"],
+    ["clone", "Function"],
+    ["append", "Function"],
   ] as const;
 
   for (const [name, type] of publicExports) {
@@ -31,7 +31,7 @@ describe('browser', () => {
     });
   }
 
-  test('does not export any private internals', () => {
+  test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
     const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in browserExports) {
@@ -40,30 +40,30 @@ describe('browser', () => {
     expect(publicExportNames).toHaveLength(Object.keys(browserExports).length);
   });
 
-  test('has no default export', () => {
+  test("has no default export", () => {
     expect.assertions(1);
-    expect(browserExports).not.toHaveProperty('default');
+    expect(browserExports).not.toHaveProperty("default");
   });
 });
 
-describe('index', () => {
+describe("index", () => {
   const publicExports = [
-    ['h', 'Function'],
-    ['collect', 'Function'],
-    ['ONCLICK', 'Symbol'],
-    ['handleClick', 'Function'],
-    ['setupSyntheticClick', 'Function'],
-    ['removeSyntheticClick', 'Function'],
-    ['noop', 'Function'],
-    ['fragment', 'Function'],
-    ['text', 'Function'],
-    ['create', 'Function'],
-    ['clone', 'Function'],
-    ['append', 'Function'],
-    ['prepend', 'Function'],
-    ['insert', 'Function'],
-    ['replace', 'Function'],
-    ['store', 'Function'],
+    ["h", "Function"],
+    ["collect", "Function"],
+    ["ONCLICK", "Symbol"],
+    ["handleClick", "Function"],
+    ["setupSyntheticClick", "Function"],
+    ["removeSyntheticClick", "Function"],
+    ["noop", "Function"],
+    ["fragment", "Function"],
+    ["text", "Function"],
+    ["create", "Function"],
+    ["clone", "Function"],
+    ["append", "Function"],
+    ["prepend", "Function"],
+    ["insert", "Function"],
+    ["replace", "Function"],
+    ["store", "Function"],
   ] as const;
 
   for (const [name, type] of publicExports) {
@@ -75,7 +75,7 @@ describe('index', () => {
     });
   }
 
-  test('does not export any private internals', () => {
+  test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
     const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in indexExports) {
@@ -84,14 +84,14 @@ describe('index', () => {
     expect(publicExportNames).toHaveLength(Object.keys(indexExports).length);
   });
 
-  test('has no default export', () => {
+  test("has no default export", () => {
     expect.assertions(1);
-    expect(indexExports).not.toHaveProperty('default');
+    expect(indexExports).not.toHaveProperty("default");
   });
 });
 
-describe('macro', () => {
-  const publicExports = [['compile', Function]] as const;
+describe("macro", () => {
+  const publicExports = [["compile", Function]] as const;
 
   for (const [name, type] of publicExports) {
     test(`exports public "${name}" ${type.name}`, () => {
@@ -102,7 +102,7 @@ describe('macro', () => {
     });
   }
 
-  test('does not export any private internals', () => {
+  test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
     const publicExportNames = publicExports.map((x) => x[0]);
     for (const name in macroExports) {
@@ -111,38 +111,38 @@ describe('macro', () => {
     expect(publicExportNames).toHaveLength(Object.keys(macroExports).length);
   });
 
-  test('has no default export', () => {
+  test("has no default export", () => {
     expect.assertions(1);
-    expect(macroExports).not.toHaveProperty('default');
+    expect(macroExports).not.toHaveProperty("default");
   });
 });
 
 const reconsilers = [
-  ['keyed', keyedExports],
-  ['non-keyed', nonKeyedExports],
-  ['reuse-nodes', reuseNodesExports],
+  ["keyed", keyedExports],
+  ["non-keyed", nonKeyedExports],
+  ["reuse-nodes", reuseNodesExports],
 ] as const;
 
 for (const [reconsiler, exports] of reconsilers) {
   describe(`reconcile/${reconsiler}`, () => {
     test('exports public "reconcile" Function', () => {
       expect.assertions(2);
-      expect(exports).toHaveProperty('reconcile');
-      expect(Object.prototype.toString.call(exports.reconcile)).toBe('[object Function]');
+      expect(exports).toHaveProperty("reconcile");
+      expect(Object.prototype.toString.call(exports.reconcile)).toBe("[object Function]");
     });
 
-    test('does not export any private internals', () => {
+    test("does not export any private internals", () => {
       expect.assertions(2);
-      const publicExportNames = ['reconcile'];
+      const publicExportNames = ["reconcile"];
       for (const name in exports) {
         expect(publicExportNames).toContain(name);
       }
       expect(publicExportNames).toHaveLength(Object.keys(exports).length);
     });
 
-    test('has no default export', () => {
+    test("has no default export", () => {
       expect.assertions(1);
-      expect(exports).not.toHaveProperty('default');
+      expect(exports).not.toHaveProperty("default");
     });
   });
 }

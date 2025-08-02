@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test';
-import { cleanup, render } from '@maxmilton/test-utils/dom';
+import { afterEach, describe, expect, mock, test } from "bun:test";
+import { cleanup, render } from "@maxmilton/test-utils/dom";
 import {
   handleClick,
   ONCLICK,
   removeSyntheticClick,
   setupSyntheticClick,
-} from '../../src/events.ts';
+} from "../../src/events.ts";
 
 declare global {
   interface HTMLElement {
@@ -15,45 +15,45 @@ declare global {
   }
 }
 
-describe('handleClick', () => {
-  test('is a function', () => {
+describe("handleClick", () => {
+  test("is a function", () => {
     expect.assertions(2);
     expect(handleClick).toBeFunction();
     expect(handleClick).not.toBeClass();
   });
 
-  test('expects 1 parameter', () => {
+  test("expects 1 parameter", () => {
     expect.assertions(1);
     expect(handleClick).toHaveParameters(1, 0);
   });
 
-  test('returns undefined', () => {
+  test("returns undefined", () => {
     expect.assertions(1);
     expect(handleClick({} as Event)).toBeUndefined();
   });
 
-  describe('in DOM', () => {
+  describe("in DOM", () => {
     afterEach(cleanup);
 
-    test('returns undefined when event handler is noop', () => {
+    test("returns undefined when event handler is noop", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       button[ONCLICK] = () => {};
       render(button);
       expect(handleClick({ target: button } as unknown as Event)).toBeUndefined();
     });
 
-    test('returns false when event handler returns false', () => {
+    test("returns false when event handler returns false", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       button[ONCLICK] = () => false;
       render(button);
       expect(handleClick({ target: button } as unknown as Event)).toBe(false);
     });
 
-    test('calls synthetic event handler', () => {
+    test("calls synthetic event handler", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       button[ONCLICK] = handler;
       render(button);
@@ -61,9 +61,9 @@ describe('handleClick', () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    test('does not call native event handler', () => {
+    test("does not call native event handler", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       button.onclick = handler;
       render(button);
@@ -73,30 +73,30 @@ describe('handleClick', () => {
   });
 });
 
-describe('setupSyntheticClick', () => {
-  test('is a function', () => {
+describe("setupSyntheticClick", () => {
+  test("is a function", () => {
     expect.assertions(2);
     expect(setupSyntheticClick).toBeFunction();
     expect(setupSyntheticClick).not.toBeClass();
   });
 
-  test('expects 0 parameters', () => {
+  test("expects 0 parameters", () => {
     expect.assertions(1);
     expect(setupSyntheticClick).toHaveParameters(0, 0);
   });
 
-  test('returns undefined', () => {
+  test("returns undefined", () => {
     expect.assertions(1);
     // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
     expect(setupSyntheticClick()).toBeUndefined();
   });
 
-  describe('in DOM', () => {
+  describe("in DOM", () => {
     afterEach(cleanup);
 
-    test('calls synthetic click event handler on native click', () => {
+    test("calls synthetic click event handler on native click", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       button[ONCLICK] = handler;
       render(button);
@@ -108,14 +108,14 @@ describe('setupSyntheticClick', () => {
       removeSyntheticClick();
     });
 
-    test('calls synthetic click event handler on synthetic click event', () => {
+    test("calls synthetic click event handler on synthetic click event", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       button[ONCLICK] = handler;
       render(button);
       setupSyntheticClick();
-      const event = new window.MouseEvent('click', {
+      const event = new window.MouseEvent("click", {
         view: window,
         bubbles: true,
         cancelable: true,
@@ -127,24 +127,24 @@ describe('setupSyntheticClick', () => {
       removeSyntheticClick();
     });
 
-    test('does not call synthetic event click handler on non-click event', () => {
+    test("does not call synthetic event click handler on non-click event", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       button[ONCLICK] = handler;
       render(button);
       setupSyntheticClick();
-      button.dispatchEvent(new Event('mouseover'));
+      button.dispatchEvent(new Event("mouseover"));
       expect(handler).not.toHaveBeenCalled();
       removeSyntheticClick();
     });
 
-    test('propagates click event from deeply nested element', () => {
+    test("propagates click event from deeply nested element", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
-      const div = document.createElement('div');
-      const span = document.createElement('span');
-      const img = document.createElement('img');
+      const button = document.createElement("button");
+      const div = document.createElement("div");
+      const span = document.createElement("span");
+      const img = document.createElement("img");
       const handler = mock(() => {});
       button[ONCLICK] = handler;
       button.appendChild(div);
@@ -159,9 +159,9 @@ describe('setupSyntheticClick', () => {
       removeSyntheticClick();
     });
 
-    test('propagates up to document body', () => {
+    test("propagates up to document body", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       document.body[ONCLICK] = handler;
       render(button);
@@ -173,10 +173,10 @@ describe('setupSyntheticClick', () => {
       delete document.body[ONCLICK];
     });
 
-    test('no longer propagates click event once handled', () => {
+    test("no longer propagates click event once handled", () => {
       expect.assertions(1);
-      const div1 = document.createElement('div');
-      const div2 = document.createElement('div');
+      const div1 = document.createElement("div");
+      const div2 = document.createElement("div");
       const handler = mock(() => {});
       div1[ONCLICK] = handler;
       div2[ONCLICK] = handler;
@@ -188,9 +188,9 @@ describe('setupSyntheticClick', () => {
       removeSyntheticClick();
     });
 
-    test('does not call handler if synthetic event is not setup', () => {
+    test("does not call handler if synthetic event is not setup", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       button[ONCLICK] = handler;
       render(button);
@@ -198,11 +198,11 @@ describe('setupSyntheticClick', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    test('does not call handler if event originates from another DOM tree branch', () => {
+    test("does not call handler if event originates from another DOM tree branch", () => {
       expect.assertions(2);
-      const div = document.createElement('div');
-      const button1 = document.createElement('button');
-      const button2 = document.createElement('button');
+      const div = document.createElement("div");
+      const button1 = document.createElement("button");
+      const button2 = document.createElement("button");
       const handler1 = mock(() => {});
       const handler2 = mock(() => {});
       button1[ONCLICK] = handler1;
@@ -217,9 +217,9 @@ describe('setupSyntheticClick', () => {
       removeSyntheticClick();
     });
 
-    test('only registers synthetic click handler once', () => {
+    test("only registers synthetic click handler once", () => {
       expect.assertions(1);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       button[ONCLICK] = handler;
       render(button);
@@ -232,30 +232,30 @@ describe('setupSyntheticClick', () => {
   });
 });
 
-describe('removeSyntheticClick', () => {
-  test('is a function', () => {
+describe("removeSyntheticClick", () => {
+  test("is a function", () => {
     expect.assertions(2);
     expect(removeSyntheticClick).toBeFunction();
     expect(removeSyntheticClick).not.toBeClass();
   });
 
-  test('expects 0 parameters', () => {
+  test("expects 0 parameters", () => {
     expect.assertions(1);
     expect(removeSyntheticClick).toHaveParameters(0, 0);
   });
 
-  test('returns undefined', () => {
+  test("returns undefined", () => {
     expect.assertions(1);
     // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
     expect(removeSyntheticClick()).toBeUndefined();
   });
 
-  describe('in DOM', () => {
+  describe("in DOM", () => {
     afterEach(cleanup);
 
-    test('does not call synthetic click handler after delete', () => {
+    test("does not call synthetic click handler after delete", () => {
       expect.assertions(2);
-      const button = document.createElement('button');
+      const button = document.createElement("button");
       const handler = mock(() => {});
       button[ONCLICK] = handler;
       render(button);

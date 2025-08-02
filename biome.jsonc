@@ -2,7 +2,6 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "formatter": {
-    "formatWithErrors": true,
     "indentStyle": "space"
   },
   "linter": {
@@ -23,10 +22,7 @@
     }
   },
   "javascript": {
-    "globals": ["Bun"],
-    "formatter": {
-      "quoteStyle": "single"
-    }
+    "globals": ["Bun"]
   },
   "overrides": [
     {

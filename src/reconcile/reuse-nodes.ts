@@ -1,4 +1,4 @@
-import { noop } from '../utils.ts';
+import { noop } from "../utils.ts";
 
 export const reconcile = <T, N extends Node>(
   parent: Element,
@@ -24,7 +24,7 @@ export const reconcile = <T, N extends Node>(
         node = tmp;
       }
     } else {
-      parent.textContent = '';
+      parent.textContent = "";
     }
     return;
   }

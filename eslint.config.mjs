@@ -1,7 +1,7 @@
-import js from '@eslint/js';
-import mm from '@maxmilton/eslint-config';
-import unicorn from 'eslint-plugin-unicorn';
-import ts from 'typescript-eslint';
+import js from "@eslint/js";
+import mm from "@maxmilton/eslint-config";
+import unicorn from "eslint-plugin-unicorn";
+import ts from "typescript-eslint";
 
 const OFF = 0;
 const WARN = 1;
@@ -24,70 +24,72 @@ export default ts.config(
       },
     },
     rules: {
+      quotes: [ERROR, "double", { avoidEscape: true }],
+
       // TODO: Remove once String.raw doesn't crash bun macros
-      'unicorn/prefer-string-raw': OFF,
+      "unicorn/prefer-string-raw": OFF,
 
       // Somewhat unstable and not always useful
-      '@typescript-eslint/no-unnecessary-type-parameters': WARN,
+      "@typescript-eslint/no-unnecessary-type-parameters": WARN,
       // Bad browser support
-      'unicorn/prefer-at': OFF,
+      "unicorn/prefer-at": OFF,
       // Prefer to clearly separate Bun and DOM
-      'unicorn/prefer-global-this': OFF,
+      "unicorn/prefer-global-this": OFF,
 
       /* Performance and byte savings */
       // byte savings
-      '@typescript-eslint/no-confusing-void-expression': WARN,
+      "@typescript-eslint/no-confusing-void-expression": WARN,
       // byte savings (but reduces debugging ability)
-      '@typescript-eslint/restrict-plus-operands': WARN,
+      "@typescript-eslint/restrict-plus-operands": WARN,
       // byte savings (but reduces debugging ability)
-      '@typescript-eslint/restrict-template-expressions': WARN,
+      "@typescript-eslint/restrict-template-expressions": WARN,
       // byte savings with same performance
-      'prefer-template': WARN,
+      "prefer-template": WARN,
       // indexOf is faster
-      '@typescript-eslint/prefer-includes': OFF,
+      "@typescript-eslint/prefer-includes": OFF,
       // worse for performance-critical code
-      '@typescript-eslint/prefer-for-of': OFF,
+      "@typescript-eslint/prefer-for-of": OFF,
       // alternatives offer byte savings and better performance
-      '@typescript-eslint/prefer-string-starts-ends-with': OFF,
+      "@typescript-eslint/prefer-string-starts-ends-with": OFF,
       // void return can be used for efficient code... but be careful!
-      'consistent-return': WARN,
+      "consistent-return": WARN,
       // useful for compact and memory efficient code... but be careful!
-      'no-cond-assign': OFF,
+      "no-cond-assign": OFF,
       // more compact at the cost of being harder to read... but be careful!
-      'no-multi-assign': WARN,
+      "no-multi-assign": WARN,
       // can be used for efficient code... but be careful!
-      'no-param-reassign': WARN,
+      "no-param-reassign": WARN,
       // byte savings
-      'no-plusplus': OFF,
+      "no-plusplus": OFF,
       // useful for compact and memory efficient code... but be careful!
-      'no-return-assign': WARN,
+      "no-return-assign": WARN,
       // byte savings + faster
-      'unicorn/explicit-length-check': OFF,
-      'unicorn/no-array-callback-reference': WARN,
+      "unicorn/explicit-length-check": OFF,
+      "unicorn/no-array-callback-reference": WARN,
       // forEach is often faster (in Chrome and Bun but not Firefox)
-      'unicorn/no-array-for-each': OFF,
+      "unicorn/no-array-for-each": OFF,
       // indexOf is faster (in Chrome)
-      'unicorn/prefer-includes': OFF,
+      "unicorn/prefer-includes": OFF,
       // slower and worse browser support
-      'unicorn/prefer-string-replace-all': OFF,
+      "unicorn/prefer-string-replace-all": OFF,
       // byte savings (minification doesn't currently automatically remove)
-      'unicorn/switch-case-braces': [ERROR, 'avoid'],
+      "unicorn/switch-case-braces": [ERROR, "avoid"],
 
       /* stage1 */
       // underscores in synthetic event handler names
-      'no-underscore-dangle': OFF,
-      'unicorn/prefer-add-event-listener': OFF,
-      'unicorn/prefer-dom-node-append': OFF,
-      'unicorn/prefer-query-selector': OFF,
+      "no-underscore-dangle": OFF,
+      "unicorn/prefer-add-event-listener": OFF,
+      "unicorn/prefer-dom-node-append": OFF,
+      "unicorn/prefer-query-selector": OFF,
     },
   },
   {
-    files: ['build.ts'],
+    files: ["build.ts"],
     rules: {
-      'no-console': OFF,
+      "no-console": OFF,
     },
   },
   {
-    ignores: ['**/*.bak', 'coverage', 'dist'],
+    ignores: ["**/*.bak", "coverage", "dist"],
   },
 );

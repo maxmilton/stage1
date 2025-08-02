@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable no-continue, no-labels, unicorn/no-for-loop, unicorn/no-new-array */
 
-import { noop } from '../utils.ts';
+import { noop } from "../utils.ts";
 
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L396C10-L396C30
 const findGreatestIndexLEQ = (seq: number[], n: number) => {
@@ -96,7 +96,7 @@ export const reconcile = <T, N extends Node>(
         node = tmp;
       }
     } else {
-      parent.textContent = '';
+      parent.textContent = "";
     }
     return;
   }
@@ -270,7 +270,7 @@ export const reconcile = <T, N extends Node>(
         prevStart++;
       }
     } else {
-      parent.textContent = '';
+      parent.textContent = "";
     }
 
     let node: Node;

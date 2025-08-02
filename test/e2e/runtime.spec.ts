@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
-test('placeholder', () => {
+test("placeholder", () => {
   expect(1 + 2).toBe(3);
 });

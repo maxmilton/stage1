@@ -1,4 +1,4 @@
-import type { IndicesOf, InferRefs, TupleOfKeys } from './types.ts';
+import type { IndicesOf, InferRefs, TupleOfKeys } from "./types.ts";
 
 export interface CompileOptions {
   /**
@@ -41,20 +41,20 @@ export function compile<R extends InferRefs<R> = object>(
       doctype() {
         // eslint-disable-next-line no-console
         console.error(
-          'Found doctype but none was expected in template:',
+          "Found doctype but none was expected in template:",
           template,
         );
         success = false;
       },
       comments(node) {
         const text = node.text.trim();
-        if (text[0] === '@') {
+        if (text[0] === "@") {
           k.push(text.slice(1));
           d.push(distance);
           distance = 1;
           // Replace with <!> which renders a Comment node at runtime
           node.remove();
-          node.after('<!>', { html: true });
+          node.after("<!>", { html: true });
         } else {
           node.remove();
         }
@@ -72,16 +72,16 @@ export function compile<R extends InferRefs<R> = object>(
             }
             return;
           }
-          if (text[0] === '@') {
+          if (text[0] === "@") {
             k.push(text.slice(1));
             d.push(distance);
             distance = 0;
             // Replace with single space which renders a Text node at runtime
-            chunk.replace(' ', { html: true });
+            chunk.replace(" ", { html: true });
           } else if (!whitespaceSensitiveBlock) {
             // Reduce any whitespace to a single space
             chunk.replace(
-              (keepSpaces ? chunk.text : text).replace(/\s+/g, ' '),
+              (keepSpaces ? chunk.text : text).replace(/\s+/g, " "),
               { html: true },
             );
           }
@@ -89,7 +89,7 @@ export function compile<R extends InferRefs<R> = object>(
         }
       },
     })
-    .on('*', {
+    .on("*", {
       element(node) {
         if (!root) {
           if (root === undefined) {
@@ -100,21 +100,21 @@ export function compile<R extends InferRefs<R> = object>(
           } else {
             // eslint-disable-next-line no-console
             console.error(
-              'Expected template to have a single root element:',
+              "Expected template to have a single root element:",
               template,
             );
             success = false;
           }
         }
 
-        if (node.tagName === 'pre' || node.tagName === 'code') {
+        if (node.tagName === "pre" || node.tagName === "code") {
           whitespaceSensitiveBlock = true;
           node.onEndTag(() => {
             whitespaceSensitiveBlock = false;
           });
         }
         for (const [name] of node.attributes) {
-          if (name[0] === '@') {
+          if (name[0] === "@") {
             k.push(name.slice(1));
             d.push(distance);
             distance = 0;
@@ -130,7 +130,7 @@ export function compile<R extends InferRefs<R> = object>(
   // Check k entries are unique
   if (new Set(k).size !== k.length) {
     // eslint-disable-next-line no-console
-    console.error('Duplicate ref keys found in template:', template);
+    console.error("Duplicate ref keys found in template:", template);
     success = false;
   }
 

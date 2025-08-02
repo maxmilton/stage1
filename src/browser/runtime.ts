@@ -1,5 +1,5 @@
-import type { InferRefs, LowercaseKeys, Refs } from '../types.ts';
-import { create } from '../utils.ts';
+import type { InferRefs, LowercaseKeys, Refs } from "../types.ts";
+import { create } from "../utils.ts";
 
 // eslint-disable-next-line symbol-description
 const REFS = Symbol();
@@ -16,7 +16,7 @@ interface View extends Node, ChildNode {
   [REFS]: readonly RefMeta[];
 }
 
-const compilerTemplate = create('template');
+const compilerTemplate = create("template");
 const treeWalker = document.createTreeWalker(compilerTemplate);
 let str: string | null | undefined;
 
@@ -27,7 +27,7 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
 
     while (index--) {
       str = attrs[index].name;
-      if (str[0] === '@') {
+      if (str[0] === "@") {
         (node as Element).removeAttribute(str);
         return str.slice(1);
       }
@@ -36,8 +36,8 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
   }
 
   str = node.nodeValue;
-  if (str && str[0] === '@') {
-    node.nodeValue = '';
+  if (str && str[0] === "@") {
+    node.nodeValue = "";
     return str.slice(1);
   }
 };
@@ -49,10 +49,10 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
 export const h = <T extends Node = Element>(template: string): View & T => {
   compilerTemplate.innerHTML = template
     // Reduce any whitespace to a single space
-    .replace(/\s+/g, ' ')
+    .replace(/\s+/g, " ")
     // Remove space adjacent to tags
-    .replace(/> /g, '>')
-    .replace(/ </g, '<');
+    .replace(/> /g, ">")
+    .replace(/ </g, "<");
 
   const node = compilerTemplate.content.firstChild as View & T;
   const metadata: RefMeta[] = (node[REFS] = []);

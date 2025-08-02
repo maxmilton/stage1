@@ -1,5 +1,5 @@
-import { collect, h } from '../src/fast/runtime.ts';
-import { compile } from '../src/macro.ts' with { type: 'macro' };
+import { collect, h } from "../src/fast/runtime.ts";
+import { compile } from "../src/macro.ts" with { type: "macro" };
 
 type TestComponent = HTMLDivElement;
 
