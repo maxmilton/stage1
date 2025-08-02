@@ -1,6 +1,6 @@
-import '@maxmilton/test-utils/extend';
+import "@maxmilton/test-utils/extend";
 
-import { setupDOM } from '@maxmilton/test-utils/dom';
+import { setupDOM } from "@maxmilton/test-utils/dom";
 
 const noop = () => {};
 

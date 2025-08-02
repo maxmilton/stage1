@@ -1,26 +1,26 @@
 // XXX: This file has the same tests as test/unit/runtime.test.ts, keep them in sync.
 
-import { afterEach, describe, expect, test } from 'bun:test';
-import { cleanup, render } from '@maxmilton/test-utils/dom';
-import { collect, h, html } from '../../src/browser/runtime.ts';
-import { Test } from '../TestComponent_browser.ts';
+import { afterEach, describe, expect, test } from "bun:test";
+import { cleanup, render } from "@maxmilton/test-utils/dom";
+import { collect, h, html } from "../../src/browser/runtime.ts";
+import { Test } from "../TestComponent_browser.ts";
 
-describe('h', () => {
-  test('is a function', () => {
+describe("h", () => {
+  test("is a function", () => {
     expect.assertions(2);
     expect(h).toBeFunction();
     expect(h).not.toBeClass();
   });
 
-  test('expects 1 parameters', () => {
+  test("expects 1 parameters", () => {
     expect.assertions(1);
     expect(h).toHaveParameters(1, 0);
   });
 
-  describe('render', () => {
+  describe("render", () => {
     afterEach(cleanup);
 
-    test('renders basic template', () => {
+    test("renders basic template", () => {
       expect.assertions(1);
       const view = h(`
         <ul>
@@ -30,10 +30,10 @@ describe('h', () => {
         </ul>
       `);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
     });
 
-    test('renders basic template with messy whitespace', () => {
+    test("renders basic template with messy whitespace", () => {
       expect.assertions(1);
       const view = h(`
         <ul>
@@ -46,10 +46,10 @@ describe('h', () => {
         </ul>
       `);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
     });
 
-    test('renders SVG template', () => {
+    test("renders SVG template", () => {
       expect.assertions(2);
       const view = h(`
         <svg>
@@ -63,7 +63,7 @@ describe('h', () => {
       );
     });
 
-    test('returns root element', () => {
+    test("returns root element", () => {
       expect.assertions(3);
       const view = h(`
         <ul id=root>
@@ -74,11 +74,11 @@ describe('h', () => {
       `);
       const rendered = render(view);
       expect(view).toBeInstanceOf(window.HTMLUListElement);
-      expect(view.id).toBe('root');
+      expect(view.id).toBe("root");
       expect(rendered.container.firstChild).toBe(view);
     });
 
-    test('removes refs in template from output DOM', () => {
+    test("removes refs in template from output DOM", () => {
       expect.assertions(1);
       const view = h(`
         <ul @list>
@@ -87,31 +87,31 @@ describe('h', () => {
         </ul>
       `);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li></ul>');
+      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li></ul>");
     });
 
     // NOTE: This is not supported by the current implementation of the h()
     // function because it would be too slow.
-    test.skip('does not minify in whitespace-sensitive blocks', () => {});
+    test.skip("does not minify in whitespace-sensitive blocks", () => {});
   });
 });
 
-describe('html', () => {
-  test('is a function', () => {
+describe("html", () => {
+  test("is a function", () => {
     expect.assertions(2);
     expect(html).toBeFunction();
     expect(html).not.toBeClass();
   });
 
-  test('expects 2 parameters (1 optional)', () => {
+  test("expects 2 parameters (1 optional)", () => {
     expect.assertions(1);
     expect(html).toHaveParameters(1, 1);
   });
 
-  describe('render', () => {
+  describe("render", () => {
     afterEach(cleanup);
 
-    test('renders basic template', () => {
+    test("renders basic template", () => {
       expect.assertions(1);
       const view = html`
         <ul>
@@ -121,24 +121,24 @@ describe('html', () => {
         </ul>
       `;
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe('<ul><li>A</li><li>B</li><li>C</li></ul>');
+      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
     });
   });
 });
 
-describe('collect', () => {
-  test('is a function', () => {
+describe("collect", () => {
+  test("is a function", () => {
     expect.assertions(2);
     expect(collect).toBeFunction();
     expect(collect).not.toBeClass();
   });
 
-  test('expects 2 parameters', () => {
+  test("expects 2 parameters", () => {
     expect.assertions(1);
     expect(collect).toHaveParameters(2, 0);
   });
 
-  test('collects all refs', () => {
+  test("collects all refs", () => {
     expect.assertions(39);
     const view = h(`
       <div @a>
@@ -168,48 +168,48 @@ describe('collect', () => {
       </div>
     `);
     const refs = collect(view, view);
-    expect(refs.a.nodeName).toEqual('DIV');
+    expect(refs.a.nodeName).toEqual("DIV");
     expect(refs.a).toBeInstanceOf(window.HTMLDivElement);
-    expect(refs.b.nodeName).toEqual('HEADER');
+    expect(refs.b.nodeName).toEqual("HEADER");
     expect(refs.b).toBeInstanceOf(window.HTMLElement);
-    expect(refs.c.nodeName).toEqual('NAV');
+    expect(refs.c.nodeName).toEqual("NAV");
     expect(refs.c).toBeInstanceOf(window.HTMLElement);
-    expect(refs.d.nodeName).toEqual('A');
+    expect(refs.d.nodeName).toEqual("A");
     expect(refs.d).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.e.nodeName).toEqual('A');
+    expect(refs.e.nodeName).toEqual("A");
     expect(refs.e).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.f.nodeName).toEqual('MAIN');
+    expect(refs.f.nodeName).toEqual("MAIN");
     expect(refs.f).toBeInstanceOf(window.HTMLElement);
-    expect(refs.g.nodeName).toEqual('H1');
+    expect(refs.g.nodeName).toEqual("H1");
     expect(refs.g).toBeInstanceOf(window.HTMLHeadingElement);
-    expect(refs.h.nodeName).toEqual('P');
+    expect(refs.h.nodeName).toEqual("P");
     expect(refs.h).toBeInstanceOf(window.HTMLParagraphElement);
-    expect(refs.i.nodeName).toEqual('B');
+    expect(refs.i.nodeName).toEqual("B");
     expect(refs.i).toBeInstanceOf(window.HTMLElement);
-    expect(refs.j.nodeName).toEqual('A');
+    expect(refs.j.nodeName).toEqual("A");
     expect(refs.j).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.k.nodeName).toEqual('OL');
+    expect(refs.k.nodeName).toEqual("OL");
     expect(refs.k).toBeInstanceOf(window.HTMLOListElement);
-    expect(refs.l.nodeName).toEqual('LI');
+    expect(refs.l.nodeName).toEqual("LI");
     expect(refs.l).toBeInstanceOf(window.HTMLLIElement);
-    expect(refs.m.nodeName).toEqual('LI');
+    expect(refs.m.nodeName).toEqual("LI");
     expect(refs.m).toBeInstanceOf(window.HTMLLIElement);
-    expect(refs.n.nodeName).toEqual('FORM');
+    expect(refs.n.nodeName).toEqual("FORM");
     expect(refs.n).toBeInstanceOf(window.HTMLFormElement);
-    expect(refs.o.nodeName).toEqual('INPUT');
+    expect(refs.o.nodeName).toEqual("INPUT");
     expect(refs.o).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.p.nodeName).toEqual('TEXTAREA');
+    expect(refs.p.nodeName).toEqual("TEXTAREA");
     expect(refs.p).toBeInstanceOf(window.HTMLTextAreaElement);
-    expect(refs.q.nodeName).toEqual('BUTTON');
+    expect(refs.q.nodeName).toEqual("BUTTON");
     expect(refs.q).toBeInstanceOf(window.HTMLButtonElement);
-    expect(refs.r.nodeName).toEqual('FOOTER');
+    expect(refs.r.nodeName).toEqual("FOOTER");
     expect(refs.r).toBeInstanceOf(window.HTMLElement);
-    expect(refs.s.nodeName).toEqual('#text');
+    expect(refs.s.nodeName).toEqual("#text");
     expect(refs.s).toBeInstanceOf(window.Text);
     expect(Object.keys(refs)).toHaveLength(19);
   });
 
-  test('collects ref at start of element attributes', () => {
+  test("collects ref at start of element attributes", () => {
     expect.assertions(4);
     const view = h(`
       <div>
@@ -218,12 +218,12 @@ describe('collect', () => {
     `);
     const refs = collect<{ search: HTMLInputElement }>(view, view);
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.search.id).toBe('search');
-    expect(refs.search.name).toBe('q');
+    expect(refs.search.id).toBe("search");
+    expect(refs.search.name).toBe("q");
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
-  test('collects ref at end of element attributes', () => {
+  test("collects ref at end of element attributes", () => {
     expect.assertions(4);
     const view = h(`
       <div>
@@ -232,12 +232,12 @@ describe('collect', () => {
     `);
     const refs = collect<{ search: HTMLInputElement }>(view, view);
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.search.id).toBe('search');
-    expect(refs.search.name).toBe('q');
+    expect(refs.search.id).toBe("search");
+    expect(refs.search.name).toBe("q");
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
-  test('collects ref in middle of element attributes', () => {
+  test("collects ref in middle of element attributes", () => {
     expect.assertions(4);
     const view = h(`
       <div>
@@ -246,8 +246,8 @@ describe('collect', () => {
     `);
     const refs = collect<{ search: HTMLInputElement }>(view, view);
     expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.search.id).toBe('search');
-    expect(refs.search.name).toBe('q');
+    expect(refs.search.id).toBe("search");
+    expect(refs.search.name).toBe("q");
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
@@ -255,10 +255,10 @@ describe('collect', () => {
   // runtime mode compile() macro does. So there's no need to test them here.
 });
 
-describe('Test component', () => {
-  test('renders basic template', () => {
+describe("Test component", () => {
+  test("renders basic template", () => {
     expect.assertions(1);
-    const rendered = render(Test({ text: 'Hello' }));
+    const rendered = render(Test({ text: "Hello" }));
     expect(rendered.container.innerHTML).toBe('<div id="test">Hello</div>');
   });
 });

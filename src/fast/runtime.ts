@@ -1,7 +1,7 @@
-import type { FlatRefs, InferRefs } from '../types.ts';
-import { create } from '../utils.ts';
+import type { FlatRefs, InferRefs } from "../types.ts";
+import { create } from "../utils.ts";
 
-const template = create('template');
+const template = create("template");
 
 /**
  * Creates a DOM node from a compiled template.

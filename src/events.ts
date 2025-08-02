@@ -18,9 +18,9 @@ export const handleClick = (event: Event): false | undefined => {
 // TODO: Add documentation: If you want to save bytes and you are sure no code
 // will override it, use `document.onclick = handleClick` instead.
 export const setupSyntheticClick = (): void => {
-  document.addEventListener('click', handleClick);
+  document.addEventListener("click", handleClick);
 };
 
 export const removeSyntheticClick = (): void => {
-  document.removeEventListener('click', handleClick);
+  document.removeEventListener("click", handleClick);
 };
