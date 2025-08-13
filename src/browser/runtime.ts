@@ -55,6 +55,14 @@ export const h = <T extends Node = Element>(template: string): View & T => {
     .replace(/ </g, "<");
 
   const node = compilerTemplate.content.firstChild as View & T;
+
+  // Fast path: if there are no ref markers, skip tree walking entirely
+  if (template.indexOf("@") === -1) {
+    // initialize empty metadata so downstream code can rely on it
+    (node as View)[REFS] = [] as RefMeta[];
+    return node;
+  }
+
   const metadata: RefMeta[] = (node[REFS] = []);
   let current: Node | null = (treeWalker.currentNode = node);
   let distance = 0;

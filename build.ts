@@ -17,7 +17,8 @@ const { outputs } = await Bun.build({
   define: {
     "Node.ELEMENT_NODE": "1",
   },
-  minify: true,
+  // Avoid double-minifying since we run Terser on the IIFE output
+  minify: false,
   sourcemap: "inline",
 });
 const bundle = await rollup({
@@ -39,6 +40,11 @@ await bundle.write({
             negate_iife: false,
             reduce_funcs: false,
             passes: 2,
+          },
+          mangle: {
+            safari10: true,
+            // do not mangle the global export name
+            reserved: ["stage1"],
           },
           format: {
             wrap_func_args: true,
