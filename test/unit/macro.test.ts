@@ -197,8 +197,8 @@ describe("compile", () => {
 
   test("has correct meta ref properties when escaped node ref", () => {
     expect.assertions(2);
-    // eslint-disable-next-line no-useless-escape
-    const meta = compile("<div>\@a</div>");
+    // biome-ignore lint/suspicious/noUselessEscapeInString: explicitly testing
+    const meta = compile("<div>\@a</div>"); // eslint-disable-line no-useless-escape
     expect(meta.ref).toHaveProperty("a", 0);
     expect(meta.success).toBeTrue();
   });
