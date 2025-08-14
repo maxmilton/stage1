@@ -4,7 +4,7 @@
   "description": "High-performance JavaScript micro framework",
   "repository": "github:maxmilton/stage1",
   "bugs": "https://github.com/maxmilton/stage1/issues",
-  "author": "Max Milton <max@bunnybunny.org>",
+  "author": "Max Milton <max@2okki.com>",
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
