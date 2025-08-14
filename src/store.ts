@@ -1,9 +1,12 @@
-type Handler<T, K extends keyof T> = (value: T[K], prev: T[K]) => void;
-type Store<T> = T & {
-  readonly on: <K extends keyof T>(
+type Handler<T, K extends keyof T> = (value: T[K], prev: Readonly<T[K]>) => void;
+type Store<T, K extends keyof T> = T & {
+  readonly on: (
     key: K,
     callback: Handler<T, K>,
-  ) => /** off */ () => void;
+  ) => /**
+   * off
+   * @returns Returns true if the handler was removed, or false if it was already removed.
+   */ () => boolean;
 };
 
 /**
@@ -15,28 +18,28 @@ type Store<T> = T & {
  * @returns A proxied state object that triggers registered callback handler
  * functions when its properties are set.
  */
-export const store = <T extends Record<string | symbol, unknown>>(
+export const store = <
+  T extends Record<string | symbol, unknown>,
+  K extends Exclude<keyof T, number>,
+>(
   initialState: T & { on?: never },
-): Store<T> => {
-  const handlers: { [K in keyof T]?: Handler<T, K>[] } = {};
+): Store<T, K> => {
+  const handlers = new Map<K, Set<Handler<T, K>>>();
 
   return new Proxy(
-    // proxied state object
     {
-      // shallow copy to prevent mutation of the initial state object
+      // Shallow copy to prevent mutating the initial state object
       ...initialState,
       on(key, fn) {
-        (handlers[key] ??= []).push(fn);
-        return /** off */ () => {
-          // eslint-disable-next-line no-bitwise
-          handlers[key]?.splice(handlers[key].indexOf(fn) >>> 0, 1);
-        };
+        let list = handlers.get(key);
+        if (!list) handlers.set(key, (list = new Set()));
+        list.add(fn);
+        return () => list.delete(fn);
       },
     },
-    // setter handler
     {
-      set(target, property: keyof T, value: T[keyof T]) {
-        handlers[property]?.forEach((fn) => fn(value, target[property]));
+      set(target, property: K, value: T[K]) {
+        handlers.get(property)?.forEach((fn) => fn(value, target[property]));
         // eslint-disable-next-line no-param-reassign
         (target as T)[property] = value;
         return true;

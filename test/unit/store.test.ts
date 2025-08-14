@@ -61,21 +61,123 @@ describe("store", () => {
     }
   });
 
-  test("returns an object with an on() function", () => {
-    expect.assertions(3);
+  test('returns an object with an "on" property', () => {
+    expect.assertions(1);
     const state = store({});
-    expect(state.on).toBeFunction();
-    expect(state.on).not.toBeClass();
-    expect(state.on).toHaveParameters(2, 0);
+    expect(state).toHaveProperty("on");
   });
 
-  test("returns off() function from on()", () => {
-    expect.assertions(3);
-    const state = store({ a: 1 });
-    const off = state.on("a", () => {});
-    expect(off).toBeFunction();
-    expect(off).not.toBeClass();
-    expect(off).toHaveParameters(0, 0);
+  describe("on()", () => {
+    test("is a function", () => {
+      expect.assertions(2);
+      const state = store({});
+      expect(state.on).toBeFunction();
+      expect(state.on).not.toBeClass();
+    });
+
+    test("expects 2 parameters", () => {
+      expect.assertions(1);
+      const state = store({});
+      expect(state.on).toHaveParameters(2, 0);
+    });
+
+    test("returns off() function", () => {
+      expect.assertions(2);
+      const state = store({ a: 1 });
+      const off = state.on("a", () => {});
+      expect(off).toBeFunction();
+      expect(off).not.toBeClass();
+    });
+
+    describe("off()", () => {
+      test("expects 0 parameters", () => {
+        expect.assertions(1);
+        const state = store({ a: 1 });
+        const off = state.on("a", () => {});
+        expect(off).toHaveParameters(0, 0);
+      });
+
+      test("returns true when handler is removed", () => {
+        expect.assertions(1);
+        const state = store({ a: 1 });
+        const off = state.on("a", () => {});
+        expect(off()).toBeTrue();
+      });
+
+      test("returns false when handler was already removed", () => {
+        expect.assertions(3);
+        const state = store({ a: 1 });
+        const off = state.on("a", () => {});
+        expect(off()).toBeTrue(); // first call removes handler
+        expect(off()).toBeFalse();
+        expect(off()).toBeFalse();
+      });
+    });
+
+    test("calls callback with new value and previous value", () => {
+      expect.assertions(1);
+      const initialState = { a: "old" };
+      const state = store(initialState);
+      const callback = mock(() => {});
+      state.on("a", callback);
+      state.a = "new";
+      expect(callback).toHaveBeenCalledWith("new", "old");
+    });
+
+    test("calls all callbacks for mutated property", () => {
+      expect.assertions(9);
+      const initialState = { a: 0 };
+      const state = store(initialState);
+      const callback1 = mock(() => {});
+      const callback2 = mock(() => {});
+      const callback3 = mock(() => {});
+      state.on("a", callback1);
+      state.on("a", callback2);
+      state.on("a", callback3);
+      state.a = 1;
+      expect(callback1).toHaveBeenCalledTimes(1);
+      expect(callback2).toHaveBeenCalledTimes(1);
+      expect(callback3).toHaveBeenCalledTimes(1);
+      state.a = 2;
+      expect(callback1).toHaveBeenCalledTimes(2);
+      expect(callback2).toHaveBeenCalledTimes(2);
+      expect(callback3).toHaveBeenCalledTimes(2);
+      state.a = 3;
+      state.a = 4;
+      expect(callback1).toHaveBeenCalledTimes(4);
+      expect(callback2).toHaveBeenCalledTimes(4);
+      expect(callback3).toHaveBeenCalledTimes(4);
+    });
+
+    test("calls only callbacks for mutated property", () => {
+      expect.assertions(12);
+      const initialState = { a: 0, b: 0, c: 0 };
+      const state = store(initialState);
+      const callbackA = mock(() => {});
+      const callbackB = mock(() => {});
+      const callbackC1 = mock(() => {});
+      const callbackC2 = mock(() => {});
+      state.on("a", callbackA);
+      state.on("b", callbackB);
+      state.on("c", callbackC1);
+      state.on("c", callbackC2);
+      state.a = 1;
+      expect(callbackA).toHaveBeenCalledTimes(1);
+      expect(callbackB).toHaveBeenCalledTimes(0);
+      expect(callbackC1).toHaveBeenCalledTimes(0);
+      expect(callbackC2).toHaveBeenCalledTimes(0);
+      state.b = 2;
+      expect(callbackA).toHaveBeenCalledTimes(1);
+      expect(callbackB).toHaveBeenCalledTimes(1);
+      expect(callbackC1).toHaveBeenCalledTimes(0);
+      expect(callbackC2).toHaveBeenCalledTimes(0);
+      state.c = 3;
+      state.c = 4;
+      expect(callbackA).toHaveBeenCalledTimes(1);
+      expect(callbackB).toHaveBeenCalledTimes(1);
+      expect(callbackC1).toHaveBeenCalledTimes(2);
+      expect(callbackC2).toHaveBeenCalledTimes(2);
+    });
   });
 
   test("mutating initial state does not mutate store state", () => {
@@ -121,70 +223,5 @@ describe("store", () => {
     state.a = 2;
     state.a = 3;
     expect(callback).toHaveBeenCalledTimes(1); // still called only once
-  });
-
-  test("calls callback with new value and previous value", () => {
-    expect.assertions(1);
-    const initialState = { a: "old" };
-    const state = store(initialState);
-    const callback = mock(() => {});
-    state.on("a", callback);
-    state.a = "new";
-    expect(callback).toHaveBeenCalledWith("new", "old");
-  });
-
-  test("calls all callbacks for mutated property", () => {
-    expect.assertions(9);
-    const initialState = { a: 0 };
-    const state = store(initialState);
-    const callback1 = mock(() => {});
-    const callback2 = mock(() => {});
-    const callback3 = mock(() => {});
-    state.on("a", callback1);
-    state.on("a", callback2);
-    state.on("a", callback3);
-    state.a = 1;
-    expect(callback1).toHaveBeenCalledTimes(1);
-    expect(callback2).toHaveBeenCalledTimes(1);
-    expect(callback3).toHaveBeenCalledTimes(1);
-    state.a = 2;
-    expect(callback1).toHaveBeenCalledTimes(2);
-    expect(callback2).toHaveBeenCalledTimes(2);
-    expect(callback3).toHaveBeenCalledTimes(2);
-    state.a = 3;
-    state.a = 4;
-    expect(callback1).toHaveBeenCalledTimes(4);
-    expect(callback2).toHaveBeenCalledTimes(4);
-    expect(callback3).toHaveBeenCalledTimes(4);
-  });
-
-  test("calls only callbacks for mutated property", () => {
-    expect.assertions(12);
-    const initialState = { a: 0, b: 0, c: 0 };
-    const state = store(initialState);
-    const callbackA = mock(() => {});
-    const callbackB = mock(() => {});
-    const callbackC1 = mock(() => {});
-    const callbackC2 = mock(() => {});
-    state.on("a", callbackA);
-    state.on("b", callbackB);
-    state.on("c", callbackC1);
-    state.on("c", callbackC2);
-    state.a = 1;
-    expect(callbackA).toHaveBeenCalledTimes(1);
-    expect(callbackB).toHaveBeenCalledTimes(0);
-    expect(callbackC1).toHaveBeenCalledTimes(0);
-    expect(callbackC2).toHaveBeenCalledTimes(0);
-    state.b = 2;
-    expect(callbackA).toHaveBeenCalledTimes(1);
-    expect(callbackB).toHaveBeenCalledTimes(1);
-    expect(callbackC1).toHaveBeenCalledTimes(0);
-    expect(callbackC2).toHaveBeenCalledTimes(0);
-    state.c = 3;
-    state.c = 4;
-    expect(callbackA).toHaveBeenCalledTimes(1);
-    expect(callbackB).toHaveBeenCalledTimes(1);
-    expect(callbackC1).toHaveBeenCalledTimes(2);
-    expect(callbackC2).toHaveBeenCalledTimes(2);
   });
 });
