@@ -27,10 +27,7 @@ const findGreatestIndexLEQ = (seq: number[], n: number) => {
 
 // return an array of the indices of ns that comprise the longest increasing subsequence within ns
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L368C10-L368C46
-const longestPositiveIncreasingSubsequence = (
-  ns: number[],
-  newStart: number,
-) => {
+const longestPositiveIncreasingSubsequence = (ns: number[], newStart: number) => {
   const seq: number[] = [];
   const is: number[] = [];
   const pre = new Array<number>(ns.length);
@@ -84,8 +81,7 @@ export const reconcile = <T, N extends Node>(
   // Fast path for clear
   if (dataLen === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
-      let node =
-        beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
+      let node = beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
       let tmp: ChildNode | null;
 
       if (afterNode === undefined) afterNode = null;
@@ -124,13 +120,9 @@ export const reconcile = <T, N extends Node>(
   let newEnd = dataLen - 1;
   let a: T;
   let b: T;
-  let prevStartNode: Node | null = beforeNode
-    ? beforeNode.nextSibling
-    : parent.firstChild;
+  let prevStartNode: Node | null = beforeNode ? beforeNode.nextSibling : parent.firstChild;
   let newStartNode = prevStartNode;
-  let prevEndNode: Node | null = afterNode
-    ? afterNode.previousSibling
-    : parent.lastChild;
+  let prevEndNode: Node | null = afterNode ? afterNode.previousSibling : parent.lastChild;
 
   fixes: while (loop) {
     loop = false;
@@ -257,8 +249,7 @@ export const reconcile = <T, N extends Node>(
   // Fast path for full replace
   if (reusingNodes === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
-      let node =
-        beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
+      let node = beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
       let tmp: ChildNode | null;
 
       if (afterNode === undefined) afterNode = null;
