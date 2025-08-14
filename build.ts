@@ -41,7 +41,6 @@ await bundle.write({
             passes: 2,
           },
           format: {
-            wrap_func_args: true,
             wrap_iife: true,
           },
           sourceMap: true,
