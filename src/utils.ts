@@ -2,8 +2,7 @@ export const noop = (): void => {};
 
 // DOM utilities
 
-export const fragment = (): DocumentFragment =>
-  document.createDocumentFragment();
+export const fragment = (): DocumentFragment => document.createDocumentFragment();
 export const text = (data: string): Text => document.createTextNode(data);
 export const create = <K extends keyof HTMLElementTagNameMap>(
   tagName: K,
@@ -11,8 +10,7 @@ export const create = <K extends keyof HTMLElementTagNameMap>(
 /** Clone a node, including all its descendants. */
 export const clone = <T extends Node>(node: T): T => node.cloneNode(true) as T;
 /** Append a node to the end of the parent node. */
-export const append = <T extends Node>(node: T, parent: Node): T =>
-  parent.appendChild(node);
+export const append = <T extends Node>(node: T, parent: Node): T => parent.appendChild(node);
 /** Prepend a node to the beginning of the parent node. */
 export const prepend = <T extends Node>(node: T, parent: Node): T =>
   parent.insertBefore(node, parent.firstChild);

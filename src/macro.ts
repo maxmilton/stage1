@@ -40,10 +40,7 @@ export function compile<R extends InferRefs<R> = object>(
     .onDocument({
       doctype() {
         // eslint-disable-next-line no-console
-        console.error(
-          "Found doctype but none was expected in template:",
-          template,
-        );
+        console.error("Found doctype but none was expected in template:", template);
         success = false;
       },
       comments(node) {
@@ -80,10 +77,7 @@ export function compile<R extends InferRefs<R> = object>(
             chunk.replace(" ", { html: true });
           } else if (!whitespaceSensitiveBlock) {
             // Reduce any whitespace to a single space
-            chunk.replace(
-              (keepSpaces ? chunk.text : text).replace(/\s+/g, " "),
-              { html: true },
-            );
+            chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, " "), { html: true });
           }
           distance++;
         }
@@ -99,10 +93,7 @@ export function compile<R extends InferRefs<R> = object>(
             });
           } else {
             // eslint-disable-next-line no-console
-            console.error(
-              "Expected template to have a single root element:",
-              template,
-            );
+            console.error("Expected template to have a single root element:", template);
             success = false;
           }
         }

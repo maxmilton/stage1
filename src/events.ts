@@ -3,9 +3,7 @@ export const ONCLICK = Symbol();
 
 // eslint-disable-next-line consistent-return
 export const handleClick = (event: Event): false | undefined => {
-  let node = event.target as
-    | (Node & { [ONCLICK]?(event: Event): false | undefined })
-    | null;
+  let node = event.target as (Node & { [ONCLICK]?(event: Event): false | undefined }) | null;
 
   while (node) {
     if (node[ONCLICK]) {

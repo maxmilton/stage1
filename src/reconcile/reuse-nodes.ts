@@ -12,8 +12,7 @@ export const reconcile = <T, N extends Node>(
   const len = data.length;
   if (len === 0) {
     if (beforeNode !== undefined || afterNode !== undefined) {
-      let node =
-        beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
+      let node = beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
       let tmp: ChildNode | null;
 
       if (afterNode === undefined) afterNode = null;
@@ -40,9 +39,7 @@ export const reconcile = <T, N extends Node>(
     }
   }
 
-  let head: Node | null = beforeNode
-    ? beforeNode.nextSibling
-    : parent.firstChild;
+  let head: Node | null = beforeNode ? beforeNode.nextSibling : parent.firstChild;
   if (head === afterNode) head = null;
 
   const mode = afterNode ? 1 : 0;
