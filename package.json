@@ -64,7 +64,7 @@
     "@eslint/js": "9.33.0",
     "@maxmilton/eslint-config": "0.2.1",
     "@maxmilton/test-utils": "0.0.12",
-    "@playwright/test": "1.54.2",
+    "@playwright/test": "1.56.1",
     "@types/bun": "1.2.20",
     "dts-buddy": "0.6.2",
     "eslint": "9.33.0",
