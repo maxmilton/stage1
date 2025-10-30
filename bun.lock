@@ -6,7 +6,7 @@
       "devDependencies": {
         "@biomejs/biome": "2.2.0",
         "@eslint/js": "9.33.0",
-        "@maxmilton/eslint-config": "0.2.1",
+        "@maxmilton/eslint-config": "0.3.0",
         "@maxmilton/test-utils": "0.0.12",
         "@playwright/test": "1.54.2",
         "@types/bun": "1.2.20",
@@ -78,7 +78,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.30", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-GQ7Nw5G2lTu/BtHTKfXhKHok2WGetd4XYcVKGx00SjAk8GMwgJM3zr6zORiPGuOE+/vkc90KtTosSSvaCjKb2Q=="],
 
-    "@maxmilton/eslint-config": ["@maxmilton/eslint-config@0.2.1", "", { "dependencies": { "confusing-browser-globals": "^1.0.11" }, "peerDependencies": { "@eslint/js": "^9.0.0", "eslint": "^9.0.0", "eslint-plugin-unicorn": ">=56.0.0", "typescript-eslint": "^8.0.0" }, "optionalPeers": ["eslint-plugin-unicorn"] }, "sha512-wgVbw2RYgPeMNNt0iOgxbBP4WpbYCh+6FaA3hIJEKkHp3EhUavuAVKrDUbTCpno2Yx3MaUbx4R8W59WBNNIDRw=="],
+    "@maxmilton/eslint-config": ["@maxmilton/eslint-config@0.3.0", "", { "peerDependencies": { "@eslint/js": "^9.38.0", "eslint": "^9.38.0", "eslint-plugin-unicorn": ">=62.0.0", "typescript-eslint": "^8.46.2" }, "optionalPeers": ["eslint-plugin-unicorn"] }, "sha512-aMxmJK1+G52eMffCj/nRLAvEmqcQUaIyn4HyGLXOQEwg/PtD90hz6ntl/9fPaGpoGK9JqLz4/ebdI3QpxyWPTA=="],
 
     "@maxmilton/html-parser": ["@maxmilton/html-parser@0.0.12", "", {}, "sha512-hrmgn5evsM1OpYF+iH5IEi/Z+ZKLmYAxSTVnehxypGERNkjhhp+MDPFeXmxPNKapru5F7XfvUGCXZgjkrM2q9g=="],
 
@@ -209,8 +209,6 @@
     "commander": ["commander@2.20.3", "", {}, "sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ=="],
 
     "concat-map": ["concat-map@0.0.1", "", {}, "sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg=="],
-
-    "confusing-browser-globals": ["confusing-browser-globals@1.0.11", "", {}, "sha512-JsPKdmh8ZkmnHxDk55FZ1TqVLvEQTvoByJZRN9jzI0UjxK/QgAmsphz7PGtqgPieQZ/CQcHWXCR7ATDNhGe+YA=="],
 
     "core-js-compat": ["core-js-compat@3.45.0", "", { "dependencies": { "browserslist": "^4.25.1" } }, "sha512-gRoVMBawZg0OnxaVv3zpqLLxaHmsubEGyTnqdpI/CEBvX4JadI1dMSHxagThprYRtSVbuQxvi6iUatdPxohHpA=="],
 
