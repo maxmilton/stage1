@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import { createBundle } from "dts-buddy";
 import { rollup } from "rollup";
 import { minify } from "terser";

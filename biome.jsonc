@@ -1,6 +1,12 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "assist": {
+    "actions": {
+      "recommended": true,
+      "source": { "useSortedProperties": "on" }
+    }
+  },
   "formatter": {
     "indentStyle": "space",
     "lineWidth": 100
@@ -15,7 +21,8 @@
         "noNonNullAssertion": "off"
       },
       "suspicious": {
-        "noAssignInExpressions": "off"
+        "noAssignInExpressions": "off",
+        "noConstEnum": "off"
       },
       "nursery": {
         "noUnresolvedImports": "off" // covered by typescript
