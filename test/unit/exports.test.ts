@@ -33,7 +33,7 @@ describe("browser", () => {
 
   test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
-    const publicExportNames = publicExports.map((x) => x[0]);
+    const publicExportNames: string[] = publicExports.map((x) => x[0]);
     for (const name in browserExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -77,7 +77,7 @@ describe("index", () => {
 
   test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
-    const publicExportNames = publicExports.map((x) => x[0]);
+    const publicExportNames: string[] = publicExports.map((x) => x[0]);
     for (const name in indexExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -104,7 +104,7 @@ describe("macro", () => {
 
   test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
-    const publicExportNames = publicExports.map((x) => x[0]);
+    const publicExportNames: string[] = publicExports.map((x) => x[0]);
     for (const name in macroExports) {
       expect(publicExportNames).toContain(name);
     }
