@@ -68,7 +68,7 @@
     "@types/bun": "1.2.20",
     "dts-buddy": "0.6.2",
     "eslint": "9.33.0",
-    "eslint-plugin-unicorn": "60.0.0",
+    "eslint-plugin-unicorn": "62.0.0",
     "happy-dom": "18.0.1",
     "rollup": "4.46.2",
     "terser": "5.43.1",
