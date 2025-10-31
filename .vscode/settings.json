@@ -7,7 +7,7 @@
   "eslint.enable": true,
   "git.branchProtection": ["master", "next"],
   "js/ts.implicitProjectConfig.checkJs": true,
-  "prettier.enable": false, // use biome instead
+  "prettier.enable": false, // use biome
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "typescript.tsdk": "node_modules/typescript/lib",
   "yaml.validate": true,
