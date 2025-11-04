@@ -8,7 +8,6 @@ export default defineConfig(
   js.configs.recommended,
   ts.configs.strictTypeChecked,
   ts.configs.stylisticTypeChecked,
-  // @ts-expect-error - broken upstream types
   unicorn.configs.recommended,
   mm.configs.recommended,
   {
@@ -28,8 +27,8 @@ export default defineConfig(
       "@typescript-eslint/prefer-includes": "off", // indexOf is faster
       "@typescript-eslint/prefer-optional-chain": "warn",
       "@typescript-eslint/prefer-string-starts-ends-with": "off", // alternatives offer byte savings and better performance
-      "@typescript-eslint/restrict-plus-operands": "warn", // byte savings (but reduces debugging ability)
-      "@typescript-eslint/restrict-template-expressions": "warn", // byte savings (but reduces debugging ability)
+      "@typescript-eslint/restrict-plus-operands": "warn", // byte savings (but reduced debugging ability)
+      "@typescript-eslint/restrict-template-expressions": "warn", // byte savings (but reduced debugging ability)
       "consistent-return": "warn", // void return can be used for efficient code... but be careful!
       "no-cond-assign": "off", // useful for compact and memory efficient code... but be careful!
       "no-multi-assign": "warn", // more compact at the cost of being harder to read... but be careful!
@@ -38,7 +37,7 @@ export default defineConfig(
       "no-return-assign": "warn", // useful for compact and memory efficient code... but be careful!
       "prefer-template": "warn", // byte savings with same performance
       "unicorn/explicit-length-check": "off", // byte savings + faster
-      "unicorn/no-array-callback-reference": "warn",
+      "unicorn/no-array-callback-reference": "warn", // byte savings + faster
       "unicorn/no-array-for-each": "off", // forEach is often faster (in Chrome and Bun but not Firefox)
       "unicorn/prefer-add-event-listener": "off", // stage1
       "unicorn/prefer-at": "off", // bad browser support
