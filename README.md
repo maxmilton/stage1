@@ -134,4 +134,4 @@ MIT license. See [LICENSE](https://github.com/maxmilton/stage1/blob/master/LICEN
 
 ---
 
-© 2025 [Max Milton](https://maxmilton.com)
+© [Max Milton](https://maxmilton.com)
