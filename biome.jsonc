@@ -18,11 +18,13 @@
     "rules": {
       "recommended": true,
       "style": {
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "useTemplate": "off"
       },
       "suspicious": {
         "noAssignInExpressions": "off",
-        "noConstEnum": "off"
+        "noConstEnum": "off",
+        "useIterableCallbackReturn": "off" // byte savings
       }
     }
   },
@@ -30,6 +32,15 @@
     "globals": ["Bun"]
   },
   "overrides": [
+    {
+      "includes": ["**/*.jsonc", ".vscode/*.json", "tsconfig.json"],
+      "json": {
+        "parser": {
+          "allowComments": true,
+          "allowTrailingCommas": true
+        }
+      }
+    },
     {
       "includes": ["**/*.spec.ts", "**/*.test.ts", "test/**"],
       "linter": {

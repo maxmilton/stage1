@@ -39,7 +39,6 @@ export const store = <
     },
     {
       set(target, property: K, value: T[K]) {
-        // biome-ignore lint/suspicious/useIterableCallbackReturn: byte savings
         handlers.get(property)?.forEach((fn) => fn(value, target[property]));
         // eslint-disable-next-line no-param-reassign
         (target as T)[property] = value;
