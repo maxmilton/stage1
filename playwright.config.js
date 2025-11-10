@@ -9,14 +9,14 @@ export default defineConfig({
     acceptDownloads: false,
     contextOptions: { strictSelectors: true },
     locale: "en-US",
-    offline: true, // no networking necessary
+    offline: true, // no network requests necessary
     timezoneId: "UTC",
     trace: "on-first-retry",
   },
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], channel: "chromium" },
     },
     {
       name: "firefox",
