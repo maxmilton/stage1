@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable no-continue, no-labels, unicorn/no-for-loop, unicorn/no-new-array */
 
 import { noop } from "../utils.ts";
 
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L396C10-L396C30
 const findGreatestIndexLEQ = (seq: number[], n: number) => {
-  // invariant: lo is guaranteed to be index of a value <= n, hi to be >
+  // Invariant: lo is guaranteed to be index of a value <= n, hi to be >
   // therefore, they actually start out of range: (-1, last + 1)
   let lo = -1;
   let hi = seq.length;
@@ -25,7 +25,7 @@ const findGreatestIndexLEQ = (seq: number[], n: number) => {
   return lo;
 };
 
-// return an array of the indices of ns that comprise the longest increasing subsequence within ns
+// Return an array of the indices of ns that comprise the longest increasing subsequence within ns
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L368C10-L368C46
 const longestPositiveIncreasingSubsequence = (ns: number[], newStart: number) => {
   const seq: number[] = [];
@@ -136,6 +136,7 @@ export const reconcile = <T, N extends Node>(
       updateFn(prevStartNode, b);
       prevStart++;
       newStart++;
+      // eslint-disable-next-line no-multi-assign
       newStartNode = prevStartNode = prevStartNode!.nextSibling;
       if (prevEnd < prevStart || newEnd < newStart) break fixes;
       a = renderedData[prevStart];

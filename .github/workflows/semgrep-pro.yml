@@ -22,6 +22,7 @@ jobs:
     container:
       image: semgrep/semgrep@sha256:142b5fbdd9427ebdda0fe796168f83ae85679a5f9a5683e70bd7ddfd88533600
     permissions:
+      actions: read
       contents: read
       security-events: write
     steps:

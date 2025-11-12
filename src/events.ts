@@ -13,8 +13,13 @@ export const handleClick = (event: Event): false | undefined => {
   }
 };
 
-// TODO: Add documentation: If you want to save bytes and you are sure no code
-// will override it, use `document.onclick = handleClick` instead.
+/**
+ * NOTE: To save bytes when certain no other code will override it, instead use:
+ * ```js
+ * import { handleClick } from "stage1"
+ * document.onclick = handleClick;
+ * ```
+ */
 export const setupSyntheticClick = (): void => {
   document.addEventListener("click", handleClick);
 };

@@ -3,23 +3,21 @@
   "editor.formatOnPaste": false,
   "editor.formatOnSave": true,
   "editor.formatOnType": false,
-  "editor.tabSize": 2,
   "eslint.enable": true,
   "git.branchProtection": ["master", "next"],
-  "js/ts.implicitProjectConfig.checkJs": true,
   "prettier.enable": false, // use biome
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "typescript.tsdk": "node_modules/typescript/lib",
   "yaml.validate": true,
 
-  "[css][html][json][jsonc][markdown]": {
+  "[css][graphql][html][json][jsonc][markdown]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": "explicit",
       "source.fixAll": "explicit"
     },
     "editor.defaultFormatter": "biomejs.biome"
   },
-  "[javascript][typescript]": {
+  "[javascript][javascriptreact][typescript][typescriptreact]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": "never",
       "source.organizeImports.biome": "explicit",

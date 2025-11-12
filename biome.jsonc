@@ -29,7 +29,10 @@
     }
   },
   "javascript": {
-    "globals": ["Bun"]
+    "globals": ["Bun"],
+    "formatter": {
+      "operatorLinebreak": "before"
+    }
   },
   "overrides": [
     {

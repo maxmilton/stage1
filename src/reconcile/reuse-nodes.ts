@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import { noop } from "../utils.ts";
 
 export const reconcile = <T, N extends Node>(

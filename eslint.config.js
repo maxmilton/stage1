@@ -13,6 +13,7 @@ export default defineConfig(
   {
     linterOptions: {
       reportUnusedDisableDirectives: "error",
+      reportUnusedInlineConfigs: "error",
     },
     languageOptions: {
       parserOptions: {
@@ -25,7 +26,7 @@ export default defineConfig(
       "@typescript-eslint/no-unnecessary-type-parameters": "warn", // somewhat unstable and not always useful
       "@typescript-eslint/prefer-for-of": "off", // worse for performance-critical code
       "@typescript-eslint/prefer-includes": "off", // indexOf is faster
-      "@typescript-eslint/prefer-optional-chain": "warn",
+      "@typescript-eslint/prefer-optional-chain": "off", // we need wider browser support
       "@typescript-eslint/prefer-string-starts-ends-with": "off", // alternatives offer byte savings and better performance
       "@typescript-eslint/restrict-plus-operands": "warn", // byte savings (but reduced debugging ability)
       "@typescript-eslint/restrict-template-expressions": "warn", // byte savings (but reduced debugging ability)
@@ -47,8 +48,8 @@ export default defineConfig(
       "unicorn/prefer-query-selector": "off", // stage1
       "unicorn/prefer-string-raw": "off", // TODO: Remove once String.raw doesn't crash bun macros
       "unicorn/prefer-string-replace-all": "off", // slower and worse browser support
-      "unicorn/switch-case-braces": ["error", "avoid"], // byte savings (minification doesn't currently automatically remove)
+      "unicorn/switch-case-braces": ["error", "avoid"], // byte savings when minification doesn't automatically remove
     },
   },
-  { ignores: ["**/*.bak", "coverage", "dist"] },
+  { ignores: ["dist"] },
 );
