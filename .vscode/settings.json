@@ -3,6 +3,7 @@
   "editor.formatOnPaste": false,
   "editor.formatOnSave": true,
   "editor.formatOnType": false,
+  "editor.tabSize": 2,
   "eslint.enable": true,
   "git.branchProtection": ["master", "next"],
   "prettier.enable": false, // use biome
@@ -24,8 +25,5 @@
       "source.fixAll": "never"
     },
     "editor.defaultFormatter": "biomejs.biome"
-  },
-  "[yaml]": {
-    "editor.defaultFormatter": "redhat.vscode-yaml"
   }
 }
