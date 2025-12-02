@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable no-continue, no-labels, unicorn/no-for-loop, unicorn/no-new-array */
+/* eslint-disable no-continue, no-labels, no-param-reassign, unicorn/no-for-loop, unicorn/no-new-array */
 
 import { noop } from "../utils.ts";
 

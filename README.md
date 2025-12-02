@@ -1,10 +1,8 @@
 [![CI status](https://badgen.net/github/checks/maxmilton/stage1?label=ci)](https://github.com/maxmilton/stage1/actions)
-[![Coverage %](https://badgen.net/codeclimate/coverage/maxmilton/stage1)](https://codeclimate.com/github/maxmilton/stage1)
+[![Coverage %](https://qlty.sh/badges/71ce5b0f-6642-4ea1-9e5a-e558bc1f6169/test_coverage.svg)](https://qlty.sh/gh/maxmilton/projects/stage1)
 [![NPM version](https://badgen.net/npm/v/stage1)](https://www.npmjs.com/package/stage1)
 [![Licence](https://badgen.net/github/license/maxmilton/stage1)](./LICENSE)
 
-<!-- TODO: Migrate to badgen.net once it supports qlty.sh -->
-<!-- [![Coverage %](https://qlty.sh/badges/71ce5b0f-6642-4ea1-9e5a-e558bc1f6169/test_coverage.svg)](https://qlty.sh/gh/maxmilton/projects/stage1) -->
 
 [![Minified size](https://badgen.net/bundlephobia/minzip/stage1)](https://bundlephobia.com/package/stage1)
 ![Dependency count](https://badgen.net/bundlephobia/dependency-count/stage1)
@@ -15,7 +13,7 @@ High-performance JavaScript micro framework.
 
 > Warning: This is alpha software. Test thoroughly before using in production. Please report any bugs you find!
 
-Originally a fork of the excellent <https://github.com/Freak613/stage0> project.
+Originally started as a fork of the excellent <https://github.com/Freak613/stage0> project.
 
 ## TODO
 
@@ -116,7 +114,7 @@ SSR (server-side rendering) is not supported and is not the intended use of this
 
 ## Build environment JS runtime support
 
-The default precompiled mode runtime requires [bun](https://bun.sh/) version 1.0.20 or above.
+The default precompiled mode runtime requires [Bun](https://bun.sh/) version 1.0.20 or above because [Bun macros](https://bun.com/docs/bundler/macros) are needed.
 
 The regular mode browser bundle does not have any specific build requirements.
 
@@ -130,7 +128,7 @@ See [releases on GitHub](https://github.com/maxmilton/stage1/releases).
 
 ## License
 
-MIT license. See [LICENSE](https://github.com/maxmilton/stage1/blob/master/LICENSE).
+MIT license. See [LICENSE](./LICENSE).
 
 ---
 

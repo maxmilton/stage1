@@ -16,11 +16,10 @@ type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) exten
   ? I
   : never;
 
-type UnionToTuple<T> = UnionToIntersection<
-  T extends unknown ? () => T : never
-> extends () => infer W
-  ? [...UnionToTuple<Exclude<T, W>>, W]
-  : [];
+type UnionToTuple<T> =
+  UnionToIntersection<T extends unknown ? () => T : never> extends () => infer W
+    ? [...UnionToTuple<Exclude<T, W>>, W]
+    : [];
 
 export type TupleOfKeys<T> = Readonly<UnionToTuple<keyof T>>;
 
@@ -32,8 +31,9 @@ export type IndicesOf<T> = {
  * @typeParam T - `Refs` type. **Order of keys is preserved** and must match
  * the order of refs in the template!
  */
-export type FlatRefs<T> = UnionToTuple<keyof T> extends infer K
-  ? K extends (keyof T)[]
-    ? { [P in keyof K]: T[K[P] & keyof T] }
-    : never
-  : never;
+export type FlatRefs<T> =
+  UnionToTuple<keyof T> extends infer K
+    ? K extends (keyof T)[]
+      ? { [P in keyof K]: T[K[P] & keyof T] }
+      : never
+    : never;
