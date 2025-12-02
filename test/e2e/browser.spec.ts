@@ -1,4 +1,4 @@
-import { resolve } from "node:path"; // eslint-disable-line unicorn/import-style
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 type Stage1 = typeof import("../../src/browser/index.ts");
@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-const jsPath = resolve(import.meta.dirname, "../../dist/browser.js");
+const jsPath = path.resolve(import.meta.dirname, "../../dist/browser.js");
 
 test("exports", async ({ page }) => {
   // await page.goto('about:blank');

@@ -527,16 +527,45 @@ describe("replace", () => {
     expect(root.outerHTML).toBe('<ul><li class="b"></li></ul>');
   });
 
-  // FIXME: Check DOM node is moved to new parent and is in fact the same node + removed from old parent.
-  // test("moves existing element to new parent", () => {
-  //   expect.assertions(1);
-  //   const root = ul.cloneNode() as HTMLUListElement;
-  //   const target = liA.cloneNode() as HTMLLIElement;
-  //   root.appendChild(target);
-  //   const newParent = ul.cloneNode() as HTMLUListElement;
-  //   newParent.appendChild(target);
-  //   replace(liB.cloneNode(), target);
-  //   replace(liC.cloneNode(), target);
-  //   expect(root.outerHTML).toBe("<ul><li class="b"></li><li class="c"></li></ul>");
-  // });
+  test("moves existing element to new parent", () => {
+    expect.assertions(15);
+    const root = document.createElement("div");
+    const parentX = ul.cloneNode() as HTMLUListElement;
+    parentX.id = "x";
+    const parentY = ul.cloneNode() as HTMLUListElement;
+    parentY.id = "y";
+    root.appendChild(parentX);
+    root.appendChild(parentY);
+    const targetA1 = liA.cloneNode() as HTMLLIElement;
+    const targetA2 = liA.cloneNode() as HTMLLIElement;
+    parentX.appendChild(targetA1);
+    parentY.appendChild(targetA2);
+    expect(root.outerHTML).toBe(
+      '<div><ul id="x"><li class="a"></li></ul><ul id="y"><li class="a"></li></ul></div>',
+    );
+    const targetB = liB.cloneNode();
+    expect(targetB.parentNode).toBeNull(); // targetB not in DOM yet
+    replace(targetB, targetA1);
+    expect(root.outerHTML).toBe(
+      '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="a"></li></ul></div>',
+    );
+    expect(targetB.parentNode).toBe(parentX);
+    expect(targetA1.parentNode).toBeNull(); // targetA1 removed from DOM
+    const targetC = liC.cloneNode();
+    expect(targetC.parentNode).toBeNull(); // targetC not in DOM yet
+    replace(targetC, targetA2);
+    expect(root.outerHTML).toBe(
+      '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="c"></li></ul></div>',
+    );
+    expect(targetC.parentNode).toBe(parentY);
+    expect(targetA2.parentNode).toBeNull(); // targetA2 removed from DOM
+    replace(targetB, targetC);
+    expect(root.outerHTML).toBe('<div><ul id="x"></ul><ul id="y"><li class="b"></li></ul></div>');
+    expect(targetB.parentNode).toBe(parentY);
+    expect(targetC.parentNode).toBeNull(); // targetC removed from DOM
+    replace(parentY, parentX);
+    expect(root.outerHTML).toBe('<div><ul id="y"><li class="b"></li></ul></div>');
+    expect(targetB.parentNode).toBe(parentY); // did not move
+    expect(parentX.parentNode).toBeNull(); // parentX removed from DOM
+  });
 });
