@@ -24,7 +24,7 @@ jobs:
       - run: bun run build
       - run: bun run lint
       - run: bun run test
-      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
         with:
           node-version: latest
           registry-url: "https://registry.npmjs.org"
