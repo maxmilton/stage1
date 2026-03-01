@@ -70,7 +70,7 @@
     "dts-buddy": "0.6.2",
     "eslint": "9.39.2",
     "eslint-plugin-unicorn": "62.0.0",
-    "happy-dom": "20.5.0",
+    "happy-dom": "20.7.0",
     "rollup": "4.57.1",
     "terser": "5.46.0",
     "typescript": "5.9.3",
