@@ -48,7 +48,7 @@ export default defineConfig(
       "unicorn/prefer-query-selector": "off", // stage1
       "unicorn/prefer-string-raw": "off", // TODO: Remove once String.raw doesn't crash bun macros
       "unicorn/prefer-string-replace-all": "off", // slower and worse browser support
-      "unicorn/switch-case-braces": ["error", "avoid"], // byte savings when minification doesn't automatically remove
+      "unicorn/switch-case-braces": ["error", "avoid"], // byte savings when minification doesn't remove
     },
   },
   { ignores: ["dist"] },
