@@ -40,15 +40,19 @@ export default defineConfig(
       "unicorn/explicit-length-check": "off", // byte savings + faster
       "unicorn/no-array-callback-reference": "warn", // byte savings + faster
       "unicorn/no-array-for-each": "off", // forEach is often faster (in Chrome and Bun but not Firefox)
+      "unicorn/no-computed-property-existence-check": "off", // used carefully
+      "unicorn/no-top-level-assignment-in-function": "off", // used carefully
       "unicorn/prefer-add-event-listener": "off", // stage1
       "unicorn/prefer-at": "off", // bad browser support
       "unicorn/prefer-dom-node-append": "off", // stage1
       "unicorn/prefer-global-this": "off", // prefer to clearly separate Bun and DOM
       "unicorn/prefer-includes": "off", // indexOf is faster (in Chrome)
       "unicorn/prefer-query-selector": "off", // stage1
+      "unicorn/prefer-smaller-scope": "off", // memory efficient, used carefully
       "unicorn/prefer-string-raw": "off", // TODO: Remove once String.raw doesn't crash bun macros
       "unicorn/prefer-string-replace-all": "off", // slower and worse browser support
-      "unicorn/switch-case-braces": ["error", "avoid"], // byte savings when minification doesn't automatically remove
+      "unicorn/prefer-unicode-code-point-escapes": "off", // bad browser support
+      "unicorn/switch-case-braces": ["error", "avoid"], // byte savings when minification doesn't remove
     },
   },
   { ignores: ["dist"] },

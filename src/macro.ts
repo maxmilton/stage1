@@ -29,11 +29,11 @@ export function compile<R extends InferRefs<R> = object>(
   /** Whether the template was successfully compiled without any errors. */
   success: boolean;
 } {
-  let success = true;
+  let isSuccess = true;
   const k: string[] = [];
   const d: number[] = [];
   let distance = 0;
-  let whitespaceSensitiveBlock = false;
+  let isWhitespaceSensitiveBlock = false;
   let root: boolean | undefined;
 
   const html = new HTMLRewriter()
@@ -41,7 +41,7 @@ export function compile<R extends InferRefs<R> = object>(
       doctype() {
         // eslint-disable-next-line no-console
         console.error("Found doctype but none was expected in template:", template);
-        success = false;
+        isSuccess = false;
       },
       comments(node) {
         const text = node.text.trim();
@@ -61,26 +61,26 @@ export function compile<R extends InferRefs<R> = object>(
       // the fact that the data provided to `HTMLRewriter.transform()` can be
       // streamed; where the last empty chunk signals the end of the text.
       text(chunk) {
-        if (!chunk.lastInTextNode) {
-          const text = chunk.text.trim();
-          if (!text) {
-            if (!whitespaceSensitiveBlock) {
-              chunk.remove();
-            }
-            return;
+        if (chunk.lastInTextNode) return;
+
+        const text = chunk.text.trim();
+        if (!text) {
+          if (!isWhitespaceSensitiveBlock) {
+            chunk.remove();
           }
-          if (text[0] === "@") {
-            k.push(text.slice(1));
-            d.push(distance);
-            distance = 0;
-            // Replace with single space which renders a Text node at runtime
-            chunk.replace(" ", { html: true });
-          } else if (!whitespaceSensitiveBlock) {
-            // Reduce any whitespace to a single space
-            chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, " "), { html: true });
-          }
-          distance++;
+          return;
         }
+        if (text[0] === "@") {
+          k.push(text.slice(1));
+          d.push(distance);
+          distance = 0;
+          // Replace with single space which renders a Text node at runtime
+          chunk.replace(" ", { html: true });
+        } else if (!isWhitespaceSensitiveBlock) {
+          // Reduce any whitespace to a single space
+          chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, " "), { html: true });
+        }
+        distance++;
       },
     })
     .on("*", {
@@ -94,14 +94,14 @@ export function compile<R extends InferRefs<R> = object>(
           } else {
             // eslint-disable-next-line no-console
             console.error("Expected template to have a single root element:", template);
-            success = false;
+            isSuccess = false;
           }
         }
 
         if (node.tagName === "pre" || node.tagName === "code") {
-          whitespaceSensitiveBlock = true;
+          isWhitespaceSensitiveBlock = true;
           node.onEndTag(() => {
-            whitespaceSensitiveBlock = false;
+            isWhitespaceSensitiveBlock = false;
           });
         }
         for (const [name] of node.attributes) {
@@ -122,7 +122,7 @@ export function compile<R extends InferRefs<R> = object>(
   if (new Set(k).size !== k.length) {
     // eslint-disable-next-line no-console
     console.error("Duplicate ref keys found in template:", template);
-    success = false;
+    isSuccess = false;
   }
 
   return {
@@ -131,6 +131,6 @@ export function compile<R extends InferRefs<R> = object>(
     d,
     // @ts-expect-error - computed type
     ref: Object.fromEntries(d.map((_, i) => [k[i], i])),
-    success,
+    success: isSuccess,
   };
 }

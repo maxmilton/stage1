@@ -10,7 +10,7 @@ export default defineConfig({
     acceptDownloads: false,
     contextOptions: { strictSelectors: true },
     locale: "en-US",
-    offline: true, // no network requests necessary
+    offline: true, // no external network requests necessary
     timezoneId: "UTC",
     trace: "on-first-retry",
   },

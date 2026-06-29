@@ -14,4 +14,5 @@ function setupMocks(): void {
 setupDOM();
 setupMocks();
 
+// eslint-disable-next-line unicorn/no-global-object-property-assignment
 global.Node = window.Node;

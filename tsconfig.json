@@ -5,7 +5,6 @@
     "module": "esnext",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
-    "esModuleInterop": false,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
@@ -22,7 +21,9 @@
     "noUncheckedSideEffectImports": true,
     "noUnusedLocals": false, // covered by linters
     "noUnusedParameters": false, // covered by linters
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+
+    "types": ["bun"]
   },
   "include": ["*.config.js", "build.ts", "src", "test"]
 }

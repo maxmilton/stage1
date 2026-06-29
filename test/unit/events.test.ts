@@ -134,7 +134,7 @@ describe("setupSyntheticClick", () => {
       button[ONCLICK] = handler;
       render(button);
       setupSyntheticClick();
-      button.dispatchEvent(new Event("mouseover"));
+      button.dispatchEvent(new window.Event("mouseover"));
       expect(handler).not.toHaveBeenCalled();
       removeSyntheticClick();
     });

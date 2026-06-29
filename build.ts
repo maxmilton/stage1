@@ -20,6 +20,7 @@ const { outputs } = await Bun.build({
     "Node.ELEMENT_NODE": "1",
   },
   minify: true,
+  emitDCEAnnotations: true,
   sourcemap: "inline",
 });
 const bundle = await rollup({
