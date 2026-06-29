@@ -111,7 +111,7 @@ export const reconcile = <T, N extends Node>(
 
   let prevStart = 0;
   let newStart = 0;
-  let loop = true;
+  let shouldLoop = true;
   let prevEnd = renderedData.length - 1;
   let newEnd = data.length - 1;
   let a: T;
@@ -120,8 +120,8 @@ export const reconcile = <T, N extends Node>(
   let newStartNode = prevStartNode;
   let prevEndNode: Node | null = afterNode ? afterNode.previousSibling : parent.lastChild;
 
-  fixes: while (loop) {
-    loop = false;
+  fixes: while (shouldLoop) {
+    shouldLoop = false;
     let tmpNode: ChildNode | null;
 
     // Skip prefix
@@ -156,7 +156,7 @@ export const reconcile = <T, N extends Node>(
     a = renderedData[prevEnd];
     b = data[newStart];
     while (a === b) {
-      loop = true;
+      shouldLoop = true;
       updateFn(prevEndNode as N, b);
       tmpNode = prevEndNode!.previousSibling;
       parent.insertBefore(prevEndNode!, newStartNode);
@@ -172,7 +172,7 @@ export const reconcile = <T, N extends Node>(
     a = renderedData[prevStart];
     b = data[newEnd];
     while (a === b) {
-      loop = true;
+      shouldLoop = true;
       updateFn(prevStartNode as N, b);
       tmpNode = prevStartNode!.nextSibling;
       parent.insertBefore(prevStartNode!, afterNode!);

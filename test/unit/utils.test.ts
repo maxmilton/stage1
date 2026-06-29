@@ -36,9 +36,9 @@ const NOT_DOM_NODES = [
   -1n,
   Number.MAX_VALUE,
   Number.MIN_VALUE,
-  Number.POSITIVE_INFINITY,
-  Number.NEGATIVE_INFINITY,
-  Number.NaN,
+  Infinity,
+  -Infinity,
+  NaN,
   BigInt(Number.MAX_SAFE_INTEGER + 1),
   true,
   false,
@@ -238,7 +238,6 @@ describe("clone", () => {
     // @ts-expect-error - intentional invalid parameters
     expect(() => clone(null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => clone(undefined)).toThrow(window.TypeError);
   });
 
@@ -290,12 +289,10 @@ describe("append", () => {
     // @ts-expect-error - intentional invalid parameters
     expect(() => append(null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => append(undefined)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
     expect(() => append(null, null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => append(undefined, undefined)).toThrow(window.TypeError);
   });
 
@@ -348,12 +345,10 @@ describe("prepend", () => {
     // @ts-expect-error - intentional invalid parameters
     expect(() => prepend(null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => prepend(undefined)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
     expect(() => prepend(null, null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => prepend(undefined, undefined)).toThrow(window.TypeError);
   });
 
@@ -411,12 +406,10 @@ describe("insert", () => {
     // @ts-expect-error - intentional invalid parameters
     expect(() => insert(null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => insert(undefined)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
     expect(() => insert(null, null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => insert(undefined, undefined)).toThrow(window.TypeError);
   });
 
@@ -492,12 +485,10 @@ describe("replace", () => {
     // @ts-expect-error - intentional invalid parameters
     expect(() => replace(null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => replace(undefined)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
     expect(() => replace(null, null)).toThrow(window.TypeError);
     // @ts-expect-error - intentional invalid parameters
-    // eslint-disable-next-line unicorn/no-useless-undefined
     expect(() => replace(undefined, undefined)).toThrow(window.TypeError);
   });
 

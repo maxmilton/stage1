@@ -27,7 +27,7 @@ describe("browser", () => {
       expect.assertions(2);
       expect(browserExports).toHaveProperty(name);
       // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(Object.prototype.toString.call(browserExports[name])).toBe(`[object ${type}]`);
+      expect(browserExports[name]).toHaveObjectType(`[object ${type}]`);
     });
   }
 
@@ -71,7 +71,7 @@ describe("index", () => {
       expect.assertions(2);
       expect(indexExports).toHaveProperty(name);
       // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(Object.prototype.toString.call(indexExports[name])).toBe(`[object ${type}]`);
+      expect(indexExports[name]).toHaveObjectType(`[object ${type}]`);
     });
   }
 
@@ -128,7 +128,7 @@ for (const [reconsiler, exports] of reconsilers) {
     test('exports public "reconcile" Function', () => {
       expect.assertions(2);
       expect(exports).toHaveProperty("reconcile");
-      expect(Object.prototype.toString.call(exports.reconcile)).toBe("[object Function]");
+      expect(exports.reconcile).toBeInstanceOf(Function);
     });
 
     test("does not export any private internals", () => {

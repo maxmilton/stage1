@@ -39,7 +39,7 @@ export const store = <
     },
     {
       set(target, property: K, value: T[K]) {
-        handlers.get(property)?.forEach((fn) => fn(value, target[property]));
+        handlers.get(property)?.forEach((fn): void => fn(value, target[property]));
         // eslint-disable-next-line no-param-reassign
         (target as T)[property] = value;
         return true;

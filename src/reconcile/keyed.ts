@@ -99,12 +99,12 @@ export const reconcile = <T, N extends Node>(
 
   // Fast path for create
   if (renderedData.length === 0) {
-    const insert = afterNode !== undefined;
+    const willInsert = afterNode !== undefined;
     let index = 0;
     let node: Node;
     for (; index < dataLen; index++) {
       node = createFn(data[index]);
-      if (insert) {
+      if (willInsert) {
         parent.insertBefore(node, afterNode!);
       } else {
         parent.appendChild(node);
@@ -115,7 +115,7 @@ export const reconcile = <T, N extends Node>(
 
   let prevStart = 0;
   let newStart = 0;
-  let loop = true;
+  let shouldLoop = true;
   let prevEnd = renderedData.length - 1;
   let newEnd = dataLen - 1;
   let a: T;
@@ -124,8 +124,8 @@ export const reconcile = <T, N extends Node>(
   let newStartNode = prevStartNode;
   let prevEndNode: Node | null = afterNode ? afterNode.previousSibling : parent.lastChild;
 
-  fixes: while (loop) {
-    loop = false;
+  fixes: while (shouldLoop) {
+    shouldLoop = false;
     let tmpNode: ChildNode | null;
 
     // Skip prefix
@@ -161,7 +161,7 @@ export const reconcile = <T, N extends Node>(
     a = renderedData[prevEnd];
     b = data[newStart];
     while (a[key] === b[key]) {
-      loop = true;
+      shouldLoop = true;
       updateFn(prevEndNode as N, b);
       tmpNode = prevEndNode!.previousSibling;
       parent.insertBefore(prevEndNode!, newStartNode);
@@ -177,7 +177,7 @@ export const reconcile = <T, N extends Node>(
     a = renderedData[prevStart];
     b = data[newEnd];
     while (a[key] === b[key]) {
-      loop = true;
+      shouldLoop = true;
       updateFn(prevStartNode as N, b);
       tmpNode = prevStartNode!.nextSibling;
       parent.insertBefore(prevStartNode!, afterNode!);

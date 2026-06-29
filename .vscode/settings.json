@@ -10,9 +10,9 @@
   "editor.tabSize": 2,
   "eslint.enable": true,
   "git.branchProtection": ["master", "next"],
-  "prettier.enable": false, // use biome
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "prettier.enable": false, // use biome
 
   "[css]": {
     "editor.defaultFormatter": "biomejs.biome"

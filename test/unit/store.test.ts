@@ -35,7 +35,7 @@ describe("store", () => {
       g: false,
       h: () => {},
       i: [1, 2, 3],
-      j: { ja: Number.POSITIVE_INFINITY, jb: Number.NEGATIVE_INFINITY },
+      j: { ja: Infinity, jb: -Infinity },
       k: Symbol("k"),
       l: new Date(),
       m: new Map(),
