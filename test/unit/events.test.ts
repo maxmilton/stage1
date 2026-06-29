@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, expectTypeOf, mock, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import {
   handleClick,
@@ -16,6 +16,14 @@ declare global {
 }
 
 describe("handleClick", () => {
+  test("types", () => {
+    expectTypeOf(handleClick).not.toBeAny();
+    expectTypeOf(handleClick).toBeFunction();
+    expectTypeOf(handleClick).parameters.toEqualTypeOf<[Event]>();
+    expectTypeOf(handleClick).returns.not.toBeAny();
+    expectTypeOf(handleClick).returns.toEqualTypeOf<false | undefined>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(handleClick).toBeFunction();
@@ -74,6 +82,15 @@ describe("handleClick", () => {
 });
 
 describe("setupSyntheticClick", () => {
+  test("types", () => {
+    expectTypeOf(setupSyntheticClick).not.toBeAny();
+    expectTypeOf(setupSyntheticClick).toBeFunction();
+    expectTypeOf(setupSyntheticClick).parameters.toEqualTypeOf<[]>();
+    expectTypeOf(setupSyntheticClick).returns.not.toBeAny();
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    expectTypeOf(setupSyntheticClick).returns.toEqualTypeOf<void>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(setupSyntheticClick).toBeFunction();
@@ -233,6 +250,15 @@ describe("setupSyntheticClick", () => {
 });
 
 describe("removeSyntheticClick", () => {
+  test("types", () => {
+    expectTypeOf(removeSyntheticClick).not.toBeAny();
+    expectTypeOf(removeSyntheticClick).toBeFunction();
+    expectTypeOf(removeSyntheticClick).parameters.toEqualTypeOf<[]>();
+    expectTypeOf(removeSyntheticClick).returns.not.toBeAny();
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    expectTypeOf(removeSyntheticClick).returns.toEqualTypeOf<void>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(removeSyntheticClick).toBeFunction();

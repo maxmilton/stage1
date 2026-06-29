@@ -1,8 +1,23 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, expectTypeOf, mock, test } from "bun:test";
 import { isProxy } from "node:util/types";
 import { store } from "../../src/store.ts";
 
 describe("store", () => {
+  test("types", () => {
+    expectTypeOf(store).not.toBeAny();
+    expectTypeOf(store).toBeFunction();
+    expectTypeOf(store).parameters.branded.toEqualTypeOf<[object & { on?: never }]>();
+    expectTypeOf(store).returns.not.toBeAny();
+    expectTypeOf(store).returns.toExtend<
+      object & {
+        on: (
+          key: string | symbol,
+          callback: (value: unknown, prev: unknown) => void,
+        ) => /** off */ () => boolean;
+      }
+    >();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(store).toBeFunction();
