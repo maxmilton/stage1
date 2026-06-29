@@ -1,6 +1,6 @@
 // XXX: This file has the same tests as test/unit/compile.test.ts, keep them in sync.
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import { collect, h } from "../../src/runtime.ts";
@@ -8,6 +8,14 @@ import type { Refs } from "../../src/types.ts";
 import { Test } from "../TestComponent.ts";
 
 describe("h", () => {
+  test("types", () => {
+    expectTypeOf(h).not.toBeAny();
+    expectTypeOf(h).toBeFunction();
+    expectTypeOf(h).parameters.toEqualTypeOf<[html: string]>();
+    expectTypeOf(h).returns.not.toBeAny();
+    expectTypeOf(h).returns.toEqualTypeOf<ChildNode & Node>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(h).toBeFunction();
@@ -136,9 +144,17 @@ describe("h", () => {
 });
 
 // TODO: Once bun supports macros used as template literals tag functions, we
-// could consider adding a html function similar to the standard runtime.
+// should consider adding a html function similar to the browser runtime.
 
 // describe("html", () => {
+//   test("types", () => {
+//     expectTypeOf(html).not.toBeAny();
+//     expectTypeOf(html).toBeFunction();
+//     expectTypeOf(html).parameters.toEqualTypeOf<[template: TemplateStringsArray, ...substitutions: unknown[]]>();
+//     expectTypeOf(html).returns.not.toBeAny();
+//     expectTypeOf(html).returns.toEqualTypeOf<ReturnType<typeof h>>();
+//   });
+//
 //   test("is a function", () => {
 //     expect.assertions(2);
 //     expect(html).toBeFunction();
@@ -171,6 +187,16 @@ describe("h", () => {
 // });
 
 describe("collect", () => {
+  test("types", () => {
+    expectTypeOf(collect).not.toBeAny();
+    expectTypeOf(collect).toBeFunction();
+    expectTypeOf(collect).parameters.toEqualTypeOf<
+      [root: Node, k: readonly string[], d: readonly number[]]
+    >();
+    expectTypeOf(collect).returns.not.toBeAny();
+    expectTypeOf(collect).returns.toExtend<Refs>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(collect).toBeFunction();
@@ -441,6 +467,14 @@ describe("collect", () => {
 });
 
 describe("Test component", () => {
+  test("types", () => {
+    expectTypeOf(Test).not.toBeAny();
+    expectTypeOf(Test).toBeFunction();
+    expectTypeOf(Test).parameters.toEqualTypeOf<[props: { text: string }]>();
+    expectTypeOf(Test).returns.not.toBeAny();
+    expectTypeOf(Test).returns.toEqualTypeOf<HTMLDivElement>();
+  });
+
   test("renders basic template", () => {
     expect.assertions(1);
     const rendered = render(Test({ text: "Hello" }));
