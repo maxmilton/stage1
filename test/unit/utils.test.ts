@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, expectTypeOf, test } from "bun:test";
 import {
   append,
   clone,
@@ -58,6 +58,15 @@ const NOT_DOM_NODES = [
 ] as const;
 
 describe("noop", () => {
+  test("types", () => {
+    expectTypeOf(noop).not.toBeAny();
+    expectTypeOf(noop).toBeFunction();
+    expectTypeOf(noop).parameters.toEqualTypeOf<[]>();
+    expectTypeOf(noop).returns.not.toBeAny();
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    expectTypeOf(noop).returns.toEqualTypeOf<void>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(noop).toBeFunction();
@@ -82,6 +91,14 @@ describe("noop", () => {
 });
 
 describe("fragment", () => {
+  test("types", () => {
+    expectTypeOf(fragment).not.toBeAny();
+    expectTypeOf(fragment).toBeFunction();
+    expectTypeOf(fragment).parameters.toEqualTypeOf<[]>();
+    expectTypeOf(fragment).returns.not.toBeAny();
+    expectTypeOf(fragment).returns.toEqualTypeOf<DocumentFragment>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(fragment).toBeFunction();
@@ -100,6 +117,14 @@ describe("fragment", () => {
 });
 
 describe("text", () => {
+  test("types", () => {
+    expectTypeOf(text).not.toBeAny();
+    expectTypeOf(text).toBeFunction();
+    expectTypeOf(text).parameters.toEqualTypeOf<[string]>();
+    expectTypeOf(text).returns.not.toBeAny();
+    expectTypeOf(text).returns.toEqualTypeOf<Text>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(text).toBeFunction();
@@ -123,6 +148,16 @@ describe("text", () => {
 });
 
 describe("create", () => {
+  test("types", () => {
+    expectTypeOf(create).not.toBeAny();
+    expectTypeOf(create).toBeFunction();
+    expectTypeOf(create).parameters.toEqualTypeOf<[keyof HTMLElementTagNameMap]>();
+    expectTypeOf(create).returns.not.toBeAny();
+    expectTypeOf(create).returns.toEqualTypeOf<
+      HTMLElementTagNameMap[keyof HTMLElementTagNameMap]
+    >();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(create).toBeFunction();
@@ -212,6 +247,14 @@ describe("create", () => {
 });
 
 describe("clone", () => {
+  test("types", () => {
+    expectTypeOf(clone).not.toBeAny();
+    expectTypeOf(clone).toBeFunction();
+    expectTypeOf(clone).parameters.toEqualTypeOf<[Node]>();
+    expectTypeOf(clone).returns.not.toBeAny();
+    expectTypeOf(clone).returns.toEqualTypeOf<Node>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(clone).toBeFunction();
@@ -263,6 +306,14 @@ describe("clone", () => {
 });
 
 describe("append", () => {
+  test("types", () => {
+    expectTypeOf(append).not.toBeAny();
+    expectTypeOf(append).toBeFunction();
+    expectTypeOf(append).parameters.toEqualTypeOf<[Node, Node]>();
+    expectTypeOf(append).returns.not.toBeAny();
+    expectTypeOf(append).returns.toEqualTypeOf<Node>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(append).toBeFunction();
@@ -319,6 +370,14 @@ describe("append", () => {
 });
 
 describe("prepend", () => {
+  test("types", () => {
+    expectTypeOf(prepend).not.toBeAny();
+    expectTypeOf(prepend).toBeFunction();
+    expectTypeOf(prepend).parameters.toEqualTypeOf<[Node, Node]>();
+    expectTypeOf(prepend).returns.not.toBeAny();
+    expectTypeOf(prepend).returns.toEqualTypeOf<Node>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(prepend).toBeFunction();
@@ -378,6 +437,14 @@ describe("prepend", () => {
 });
 
 describe("insert", () => {
+  test("types", () => {
+    expectTypeOf(insert).not.toBeAny();
+    expectTypeOf(insert).toBeFunction();
+    expectTypeOf(insert).parameters.toEqualTypeOf<[Node, Node]>();
+    expectTypeOf(insert).returns.not.toBeAny();
+    expectTypeOf(insert).returns.toEqualTypeOf<Node>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(insert).toBeFunction();
@@ -457,6 +524,14 @@ describe("insert", () => {
 });
 
 describe("replace", () => {
+  test("types", () => {
+    expectTypeOf(replace).not.toBeAny();
+    expectTypeOf(replace).toBeFunction();
+    expectTypeOf(replace).parameters.toEqualTypeOf<[Node, Node]>();
+    expectTypeOf(replace).returns.not.toBeAny();
+    expectTypeOf(replace).returns.toEqualTypeOf<Node>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(replace).toBeFunction();

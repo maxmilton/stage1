@@ -1,10 +1,32 @@
 // XXX: This file has the same tests as test/unit/compile.test.ts, keep them in sync.
 
-import { describe, expect, spyOn, test } from "bun:test";
+import { describe, expect, expectTypeOf, spyOn, test } from "bun:test";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import { compile as compileNoMacro } from "../../src/macro.ts";
 
 describe("compile", () => {
+  test("types", () => {
+    expectTypeOf(compileNoMacro).not.toBeAny();
+    expectTypeOf(compileNoMacro).toBeFunction();
+    // @ts-expect-error - TODO: Fix this type instead of using parameter(n).
+    expectTypeOf(compileNoMacro).parameters.toEqualTypeOf<
+      [template: string, opts: { keepSpaces?: boolean } | undefined]
+    >();
+    // FIXME: The following type checks are broken on the latest bun versions.
+    // expectTypeOf(compileNoMacro).parameter(0).toBeString();
+    // expectTypeOf(compileNoMacro).parameter(1).toEqualTypeOf<{ keepSpaces?: boolean } | undefined>();
+    // expectTypeOf(compileNoMacro).returns.not.toBeAny();
+    // expectTypeOf(compileNoMacro).returns.omit("ref").toEqualTypeOf<{
+    //   html: string;
+    //   k: readonly string[];
+    //   d: readonly number[];
+    //   success: boolean;
+    // }>();
+    // expectTypeOf(compileNoMacro)
+    //   .returns.toHaveProperty("ref")
+    //   .toExtend<Record<string, `${number}`>>();
+  });
+
   test("is a function", () => {
     expect.assertions(2);
     expect(compileNoMacro).toBeFunction();
