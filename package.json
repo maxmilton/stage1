@@ -2,15 +2,11 @@
   "name": "stage1",
   "version": "0.10.0",
   "description": "High-performance JavaScript micro framework",
-  "repository": "github:maxmilton/stage1",
   "bugs": "https://github.com/maxmilton/stage1/issues",
-  "author": "Max Milton <max@2okki.com>",
+  "repository": "github:maxmilton/stage1",
   "license": "MIT",
-  "__FIXME__sideEffects": false,
+  "author": "Max Milton <max@2okki.com>",
   "type": "module",
-  "main": "dist/index.js",
-  "browser": "dist/browser.js",
-  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -46,6 +42,9 @@
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
+  "main": "dist/index.js",
+  "browser": "dist/browser.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist",
     "src"
@@ -75,5 +74,6 @@
     "terser": "5.48.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.62.1"
-  }
+  },
+  "__FIXME__sideEffects": false
 }

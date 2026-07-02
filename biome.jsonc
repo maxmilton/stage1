@@ -3,7 +3,8 @@
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "assist": {
     "actions": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "source": { "useSortedPackageJson": "on" }
     }
   },
   "formatter": {
