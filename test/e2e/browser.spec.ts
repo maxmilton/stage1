@@ -15,6 +15,7 @@ test("exports", async ({ page }) => {
   // await page.goto('about:blank');
   await page.addScriptTag({ path: jsPath });
 
+  // eslint-disable-next-line unicorn/isolated-functions
   const result = await page.evaluate(() => Object.keys(window.stage1));
 
   expect(result).toEqual([
