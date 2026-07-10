@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Check valid version tag
         run: |
-          [[ "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-next.[0-9]+)? ]] || exit 1
+          [[ "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-next.[0-9]+)? ]] || exit 1
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
@@ -30,7 +30,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - name: Determine npm tag
         run: |
-          if [[ "${{ github.ref }}" == *"-next."* ]]; then
+          if [[ "$GITHUB_REF" == *"-next."* ]]; then
             echo "NPM_TAG=next" >> $GITHUB_ENV
           else
             echo "NPM_TAG=latest" >> $GITHUB_ENV
