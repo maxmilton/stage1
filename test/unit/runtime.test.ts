@@ -41,7 +41,7 @@ describe("h", () => {
       `);
       const view = h(meta.html);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
+      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
       expect(meta.success).toBeTrue();
     });
 
@@ -59,7 +59,7 @@ describe("h", () => {
       `);
       const view = h(meta.html);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
+      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
       expect(meta.success).toBeTrue();
     });
 
@@ -73,7 +73,7 @@ describe("h", () => {
       const view = h(meta.html);
       const rendered = render(view);
       expect(view).toBeInstanceOf(window.SVGSVGElement);
-      expect(rendered.container.innerHTML).toBe(
+      expect(rendered.container.getHTML()).toBe(
         '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
       );
       expect(meta.success).toBeTrue();
@@ -106,7 +106,7 @@ describe("h", () => {
       `);
       const view = h(meta.html);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li></ul>");
+      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li></ul>");
       expect(meta.success).toBeTrue();
     });
 
@@ -135,7 +135,7 @@ describe("h", () => {
       `);
       const view = h(meta.html);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe(
+      expect(rendered.container.getHTML()).toBe(
         "<div><pre>\n            a\n            b\n            c\n\n\n            &lt;span&gt; Foo  &lt;/span&gt;\n          </pre><span>Bar</span><code>\n            &lt;span&gt;\n              Baz\n            &lt;/span&gt;\n          </code></div>",
       );
       expect(meta.success).toBeTrue();
@@ -478,6 +478,6 @@ describe("Test component", () => {
   test("renders basic template", () => {
     expect.assertions(1);
     const rendered = render(Test({ text: "Hello" }));
-    expect(rendered.container.innerHTML).toBe('<div id="test">Hello</div>');
+    expect(rendered.container.getHTML()).toBe('<div id="test">Hello</div>');
   });
 });

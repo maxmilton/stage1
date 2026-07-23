@@ -39,7 +39,7 @@ describe("h", () => {
         </ul>
       `);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
+      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
     });
 
     test("renders basic template with messy whitespace", () => {
@@ -55,7 +55,7 @@ describe("h", () => {
         </ul>
       `);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
+      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
     });
 
     test("renders SVG template", () => {
@@ -67,7 +67,7 @@ describe("h", () => {
       `);
       const rendered = render(view);
       expect(view).toBeInstanceOf(window.SVGSVGElement);
-      expect(rendered.container.innerHTML).toBe(
+      expect(rendered.container.getHTML()).toBe(
         '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
       );
     });
@@ -96,7 +96,7 @@ describe("h", () => {
         </ul>
       `);
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li></ul>");
+      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li></ul>");
     });
 
     // NOTE: This is not supported by the current implementation of the h()
@@ -140,7 +140,7 @@ describe("html", () => {
         </ul>
       `;
       const rendered = render(view);
-      expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
+      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
     });
   });
 });
@@ -294,6 +294,6 @@ describe("Test component", () => {
   test("renders basic template", () => {
     expect.assertions(1);
     const rendered = render(Test({ text: "Hello" }));
-    expect(rendered.container.innerHTML).toBe('<div id="test">Hello</div>');
+    expect(rendered.container.getHTML()).toBe('<div id="test">Hello</div>');
   });
 });
