@@ -60,20 +60,20 @@
     "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.1",
+    "@biomejs/biome": "2.5.4",
     "@eslint/js": "10.0.1",
-    "@maxmilton/eslint-config": "0.3.2",
+    "@maxmilton/eslint-config": "0.3.3",
     "@maxmilton/test-utils": "0.0.15",
     "@playwright/test": "1.61.1",
     "@types/bun": "1.3.14",
     "dts-buddy": "0.8.2",
-    "eslint": "10.6.0",
-    "eslint-plugin-unicorn": "70.0.0",
+    "eslint": "10.7.0",
+    "eslint-plugin-unicorn": "72.0.0",
     "happy-dom": "20.10.6",
     "rollup": "4.62.2",
-    "terser": "5.48.0",
+    "terser": "5.49.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.62.1"
+    "typescript-eslint": "8.64.0"
   },
   "__FIXME__sideEffects": false
 }
