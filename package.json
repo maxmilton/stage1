@@ -60,7 +60,7 @@
     "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.4",
+    "@biomejs/biome": "2.5.5",
     "@eslint/js": "10.0.1",
     "@maxmilton/eslint-config": "0.3.3",
     "@maxmilton/test-utils": "0.0.15",
