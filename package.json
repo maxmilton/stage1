@@ -72,7 +72,7 @@
     "happy-dom": "20.11.1",
     "rollup": "4.62.2",
     "terser": "5.49.0",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "typescript-eslint": "8.64.0"
   },
   "__FIXME__sideEffects": false
