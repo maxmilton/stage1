@@ -57,7 +57,7 @@
         }
       },
       "javascript": {
-        "globals": ["$console", "Bun", "happyDOM", "Loader"]
+        "globals": ["$console", "Bun", "happyDOM"]
       }
     }
   ]

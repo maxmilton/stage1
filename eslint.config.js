@@ -41,6 +41,8 @@ export default defineConfig(
       "unicorn/no-array-callback-reference": "warn", // byte savings + faster
       "unicorn/no-array-for-each": "off", // forEach is often faster (in Chrome and Bun but not Firefox)
       "unicorn/no-computed-property-existence-check": "off", // used carefully
+      "unicorn/no-for-loop": "off", // faster
+      "unicorn/no-new-array": "off", // faster when used intentionally
       "unicorn/no-top-level-assignment-in-function": "off", // used carefully
       "unicorn/prefer-add-event-listener": "off", // stage1
       "unicorn/prefer-at": "off", // bad browser support
