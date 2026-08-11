@@ -7,6 +7,40 @@ import { collect, h, html } from "../../src/browser/runtime.ts";
 import type { Refs } from "../../src/types.ts";
 import { Test } from "../TestComponent_browser.ts";
 
+// A deep mixed tree exercising every node kind the TreeWalker has to step
+// over. Each ref is its own test so a miss names the ref that went missing
+// instead of stopping at the first of nineteen assertions. `nodeName` is the
+// discriminating assertion — `instanceof HTMLElement` passes for any element,
+// so it would not catch collect() landing on the wrong one.
+const deepTree = () =>
+  h(/* html */ `
+    <div @a>
+      <header @b>
+        <nav @c>
+          <a @d href="@one">One</a>
+          <a @e href="@two">Two</a>
+        </nav>
+      </header>
+      <main @f>
+        <h1 @g>Test</h1>
+        <p @h><b @i>This</b> is a <a href="@" @j>test</a>.</p>
+        <ol @k>
+          <li @l id=one>One</li>
+          <li @m id=two>Two</li>
+        </ol>
+        <form @n>
+          <input @o />
+          <textarea @p></textarea>
+          <button @q>Submit</button>
+        </form>
+      </main>
+      <!-- -->
+      <footer @r>
+        @s
+      </footer>
+    </div>
+  `);
+
 describe("h", () => {
   test("types", () => {
     expectTypeOf(h).not.toBeAny();
@@ -174,75 +208,37 @@ describe("collect", () => {
     expect(collect).toHaveParameters(2, 0);
   });
 
-  test("collects all refs", () => {
-    expect.assertions(39);
-    const view = h(/* html */ `
-      <div @a>
-        <header @b>
-          <nav @c>
-            <a @d href="@one">One</a>
-            <a @e href="@two">Two</a>
-          </nav>
-        </header>
-        <main @f>
-          <h1 @g>Test</h1>
-          <p @h><b @i>This</b> is a <a href="@" @j>test</a>.</p>
-          <ol @k>
-            <li @l id=one>One</li>
-            <li @m id=two>Two</li>
-          </ol>
-          <form @n>
-            <input @o />
-            <textarea @p></textarea>
-            <button @q>Submit</button>
-          </form>
-        </main>
-        <!-- -->
-        <footer @r>
-          @s
-        </footer>
-      </div>
-    `);
-    const refs = collect(view, view);
-    expect(refs.a.nodeName).toBe("DIV");
-    expect(refs.a).toBeInstanceOf(window.HTMLDivElement);
-    expect(refs.b.nodeName).toBe("HEADER");
-    expect(refs.b).toBeInstanceOf(window.HTMLElement);
-    expect(refs.c.nodeName).toBe("NAV");
-    expect(refs.c).toBeInstanceOf(window.HTMLElement);
-    expect(refs.d.nodeName).toBe("A");
-    expect(refs.d).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.e.nodeName).toBe("A");
-    expect(refs.e).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.f.nodeName).toBe("MAIN");
-    expect(refs.f).toBeInstanceOf(window.HTMLElement);
-    expect(refs.g.nodeName).toBe("H1");
-    expect(refs.g).toBeInstanceOf(window.HTMLHeadingElement);
-    expect(refs.h.nodeName).toBe("P");
-    expect(refs.h).toBeInstanceOf(window.HTMLParagraphElement);
-    expect(refs.i.nodeName).toBe("B");
-    expect(refs.i).toBeInstanceOf(window.HTMLElement);
-    expect(refs.j.nodeName).toBe("A");
-    expect(refs.j).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.k.nodeName).toBe("OL");
-    expect(refs.k).toBeInstanceOf(window.HTMLOListElement);
-    expect(refs.l.nodeName).toBe("LI");
-    expect(refs.l).toBeInstanceOf(window.HTMLLIElement);
-    expect(refs.m.nodeName).toBe("LI");
-    expect(refs.m).toBeInstanceOf(window.HTMLLIElement);
-    expect(refs.n.nodeName).toBe("FORM");
-    expect(refs.n).toBeInstanceOf(window.HTMLFormElement);
-    expect(refs.o.nodeName).toBe("INPUT");
-    expect(refs.o).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.p.nodeName).toBe("TEXTAREA");
-    expect(refs.p).toBeInstanceOf(window.HTMLTextAreaElement);
-    expect(refs.q.nodeName).toBe("BUTTON");
-    expect(refs.q).toBeInstanceOf(window.HTMLButtonElement);
-    expect(refs.r.nodeName).toBe("FOOTER");
-    expect(refs.r).toBeInstanceOf(window.HTMLElement);
-    expect(refs.s.nodeName).toBe("#text");
-    expect(refs.s).toBeInstanceOf(window.Text);
-    expect(Object.keys(refs)).toHaveLength(19);
+  test.each([
+    ["a", "DIV"],
+    ["b", "HEADER"],
+    ["c", "NAV"],
+    ["d", "A"],
+    ["e", "A"],
+    ["f", "MAIN"],
+    ["g", "H1"],
+    ["h", "P"],
+    ["i", "B"],
+    ["j", "A"],
+    ["k", "OL"],
+    ["l", "LI"],
+    ["m", "LI"],
+    ["n", "FORM"],
+    ["o", "INPUT"],
+    ["p", "TEXTAREA"],
+    ["q", "BUTTON"],
+    ["r", "FOOTER"],
+    ["s", "#text"],
+  ])('collects the "%s" ref as %s', (name, nodeName) => {
+    expect.assertions(1);
+    const view = deepTree();
+    const refs: Refs = collect(view, view);
+    expect(refs[name].nodeName).toBe(nodeName);
+  });
+
+  test("collects every ref in a deep tree and no others", () => {
+    expect.assertions(1);
+    const view = deepTree();
+    expect(Object.keys(collect(view, view))).toHaveLength(19);
   });
 
   test("collects ref at start of element attributes", () => {

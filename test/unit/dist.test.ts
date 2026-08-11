@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import pkg from "../../package.json" with { type: "json" };
 
+// NOTE: This is the only test file which needs `bun build.ts` to have run — it
+// reads dist/ from disk. Kept separate from the src/ tests for that reason.
 describe("dist files", () => {
   // TODO: Remove the file MIME type checks? Bun inferrs it from the file
   // extension, not the actual file data, so the usefulness is questionable.
@@ -8,6 +10,7 @@ describe("dist files", () => {
   // NOTE: Files of unknown type (e.g., symlinks) fall back to the default
   // "application/octet-stream". Bun.file() does not resolve symlinks so it's
   // safe to infer that all these files are therefore regular files.
+
   const distFiles: [filename: string, type: string, minBytes?: number, maxBytes?: number][] = [
     ["reconcile/keyed.js", "text/javascript;charset=utf-8", 2000, 3500],
     ["reconcile/keyed.js.map", "application/json;charset=utf-8"],
@@ -101,7 +104,7 @@ test("no test file relies on the removed Bun `Loader` internal", async () => {
   expect.assertions(1);
   const contents = await Promise.all(
     [...new Bun.Glob("**/*.ts").scanSync({ cwd: "test/unit" })]
-      .filter((filename) => filename !== "index.test.ts")
+      .filter((filename) => filename !== "dist.test.ts")
       .map((filename) => Bun.file(`test/unit/${filename}`).text()),
   );
   expect(contents.join("\n")).not.toContain("Loader.registry");

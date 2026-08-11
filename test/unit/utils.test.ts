@@ -11,6 +11,8 @@ import {
   text,
 } from "../../src/utils.ts";
 
+// NOTE: These are templates, never the subject of a test — every test clones
+// them and mutates the clone, so no state carries between tests.
 const ul = document.createElement("ul");
 const liA = document.createElement("li");
 liA.className = "a";
@@ -631,47 +633,45 @@ describe("replace", () => {
     expect(root.outerHTML).toBe(/* html */ '<ul><li class="b"></li></ul>');
   });
 
-  test("moves existing element to new parent", () => {
-    expect.assertions(15);
+  test("adopts a detached node into the target's parent", () => {
+    expect.assertions(3);
+    const parent = ul.cloneNode() as HTMLUListElement;
+    const target = liA.cloneNode() as HTMLLIElement;
+    parent.appendChild(target);
+    const newNode = liB.cloneNode() as HTMLLIElement;
+    expect(newNode.parentNode).toBeNull(); // guard: not in the DOM before the call
+    replace(newNode, target);
+    expect(newNode.parentNode).toBe(parent);
+    expect(target.parentNode).toBeNull();
+  });
+
+  test("moves an already-attached node to the target's parent", () => {
+    expect.assertions(3);
+    const parentX = ul.cloneNode() as HTMLUListElement;
+    const parentY = ul.cloneNode() as HTMLUListElement;
+    const node = liB.cloneNode() as HTMLLIElement;
+    const target = liC.cloneNode() as HTMLLIElement;
+    parentX.appendChild(node);
+    parentY.appendChild(target);
+    replace(node, target);
+    expect(node.parentNode).toBe(parentY);
+    expect(parentX.childNodes).toHaveLength(0);
+    expect(target.parentNode).toBeNull();
+  });
+
+  test("moves the replacement's descendants with it", () => {
+    expect.assertions(3);
     const root = document.createElement("div");
     const parentX = ul.cloneNode() as HTMLUListElement;
     parentX.id = "x";
     const parentY = ul.cloneNode() as HTMLUListElement;
     parentY.id = "y";
-    root.appendChild(parentX);
-    root.appendChild(parentY);
-    const targetA1 = liA.cloneNode() as HTMLLIElement;
-    const targetA2 = liA.cloneNode() as HTMLLIElement;
-    parentX.appendChild(targetA1);
-    parentY.appendChild(targetA2);
-    expect(root.outerHTML).toBe(
-      /* html */ '<div><ul id="x"><li class="a"></li></ul><ul id="y"><li class="a"></li></ul></div>',
-    );
-    const targetB = liB.cloneNode();
-    expect(targetB.parentNode).toBeNull(); // targetB not in DOM yet
-    replace(targetB, targetA1);
-    expect(root.outerHTML).toBe(
-      /* html */ '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="a"></li></ul></div>',
-    );
-    expect(targetB.parentNode).toBe(parentX);
-    expect(targetA1.parentNode).toBeNull(); // targetA1 removed from DOM
-    const targetC = liC.cloneNode();
-    expect(targetC.parentNode).toBeNull(); // targetC not in DOM yet
-    replace(targetC, targetA2);
-    expect(root.outerHTML).toBe(
-      /* html */ '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="c"></li></ul></div>',
-    );
-    expect(targetC.parentNode).toBe(parentY);
-    expect(targetA2.parentNode).toBeNull(); // targetA2 removed from DOM
-    replace(targetB, targetC);
-    expect(root.outerHTML).toBe(
-      /* html */ '<div><ul id="x"></ul><ul id="y"><li class="b"></li></ul></div>',
-    );
-    expect(targetB.parentNode).toBe(parentY);
-    expect(targetC.parentNode).toBeNull(); // targetC removed from DOM
+    root.append(parentX, parentY);
+    const child = liB.cloneNode() as HTMLLIElement;
+    parentY.appendChild(child);
     replace(parentY, parentX);
     expect(root.outerHTML).toBe(/* html */ '<div><ul id="y"><li class="b"></li></ul></div>');
-    expect(targetB.parentNode).toBe(parentY); // did not move
-    expect(parentX.parentNode).toBeNull(); // parentX removed from DOM
+    expect(child.parentNode).toBe(parentY);
+    expect(parentX.parentNode).toBeNull();
   });
 });
