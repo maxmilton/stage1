@@ -388,6 +388,18 @@ describe("collect", () => {
     expect(meta.success).toBeTrue();
   });
 
+  // NOTE: A bare "<" splits the Text node into several compile-time chunks but
+  // is still one node at runtime, so the walk distance must count it once.
+  test("collects ref after text split across chunks", () => {
+    expect.assertions(3);
+    const meta = compile<{ x: Comment }>(/* html */ "<div>a < b<!-- @x --></div>");
+    const view = h(meta.html);
+    const refs = collect<{ x: Comment }>(view, meta.k, meta.d);
+    expect(refs.x.nodeName).toBe("#comment");
+    expect(refs.x).toBeInstanceOf(window.Comment);
+    expect(meta.success).toBeTrue();
+  });
+
   test("collects refs from template with many comments", () => {
     expect.assertions(16);
     const meta = compile<Refs>(/* html */ `

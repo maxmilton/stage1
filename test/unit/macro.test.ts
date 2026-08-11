@@ -321,6 +321,143 @@ describe("compile", () => {
     expect(meta.success).toBeTrue();
   });
 
+  test("does not minify in a textarea", () => {
+    expect.assertions(2);
+    const meta = compile(/* html */ "<div><textarea>  a   b</textarea></div>");
+    expect(meta.html).toBe(/* html */ "<div><textarea>  a   b</textarea></div>");
+    expect(meta.success).toBeTrue();
+  });
+
+  // NOTE: Whitespace-sensitive blocks keep their text verbatim but are still
+  // scanned for ref markers; only the raw text elements below opt out of refs.
+  describe("refs in whitespace-sensitive blocks", () => {
+    test("collects a text ref in a pre", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<div><pre>@a</pre></div>");
+      expect(meta.html).toBe(/* html */ "<div><pre> </pre></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([2]);
+      expect(meta.success).toBeTrue();
+    });
+
+    test("collects a text ref in a nested whitespace-sensitive block", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<div><pre><code>@a</code></pre></div>");
+      expect(meta.html).toBe(/* html */ "<div><pre><code> </code></pre></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([3]);
+      expect(meta.success).toBeTrue();
+    });
+
+    test("collects a text ref in a textarea", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div><textarea>@a</textarea></div>");
+      expect(meta.html).toBe(/* html */ "<div><textarea> </textarea></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.success).toBeTrue();
+    });
+
+    test("collects a comment ref in a pre", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div><pre><!-- @a --></pre></div>");
+      expect(meta.html).toBe(/* html */ "<div><pre><!></pre></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.success).toBeTrue();
+    });
+  });
+
+  // NOTE: script/style content is raw text — it must never be minified, and a
+  // leading "@" is a CSS at-rule or a JS decorator, never a ref marker.
+  describe("raw text elements", () => {
+    test("does not treat style text as a ref", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div><style>@a</style></div>");
+      expect(meta.html).toBe(/* html */ "<div><style>@a</style></div>");
+      expect(meta.k).toBeEmpty();
+      expect(meta.success).toBeTrue();
+    });
+
+    test("does not treat script text as a ref", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div><script>@a</script></div>");
+      expect(meta.html).toBe(/* html */ "<div><script>@a</script></div>");
+      expect(meta.k).toBeEmpty();
+      expect(meta.success).toBeTrue();
+    });
+
+    test("keeps style content verbatim", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div><style>@media print{a{color:red}}</style></div>");
+      expect(meta.html).toBe(/* html */ "<div><style>@media print{a{color:red}}</style></div>");
+      expect(meta.k).toBeEmpty();
+      expect(meta.success).toBeTrue();
+    });
+
+    test("keeps script content verbatim", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div><script>const a = 1;  const b = 2;</script></div>");
+      expect(meta.html).toBe(/* html */ "<div><script>const a = 1;  const b = 2;</script></div>");
+      expect(meta.k).toBeEmpty();
+      expect(meta.success).toBeTrue();
+    });
+
+    test("does not treat a script comment as a ref", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div><script><!-- @a --></script></div>");
+      expect(meta.html).toBe(/* html */ "<div><script><!-- @a --></script></div>");
+      expect(meta.k).toBeEmpty();
+      expect(meta.success).toBeTrue();
+    });
+  });
+
+  // NOTE: A bare "<" which does not start a tag makes the tokenizer split one
+  // Text node into several chunks, so each of these is a single node at runtime
+  // and must be handled — and counted — exactly once.
+  describe("text split across chunks", () => {
+    test("keeps text either side of a bare less-than", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<div>a < b</div>");
+      expect(meta.html).toBe(/* html */ "<div>a < b</div>");
+      expect(meta.success).toBeTrue();
+    });
+
+    test("counts split text as one node", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div>a < b<!-- @x --></div>");
+      expect(meta.html).toBe(/* html */ "<div>a < b<!></div>");
+      expect(meta.d).toEqual([2]);
+      expect(meta.success).toBeTrue();
+    });
+
+    test("counts split text in a nested element as one node", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<div><b>i < 10</b><!-- @x --></div>");
+      expect(meta.html).toBe(/* html */ "<div><b>i < 10</b><!></div>");
+      expect(meta.d).toEqual([3]);
+      expect(meta.success).toBeTrue();
+    });
+  });
+
+  // NOTE: Void and self-closing elements have no end tag, so the root element
+  // check must not try to hook one — it used to throw "No end tag.".
+  describe("void root element", () => {
+    test("compiles a void root element with a ref", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<input @a>");
+      expect(meta.html).toBe(/* html */ "<input>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([0]);
+      expect(meta.success).toBeTrue();
+    });
+
+    test("compiles a self-closing root element", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<svg/>");
+      expect(meta.html).toBe(/* html */ "<svg/>");
+      expect(meta.success).toBeTrue();
+    });
+  });
+
   // FIXME: Uncomment once bun string handling in macros bug is fixed.
   // ↳ Currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
   // test("does not escape HTML entities", () => {
@@ -336,6 +473,34 @@ describe("compile", () => {
       expect.assertions(2);
       const spy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div></div><div></div>";
+      compileNoMacro(template);
+      expect(spy).toHaveBeenCalledWith(
+        "Expected template to have a single root element:",
+        template,
+      );
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    // NOTE: Only one end tag handler can be registered per element, so the root
+    // element check and the whitespace-sensitive block check have to share one.
+    test("logs error when more than one root element and the root is a pre", () => {
+      expect.assertions(2);
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<pre>a</pre><div>b</div>";
+      compileNoMacro(template);
+      expect(spy).toHaveBeenCalledWith(
+        "Expected template to have a single root element:",
+        template,
+      );
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    test("logs error when more than one root element and the root is void", () => {
+      expect.assertions(2);
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<input><input>";
       compileNoMacro(template);
       expect(spy).toHaveBeenCalledWith(
         "Expected template to have a single root element:",
@@ -683,6 +848,316 @@ describe("compile", () => {
       );
       expect(meta.html).toBe(/* html */ "<div>x</div>");
       expect(meta.success).toBeTrue();
+    });
+  });
+});
+
+// These tests do not exercise compile(); they pin the bun/lol-html HTMLRewriter
+// behaviours src/macro.ts is built around. None of them are documented by bun,
+// so each test names the code which depends on it — when one fails after a bun
+// upgrade it points straight at what needs revisiting.
+describe("HTMLRewriter", () => {
+  describe("text chunking", () => {
+    // ↳ macro.ts buffers text chunks because of this; see SPEC V6b.
+    test("splits a text node on a bare less-than", () => {
+      expect.assertions(1);
+      const chunks: [text: string, lastInTextNode: boolean][] = [];
+      new HTMLRewriter()
+        .onDocument({
+          text(chunk) {
+            chunks.push([chunk.text, chunk.lastInTextNode]);
+          },
+        })
+        .transform(/* html */ "<div>a < b</div>");
+      expect(chunks).toEqual([
+        ["a ", false],
+        ["<", false],
+        [" b", false],
+        ["", true],
+      ]);
+    });
+
+    // NOTE: Splitting is tokenizer driven, not size or stream driven, so a big
+    // template does not make it more likely — and buffering cannot be skipped
+    // for small ones.
+    test("does not split on size", () => {
+      expect.assertions(1);
+      let chunks = 0;
+      new HTMLRewriter()
+        .onDocument({
+          text(chunk) {
+            if (!chunk.lastInTextNode) chunks++;
+          },
+        })
+        .transform(/* html */ `<div>${"y".repeat(1e6)}</div>`);
+      expect(chunks).toBe(1);
+    });
+
+    test.each([
+      /* eslint-disable array-bracket-spacing */
+      [/* html */ "<div>a &lt; b</div>"],
+      [/* html */ "<div>a && b</div>"],
+      [/* html */ "<div>a --> b</div>"],
+      [/* html */ "<div>a </ b</div>"],
+      [/* html */ "<div>a <! b</div>"],
+      /* eslint-enable array-bracket-spacing */
+    ])("does not split %j", (template) => {
+      expect.assertions(1);
+      let chunks = 0;
+      new HTMLRewriter()
+        .onDocument({
+          text(chunk) {
+            if (!chunk.lastInTextNode) chunks++;
+          },
+        })
+        .transform(template);
+      expect(chunks).toBe(1);
+    });
+
+    // ↳ macro.ts flushes its buffer on the last chunk, so there must be exactly
+    // one per text node.
+    test("terminates every text node with one empty last chunk", () => {
+      expect.assertions(1);
+      const flags: boolean[] = [];
+      new HTMLRewriter()
+        .onDocument({
+          text(chunk) {
+            flags.push(chunk.lastInTextNode);
+          },
+        })
+        .transform(/* html */ "<div>a<span>b</span>c</div>");
+      expect(flags).toEqual([false, true, false, true, false, true]);
+    });
+
+    // ↳ macro.ts uses a single shared buffer; interleaving would corrupt it.
+    test("flushes all chunks of a text node before the next element", () => {
+      expect.assertions(1);
+      const sequence: string[] = [];
+      new HTMLRewriter()
+        .onDocument({
+          text(chunk) {
+            sequence.push(chunk.lastInTextNode ? "END" : `t:${chunk.text}`);
+          },
+        })
+        .on("*", {
+          element(node) {
+            sequence.push(`el:${node.tagName}`);
+          },
+        })
+        .transform(/* html */ "<div>a < b<span>c</span></div>");
+      expect(sequence).toEqual(["el:div", "t:a ", "t:<", "t: b", "END", "el:span", "t:c", "END"]);
+    });
+
+    // ↳ macro.ts removes every non-last chunk then writes the whole node to the
+    // last one, which is empty; the replacement must land in the right place.
+    test("reinserts at the right position when replacing the last chunk", () => {
+      expect.assertions(1);
+      let buffer = "";
+      const html = new HTMLRewriter()
+        .onDocument({
+          text(chunk) {
+            buffer += chunk.text;
+            if (!chunk.lastInTextNode) {
+              chunk.remove();
+              return;
+            }
+            const text = buffer;
+            buffer = "";
+            chunk.replace(`[${text}]`, { html: true });
+          },
+        })
+        .transform(/* html */ "<div>a < b<span>c</span></div>");
+      expect(html).toBe(/* html */ "<div>[a < b]<span>[c]</span></div>");
+    });
+  });
+
+  describe("end tag handlers", () => {
+    // ↳ macro.ts unwinds the root, verbatim and raw state in ONE shared handler
+    // because of this.
+    test("replaces a previously registered handler", () => {
+      expect.assertions(1);
+      const fired: string[] = [];
+      new HTMLRewriter()
+        .on("*", {
+          element(node) {
+            node.onEndTag(() => {
+              fired.push("first");
+            });
+            node.onEndTag(() => {
+              fired.push("second");
+            });
+          },
+        })
+        .transform(/* html */ "<div>x</div>");
+      expect(fired).toEqual(["second"]);
+    });
+
+    // ↳ ...and it clobbers across separate .on() calls too, which is why the
+    // per-concern handler split is not possible.
+    test("replaces a handler registered by another on() handler", () => {
+      expect.assertions(1);
+      const fired: string[] = [];
+      new HTMLRewriter()
+        .on("*", {
+          element(node) {
+            node.onEndTag(() => {
+              fired.push("star");
+            });
+          },
+        })
+        .on("pre", {
+          element(node) {
+            node.onEndTag(() => {
+              fired.push("pre");
+            });
+          },
+        })
+        .transform(/* html */ "<pre>x</pre>");
+      expect(fired).toEqual(["pre"]);
+    });
+
+    // ↳ macro.ts guards onEndTag with `canHaveContent && !selfClosing`; without
+    // it a void root element throws "No end tag." and fails the build.
+    test.each([
+      /* eslint-disable array-bracket-spacing */
+      [/* html */ "<div></div>", true, false, false],
+      [/* html */ "<input>", false, false, true],
+      [/* html */ "<br>", false, false, true],
+      [/* html */ "<svg/>", false, true, true],
+      /* eslint-enable array-bracket-spacing */
+    ])(
+      "throws for %j when it has no end tag",
+      (template, canHaveContent, selfClosing, shouldThrow) => {
+        expect.assertions(3);
+        let didThrow = false;
+        new HTMLRewriter()
+          .on("*", {
+            element(node) {
+              expect(node.canHaveContent).toBe(canHaveContent);
+              expect(node.selfClosing).toBe(selfClosing);
+              try {
+                node.onEndTag(() => {});
+              } catch {
+                didThrow = true;
+              }
+            },
+          })
+          .transform(template);
+        expect(didThrow).toBe(shouldThrow);
+      },
+    );
+
+    // NOTE: A self-closing foreign element claims it can have content and lets
+    // you register a handler, but never fires it — so `canHaveContent` alone is
+    // not enough, hence the `!selfClosing` half of the macro.ts guard.
+    test("never fires for a self-closing foreign element", () => {
+      expect.assertions(3);
+      let wasFired = false;
+      new HTMLRewriter()
+        .on("*", {
+          element(node) {
+            expect(node.canHaveContent).toBeTrue();
+            expect(node.selfClosing).toBeTrue();
+            node.onEndTag(() => {
+              wasFired = true;
+            });
+          },
+        })
+        .transform(/* html */ "<circle/>");
+      expect(wasFired).toBeFalse();
+    });
+
+    // ↳ macro.ts decrements verbatimDepth in an end tag handler, so an unclosed
+    // <pre> must not leak the state to the rest of the template.
+    test("fires for implied end tags", () => {
+      expect.assertions(1);
+      const fired: string[] = [];
+      new HTMLRewriter()
+        .on("*", {
+          element(node) {
+            const { tagName } = node;
+            if (node.canHaveContent && !node.selfClosing) {
+              node.onEndTag(() => {
+                fired.push(tagName);
+              });
+            }
+          },
+        })
+        .transform(/* html */ "<div><pre>a</div>");
+      expect(fired).toEqual(["pre", "div"]);
+    });
+  });
+
+  describe("attributes", () => {
+    // ↳ macro.ts collects ref markers into an array BEFORE removing any,
+    // because removing one aborts the iteration.
+    test("truncates iteration when an attribute is removed", () => {
+      expect.assertions(2);
+      const iterated: string[] = [];
+      const html = new HTMLRewriter()
+        .on("*", {
+          element(node) {
+            for (const [name] of node.attributes) {
+              iterated.push(name);
+              if (name[0] === "@") node.removeAttribute(name);
+            }
+          },
+        })
+        .transform(/* html */ "<div @a x=1 @b y=2 @c></div>");
+      expect(iterated).toEqual(["@a"]);
+      expect(html).toBe(/* html */ "<div x=1 @b y=2 @c></div>");
+    });
+
+    // NOTE: This is why REF_NAME_RE's lowercase rule can only be violated in
+    // text or comment position; see SPEC V19.
+    test("lowercases attribute names", () => {
+      expect.assertions(1);
+      let names: string[] = [];
+      new HTMLRewriter()
+        .on("*", {
+          element(node) {
+            names = [...node.attributes].map(([name]) => name);
+          },
+        })
+        .transform(/* html */ '<div @Foo DATA-Bar="x"></div>');
+      expect(names).toEqual(["@foo", "data-bar"]);
+    });
+  });
+
+  describe("comments and doctype", () => {
+    // ↳ macro.ts turns a comment ref into <!> this way.
+    test("allows after() on a removed comment", () => {
+      expect.assertions(1);
+      const html = new HTMLRewriter()
+        .onDocument({
+          comments(node) {
+            node.remove();
+            node.after(/* html */ "<!>", { html: true });
+          },
+        })
+        .transform(/* html */ "<div><!-- @a --></div>");
+      expect(html).toBe(/* html */ "<div><!></div>");
+    });
+
+    // ↳ A doctype is reported wherever it appears, so macro.ts cannot swap the
+    // handler for a regex anchored to the start of the template.
+    test.each([
+      /* eslint-disable array-bracket-spacing */
+      [/* html */ "<!DOCTYPE html><div></div>"],
+      [/* html */ "<div><!DOCTYPE html></div>"],
+      [/* html */ "<div></div><!DOCTYPE html>"],
+      /* eslint-enable array-bracket-spacing */
+    ])("reports a doctype in %j", (template) => {
+      expect.assertions(1);
+      let found = 0;
+      new HTMLRewriter()
+        .onDocument({
+          doctype() {
+            found++;
+          },
+        })
+        .transform(template);
+      expect(found).toBe(1);
     });
   });
 });

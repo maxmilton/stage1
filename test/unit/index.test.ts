@@ -23,7 +23,9 @@ describe("dist files", () => {
     ["index.d.ts.map", "application/json;charset=utf-8"],
     ["index.js", "text/javascript;charset=utf-8", 1000, 1500],
     ["index.js.map", "application/json;charset=utf-8"],
-    ["macro.js", "text/javascript;charset=utf-8", 1000, 1500],
+    // NOTE: Looser ceiling than the runtime bundles; macro.js runs at build
+    // time in bun and is never shipped to a browser, so bytes are cheap here.
+    ["macro.js", "text/javascript;charset=utf-8", 1000, 2000],
     ["macro.js.map", "application/json;charset=utf-8"],
   ];
 
