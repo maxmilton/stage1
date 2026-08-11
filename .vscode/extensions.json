@@ -1,11 +1,11 @@
 {
   "recommendations": [
+    "bierner.comment-tagged-templates",
     "biomejs.biome",
-    "ms-playwright.playwright",
     "dbaeumer.vscode-eslint",
+    "ms-playwright.playwright",
     "oven.bun-vscode",
-    "tekumara.typos-vscode",
-    "YoavBls.pretty-ts-errors"
+    "tekumara.typos-vscode"
   ],
   "unwantedRecommendations": ["dprint.dprint", "esbenp.prettier-vscode", "prettier.prettier-vscode"]
 }

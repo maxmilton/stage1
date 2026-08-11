@@ -39,6 +39,9 @@
     "editor.unicodeHighlight.invisibleCharacters": true,
     "files.trimTrailingWhitespace": false
   },
+  "[toml]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
   "[typescript]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": "never",
