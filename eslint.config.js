@@ -58,5 +58,11 @@ export default defineConfig(
       "unicorn/switch-case-braces": ["error", "avoid"], // byte savings when minification doesn't remove
     },
   },
+  {
+    files: ["test/TestComponent*.ts"],
+    rules: {
+      "unicorn/filename-case": "off",
+    },
+  },
   { ignores: ["dist"] },
 );
