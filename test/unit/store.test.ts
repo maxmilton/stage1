@@ -139,6 +139,18 @@ describe("store", () => {
       expect(callback).toHaveBeenCalledWith("new", "old");
     });
 
+    test("calls callback before the new value is assigned", () => {
+      expect.assertions(2);
+      const state = store({ a: "old" });
+      let valueDuringCallback: string | undefined;
+      state.on("a", () => {
+        valueDuringCallback = state.a;
+      });
+      state.a = "new";
+      expect(valueDuringCallback).toBe("old"); // not yet assigned
+      expect(state.a).toBe("new");
+    });
+
     test("calls callback for symbol key property", () => {
       expect.assertions(2);
       const key = Symbol("status");

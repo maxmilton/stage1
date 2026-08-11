@@ -337,6 +337,25 @@ describe("collect", () => {
     expect(meta.success).toBeTrue();
   });
 
+  // NOTE: The walk is unchecked for speed — `k`/`d` must come from the same
+  // compile() as `root`. Walking past the end of the tree throws rather than
+  // returning undefined, and a `k` longer than `d` silently yields the same
+  // node for the surplus keys. See SPEC V16.
+  test("throws when the walk distance overruns the tree", () => {
+    expect.assertions(1);
+    const view = h(/* html */ "<div><span></span></div>");
+    expect(() => collect(view, ["a"], [99])).toThrow(window.TypeError);
+  });
+
+  // This should never happen when compile macro is used.
+  test("returns the same node for surplus ref keys", () => {
+    expect.assertions(2);
+    const view = h(/* html */ "<div><span></span></div>");
+    const refs = collect<{ a: Node; b: Node }>(view, ["a", "b"], [1]);
+    expect(refs.a.nodeName).toBe("SPAN");
+    expect(refs.b).toBe(refs.a);
+  });
+
   test("collects ref from template with only text", () => {
     expect.assertions(3);
     const meta = compile<{ a: Text }>(/* html */ "@a");
@@ -350,6 +369,18 @@ describe("collect", () => {
   test("collects ref from template with only comment", () => {
     expect.assertions(3);
     const meta = compile<{ a: Comment }>(/* html */ "<!-- @a -->");
+    const view = h(meta.html);
+    const refs = collect<{ a: Comment }>(view, meta.k, meta.d);
+    expect(refs.a.nodeName).toBe("#comment");
+    expect(refs.a).toBeInstanceOf(window.Comment);
+    expect(meta.success).toBeTrue();
+  });
+
+  // NOTE: The whitespace-only Text node kept inside <pre> is a real node in the
+  // walk, so a template like this fails if compile() does not count it in `d`.
+  test("collects ref after a whitespace-sensitive block", () => {
+    expect.assertions(3);
+    const meta = compile<{ a: Comment }>(/* html */ "<div><pre>   </pre><!-- @a --></div>");
     const view = h(meta.html);
     const refs = collect<{ a: Comment }>(view, meta.k, meta.d);
     expect(refs.a.nodeName).toBe("#comment");

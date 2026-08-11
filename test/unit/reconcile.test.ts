@@ -1,6 +1,6 @@
 /* eslint-disable no-param-reassign */
 
-import { describe, expect, expectTypeOf, test } from "bun:test";
+import { describe, expect, expectTypeOf, spyOn, test } from "bun:test";
 import { reconcile as reconcileKeyed } from "../../src/reconcile/keyed.ts";
 import { reconcile as reconcileNonKeyed } from "../../src/reconcile/non-keyed.ts";
 import { reconcile as reconcileReuseNodes } from "../../src/reconcile/reuse-nodes.ts";
@@ -26,6 +26,21 @@ const REPLACEMENT_ITEMS: Item[] = [
   { id: "x", label: "X" },
   { id: "y", label: "Y" },
 ];
+/**
+ * A shuffle the prefix/suffix/swap fast paths cannot consume, so reconciling
+ * SHUFFLE_FROM to SHUFFLE_TO reaches the general path with every node reusable
+ * (`P` has no `-1` entries) — the only input which actually runs the longest
+ * increasing subsequence algorithm.
+ *
+ * The LIS only decides HOW MANY nodes move, never the resulting order, so the
+ * tests below assert the move count. A correct LIS keeps the longest increasing
+ * run in place and moves just 2 nodes; a broken one renders the same order with
+ * more DOM operations, which order assertions alone cannot detect.
+ */
+const SHUFFLE_FROM_IDS = ["a", "b", "c", "d", "e", "f"];
+const SHUFFLE_TO_IDS = ["c", "a", "b", "f", "d", "e"];
+const SHUFFLE_FROM: Item[] = SHUFFLE_FROM_IDS.map((id) => ({ id, label: id.toUpperCase() }));
+const SHUFFLE_TO: Item[] = SHUFFLE_TO_IDS.map((id) => ({ id, label: id.toUpperCase() }));
 const IDS = ["a", "b", "c", "d"];
 const REORDERED_IDS = ["d", "b", "e", "a"];
 
@@ -167,6 +182,112 @@ describe("keyed", () => {
     expect(nodes[3].parentNode).toBeNull();
   });
 
+  test("reorders with the fewest moves when the fast paths cannot match", () => {
+    expect.assertions(4);
+    const parent = document.createElement("div");
+    reconcileKeyed("id", parent, [], SHUFFLE_FROM, createItemNode, updateItemNode);
+    const nodes = new Set(parent.children);
+    const insertBefore = spyOn(parent, "insertBefore");
+    reconcileKeyed("id", parent, SHUFFLE_FROM, SHUFFLE_TO, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(SHUFFLE_TO_IDS);
+    expect(parent.textContent).toBe("CABFDE");
+    expect([...parent.children].every((node) => nodes.has(node))).toBeTrue();
+    expect(insertBefore).toHaveBeenCalledTimes(2);
+    insertBefore.mockRestore();
+  });
+
+  test("removes trailing nodes when data shrinks", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileKeyed("id", parent, [], ITEMS, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    reconcileKeyed("id", parent, ITEMS, ITEMS.slice(0, 2), createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["a", "b"]);
+    expect(nodes[2].parentNode).toBeNull();
+    expect(nodes[3].parentNode).toBeNull();
+  });
+
+  // NOTE: Removing from the front makes the suffix-skip fast path consume the
+  // trailing match first, so the shrink loop ends with `prevEnd === 0`.
+  test("removes the leading node when data shrinks from the front", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    const first = ITEMS.slice(0, 2);
+    reconcileKeyed("id", parent, [], first, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    reconcileKeyed("id", parent, first, ITEMS.slice(1, 2), createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["b"]);
+    expect(nodes[0].parentNode).toBeNull();
+    expect(parent.firstElementChild).toBe(nodes[1]);
+  });
+
+  test("reuses the trailing nodes when only the first item changes", () => {
+    expect.assertions(4);
+    const parent = document.createElement("div");
+    const first = ITEMS.slice(0, 3);
+    reconcileKeyed("id", parent, [], first, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    const next = [{ id: "x", label: "X" }, ...first.slice(1)];
+    reconcileKeyed("id", parent, first, next, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["x", "b", "c"]);
+    const [, secondNode, thirdNode] = [...parent.children];
+    expect(secondNode).toBe(nodes[1]);
+    expect(thirdNode).toBe(nodes[2]);
+    expect(nodes[0].parentNode).toBeNull();
+  });
+
+  test("appends nodes when data grows", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileKeyed("id", parent, [], ITEMS.slice(0, 2), createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    reconcileKeyed("id", parent, ITEMS.slice(0, 2), ITEMS, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["a", "b", "c", "d"]);
+    expect(parent.firstElementChild).toBe(nodes[0]);
+    expect(parent.textContent).toBe("ABCD");
+  });
+
+  test("replaces every node when no keys match", () => {
+    expect.assertions(4);
+    const parent = document.createElement("div");
+    reconcileKeyed("id", parent, [], ITEMS.slice(0, 2), createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    reconcileKeyed(
+      "id",
+      parent,
+      ITEMS.slice(0, 2),
+      REPLACEMENT_ITEMS,
+      createItemNode,
+      updateItemNode,
+    );
+    expect(itemOrder(parent)).toEqual(["x", "y"]);
+    expect(nodes[0].parentNode).toBeNull();
+    expect(nodes[1].parentNode).toBeNull();
+    expect(parent.textContent).toBe("XY");
+  });
+
+  test("replaces every node between boundary nodes when no keys match", () => {
+    expect.assertions(4);
+    const [parent, before, after] = createBoundedParent();
+    const first = ITEMS.slice(0, 2);
+    reconcileKeyed("id", parent, [], first, createItemNode, updateItemNode, before, after);
+    const nodes = [...parent.children].slice(1, -1);
+    reconcileKeyed(
+      "id",
+      parent,
+      first,
+      REPLACEMENT_ITEMS,
+      createItemNode,
+      updateItemNode,
+      before,
+      after,
+    );
+    expect(parent.firstChild).toBe(before);
+    expect(parent.lastChild).toBe(after);
+    expect(parent.textContent).toBe("XY");
+    expect(nodes[0].parentNode).toBeNull();
+  });
+
   test("creates nodes between boundary nodes", () => {
     expect.assertions(3);
     const [parent, before, after] = createBoundedParent();
@@ -275,6 +396,111 @@ describe("non-keyed", () => {
     const [firstNode, secondNode] = [...parent.children];
     expect(firstNode).toBe(nodes[0]);
     expect(secondNode).toBe(nodes[1]);
+  });
+
+  test("reorders with the fewest moves when the fast paths cannot match", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileNonKeyed(parent, [], SHUFFLE_FROM_IDS, createStringItemNode, updateStringItemNode);
+    const nodes = new Set(parent.children);
+    const insertBefore = spyOn(parent, "insertBefore");
+    reconcileNonKeyed(
+      parent,
+      SHUFFLE_FROM_IDS,
+      SHUFFLE_TO_IDS,
+      createStringItemNode,
+      updateStringItemNode,
+    );
+    expect(itemOrder(parent)).toEqual(SHUFFLE_TO_IDS);
+    expect([...parent.children].every((node) => nodes.has(node))).toBeTrue();
+    expect(insertBefore).toHaveBeenCalledTimes(2);
+    insertBefore.mockRestore();
+  });
+
+  test("reuses the trailing nodes when only the first item changes", () => {
+    expect.assertions(4);
+    const parent = document.createElement("div");
+    const first = ["a", "b", "c"];
+    reconcileNonKeyed(parent, [], first, createStringItemNode, updateStringItemNode);
+    const nodes = [...parent.children];
+    reconcileNonKeyed(parent, first, ["x", "b", "c"], createStringItemNode, updateStringItemNode);
+    expect(itemOrder(parent)).toEqual(["x", "b", "c"]);
+    const [, secondNode, thirdNode] = [...parent.children];
+    expect(secondNode).toBe(nodes[1]);
+    expect(thirdNode).toBe(nodes[2]);
+    expect(nodes[0].parentNode).toBeNull();
+  });
+
+  test("appends nodes when data grows", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    reconcileNonKeyed(parent, [], ["a", "b"], createStringItemNode, updateStringItemNode);
+    const nodes = [...parent.children];
+    reconcileNonKeyed(parent, ["a", "b"], IDS, createStringItemNode, updateStringItemNode);
+    expect(itemOrder(parent)).toEqual(["a", "b", "c", "d"]);
+    expect(parent.firstElementChild).toBe(nodes[0]);
+  });
+
+  test("replaces every node when no data matches", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileNonKeyed(parent, [], ["a", "b"], createStringItemNode, updateStringItemNode);
+    const nodes = [...parent.children];
+    reconcileNonKeyed(parent, ["a", "b"], ["x", "y"], createStringItemNode, updateStringItemNode);
+    expect(itemOrder(parent)).toEqual(["x", "y"]);
+    expect(nodes[0].parentNode).toBeNull();
+    expect(nodes[1].parentNode).toBeNull();
+  });
+
+  // NOTE: Removing from the front makes the suffix-skip fast path consume the
+  // trailing match first, so the shrink loop ends with `prevEnd === 0`.
+  test("removes the leading node when data shrinks from the front", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileNonKeyed(parent, [], ["a", "b"], createStringItemNode, updateStringItemNode);
+    const nodes = [...parent.children];
+    reconcileNonKeyed(parent, ["a", "b"], ["b"], createStringItemNode, updateStringItemNode);
+    expect(itemOrder(parent)).toEqual(["b"]);
+    expect(nodes[0].parentNode).toBeNull();
+    expect(parent.firstElementChild).toBe(nodes[1]);
+  });
+
+  test("appends nodes between boundary nodes when data grows", () => {
+    expect.assertions(3);
+    const [parent, before, after] = createBoundedParent();
+    reconcileNonKeyed(parent, [], ["a", "b"], createStringItemNode, undefined, before, after);
+    reconcileNonKeyed(
+      parent,
+      ["a", "b"],
+      IDS,
+      createStringItemNode,
+      updateStringItemNode,
+      before,
+      after,
+    );
+    expect(parent.firstChild).toBe(before);
+    expect(parent.lastChild).toBe(after);
+    expect(parent.textContent).toBe("abcd");
+  });
+
+  test("replaces every node between boundary nodes when no data matches", () => {
+    expect.assertions(4);
+    const [parent, before, after] = createBoundedParent();
+    reconcileNonKeyed(parent, [], ["a", "b"], createStringItemNode, undefined, before, after);
+    const nodes = [...parent.children].slice(1, -1);
+    reconcileNonKeyed(
+      parent,
+      ["a", "b"],
+      ["x", "y"],
+      createStringItemNode,
+      updateStringItemNode,
+      before,
+      after,
+    );
+    expect(parent.firstChild).toBe(before);
+    expect(parent.lastChild).toBe(after);
+    expect(parent.textContent).toBe("xy");
+    expect(nodes[0].parentNode).toBeNull();
   });
 
   test("creates nodes between boundary nodes", () => {

@@ -359,6 +359,18 @@ describe("collect", () => {
     expect(meta.success).toBeTrue();
   });
 
+  // NOTE: The whitespace-only Text node kept inside <pre> is a real node in the
+  // walk, so a template like this fails if compile() does not count it in `d`.
+  test("collects ref after a whitespace-sensitive block", () => {
+    expect.assertions(3);
+    const meta = compile<{ a: Comment }>(/* html */ "<div><pre>   </pre><!-- @a --></div>");
+    const view = h(meta.html);
+    const refs = collect<{ a: Comment }>(view, meta.d);
+    expect(refs[meta.ref.a].nodeName).toBe("#comment");
+    expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
+    expect(meta.success).toBeTrue();
+  });
+
   test("collects refs from template with many comments", () => {
     expect.assertions(16);
     const meta = compile<Refs>(/* html */ `

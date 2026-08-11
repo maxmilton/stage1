@@ -287,6 +287,27 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
+  // NOTE: collector() scans attributes in reverse to save bytes, so the LAST
+  // marker wins here while compile() keeps the FIRST and treats several markers
+  // as an error. That divergence is accepted, not an oversight — see SPEC B1.
+  // Live mode does no validation, so the unused marker is left in the output.
+  test("uses the last ref marker when an element has several", () => {
+    expect.assertions(3);
+    const view = h(/* html */ "<div @a @b></div>");
+    const refs = collect<{ b: HTMLDivElement }>(view, view);
+    expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
+    expect(Object.keys(refs)).toEqual(["b"]);
+    expect(view.outerHTML).toBe(/* html */ '<div @a=""></div>');
+  });
+
+  test("does not collect an escaped ref marker", () => {
+    expect.assertions(2);
+    const view = h(/* html */ "<div \\@a></div>");
+    const refs = collect(view, view);
+    expect(Object.keys(refs)).toBeEmpty();
+    expect(view.outerHTML).toBe(/* html */ '<div \\@a=""></div>');
+  });
+
   test("collects ref from template with only text", () => {
     expect.assertions(3);
     const view = h<Text>(/* html */ "@a");

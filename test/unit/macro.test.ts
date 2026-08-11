@@ -148,22 +148,55 @@ describe("compile", () => {
     expect(meta.success).toBeTrue();
   });
 
+  // NOTE: Escaping is emergent, not implemented. A ref marker is only recognised
+  // when "@" is the FIRST character, so a leading "\" is enough to opt out — but
+  // nothing strips it, and the backslash survives verbatim into the output HTML.
+  // The html assertions below pin that; see SPEC V4.
+
   test("has empty k, d, and ref properties when escaped node ref", () => {
-    expect.assertions(4);
+    expect.assertions(5);
     const meta = compile(/* html */ "<div \\@a></div>");
     expect(meta.k).toBeEmpty();
     expect(meta.d).toBeEmpty();
     expect(meta.ref).toBeEmptyObject();
+    expect(meta.html).toBe(/* html */ "<div \\@a></div>");
     expect(meta.success).toBeTrue();
   });
 
   test("has empty k, d, and ref properties when escaped text ref", () => {
-    expect.assertions(4);
+    expect.assertions(5);
     const meta = compile(/* html */ "<div>\\@a</div>");
     expect(meta.k).toBeEmpty();
     expect(meta.d).toBeEmpty();
     expect(meta.ref).toBeEmptyObject();
+    expect(meta.html).toBe(/* html */ "<div>\\@a</div>");
     expect(meta.success).toBeTrue();
+  });
+
+  test("has empty k, d, and ref properties when escaped node ref with value", () => {
+    expect.assertions(3);
+    const meta = compile(/* html */ '<div \\@a="x"></div>');
+    expect(meta.k).toBeEmpty();
+    expect(meta.html).toBe(/* html */ '<div \\@a="x"></div>');
+    expect(meta.success).toBeTrue();
+  });
+
+  test("has empty k, d, and ref properties when marker is not the first character", () => {
+    expect.assertions(3);
+    const meta = compile(/* html */ "<div a\\@b></div>");
+    expect(meta.k).toBeEmpty();
+    expect(meta.html).toBe(/* html */ "<div a\\@b></div>");
+    expect(meta.success).toBeTrue();
+  });
+
+  // NOTE: Several markers on one element is an error, but the first is still
+  // used as the ref and every marker is stripped so none leaks into the output.
+  test("uses the first ref marker when an element has several", () => {
+    expect.assertions(3);
+    const meta = compile(/* html */ "<div @a @b></div>");
+    expect(meta.k).toEqual(["a"]);
+    expect(meta.ref).toHaveProperty("a", 0);
+    expect(meta.html).toBe(/* html */ "<div></div>");
   });
 
   test("has correct meta ref properties when 3 node refs", () => {
@@ -215,6 +248,11 @@ describe("compile", () => {
     expect(meta.success).toBeTrue();
   });
 
+  // NOTE: A SINGLE backslash here is a JS useless-escape, so the string literal
+  // is just "<div>@a</div>" — the escape never reaches compile(). This documents
+  // that escaping must be written "\\@" in source to survive into the template;
+  // the escape that does reach compile() is covered above. That is why this
+  // otherwise reads as a duplicate of "…when 1 text ref".
   test("has correct meta ref properties when escaped node ref", () => {
     expect.assertions(2);
     // biome-ignore lint/suspicious/noUselessEscapeInString: explicitly testing
@@ -226,6 +264,13 @@ describe("compile", () => {
   test("has no meta ref properties when escaped text ref", () => {
     expect.assertions(2);
     const meta = compile(/* html */ "<div>\\@a</div>");
+    expect(meta.ref).toBeEmptyObject();
+    expect(meta.success).toBeTrue();
+  });
+
+  test("has no meta ref properties when html escaped @ text", () => {
+    expect.assertions(2);
+    const meta = compile(/* html */ "<div>&#64;</div>");
     expect(meta.ref).toBeEmptyObject();
     expect(meta.success).toBeTrue();
   });
@@ -256,6 +301,23 @@ describe("compile", () => {
     expect(meta.html).toBe(
       /* html */ "<div><pre>\n          a\n           b\n          c\n\n\n          &lt;span&gt; Foo  &lt;/span&gt;\n        </pre><span>Bar</span><code>\n          &lt;span&gt;\n            Baz\n          &lt;/span&gt;\n        </code></div>",
     );
+    expect(meta.success).toBeTrue();
+  });
+
+  test("does not minify after a nested whitespace-sensitive block closes", () => {
+    expect.assertions(2);
+    const meta = compile(/* html */ "<div><pre>a  b<code>c  d</code>  e  f</pre></div>");
+    expect(meta.html).toBe(/* html */ "<div><pre>a  b<code>c  d</code>  e  f</pre></div>");
+    expect(meta.success).toBeTrue();
+  });
+
+  // NOTE: Whitespace-only text is kept inside pre/code, so unlike elsewhere it
+  // is a real node at runtime and must count towards the walk distance.
+  test("counts kept whitespace-only text in a whitespace-sensitive block", () => {
+    expect.assertions(3);
+    const meta = compile(/* html */ "<div><pre>   </pre><!-- @a --></div>");
+    expect(meta.html).toBe(/* html */ "<div><pre>   </pre><!></div>");
+    expect(meta.d).toEqual([3]);
     expect(meta.success).toBeTrue();
   });
 
@@ -306,9 +368,60 @@ describe("compile", () => {
       spy.mockRestore();
     });
 
+    test("logs error when an element has multiple ref markers", () => {
+      expect.assertions(2);
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<div @a @b></div>";
+      compileNoMacro(template);
+      expect(spy).toHaveBeenCalledWith(
+        "Found multiple ref markers on a single element in template:",
+        template,
+      );
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    // NOTE: Ref names must be lowercase because browsers normalise element
+    // attribute names when rendering HTML (README:72). Attribute names reach
+    // the macro already lowercased by HTMLRewriter, so a non-lowercase name can
+    // only be caught in text and comment position.
+    const invalidRefNames: [template: string, name: string][] = [
+      /* eslint-disable array-bracket-spacing */
+      [/* html */ "<div @></div>", ""],
+      [/* html */ "<div>@</div>", ""],
+      [/* html */ "<!-- @ -->", ""],
+      [/* html */ "<div>@a and more</div>", "a and more"],
+      [/* html */ "<div><!-- @a extra --></div>", "a extra"],
+      [/* html */ "<div>@Foo</div>", "Foo"],
+      [/* html */ "<div>@1a</div>", "1a"],
+      /* eslint-enable array-bracket-spacing */
+    ];
+
+    test.each(invalidRefNames)("logs error for invalid ref name in %j", (template, name) => {
+      expect.assertions(2);
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      compileNoMacro(template);
+      expect(spy).toHaveBeenCalledWith(`Invalid ref name "${name}" in template:`, template);
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    test.each(invalidRefNames)("returns success false for invalid ref name in %j", (template) => {
+      expect.assertions(1);
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      expect(compileNoMacro(template).success).toBeFalse();
+      spy.mockRestore();
+    });
+
     test("returns success false when more than one root element", () => {
       expect.assertions(1);
       const meta = compile(/* html */ "<div></div><div></div>");
+      expect(meta.success).toBeFalse();
+    });
+
+    test("returns success false when an element has multiple ref markers", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<div @a @b></div>");
       expect(meta.success).toBeFalse();
     });
 

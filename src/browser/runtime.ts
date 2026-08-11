@@ -25,6 +25,9 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
     const attrs = (node as Element).attributes;
     let index = attrs.length;
 
+    // NOTE: Reverse scan is intentional; it saves bytes over a forward loop. It
+    // means the LAST ref marker wins here while compile() keeps the FIRST — a
+    // known, accepted divergence. Do not "fix" it; see SPEC B1 + V18.
     while (index--) {
       str = attrs[index].name;
       if (str[0] === "@") {
