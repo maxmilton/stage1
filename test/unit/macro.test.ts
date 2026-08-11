@@ -458,6 +458,99 @@ describe("compile", () => {
     });
   });
 
+  // NOTE: A DOM <template> keeps its children in .content, so the collect()
+  // walk cannot enter it and every distance past it would be wrong. Rejecting
+  // it here turns a runtime crash into a build error. Empty templates are not
+  // special-cased — they only happen to work.
+  describe("template element", () => {
+    test("logs error for a nested template element", () => {
+      expect.assertions(2);
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<div><template><span @a></span></template><b @b></b></div>";
+      compileNoMacro(template);
+      expect(spy).toHaveBeenCalledWith(
+        "Found unsupported <template> element in template:",
+        template,
+      );
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    test("returns success false for a nested template element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<div><template><span @a></span></template><b @b></b></div>");
+      expect(meta.success).toBeFalse();
+    });
+
+    test("returns success false for a root template element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<template><div @a></div></template>");
+      expect(meta.success).toBeFalse();
+    });
+
+    test("returns success false for an empty template element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<div><template></template></div>");
+      expect(meta.success).toBeFalse();
+    });
+
+    test("returns success true without a template element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<div><span @a></span><b @b></b></div>");
+      expect(meta.success).toBeTrue();
+    });
+  });
+
+  // NOTE: In HTML content the parser IGNORES a self-closing slash, so <div/> is
+  // an open <div> and whatever follows is its child, not a second root. Only
+  // foreign content (e.g. <svg/>) really self-closes. HTMLRewriter reports
+  // selfClosing true for both, so it must not be treated as "has no end tag".
+  describe("self-closing slash in HTML content", () => {
+    test("does not treat a slashed element as a closed root", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<div/><span></span>");
+      expect(meta.html).toBe(/* html */ "<div/><span></span>");
+      expect(meta.success).toBeTrue();
+    });
+
+    test("collects refs across a slashed element", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<div @a/><span @b></span>");
+      expect(meta.html).toBe(/* html */ "<div/><span></span>");
+      expect(meta.k).toEqual(["a", "b"]);
+      expect(meta.d).toEqual([0, 1]);
+      expect(meta.success).toBeTrue();
+    });
+
+    test("does not treat a slashed unknown element as a closed root", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<circle/><div></div>");
+      expect(meta.success).toBeTrue();
+    });
+
+    test("keeps whitespace after a slashed pre", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<pre/>a  b");
+      expect(meta.html).toBe(/* html */ "<pre/>a  b");
+      expect(meta.success).toBeTrue();
+    });
+
+    test("keeps a slashed script raw", () => {
+      expect.assertions(3);
+      const meta = compile(/* html */ "<script/>@media a  b");
+      expect(meta.html).toBe(/* html */ "<script/>@media a  b");
+      expect(meta.k).toBeEmpty();
+      expect(meta.success).toBeTrue();
+    });
+
+    // ↳ Foreign content DOES self-close, so this must still be two roots.
+    test("still reports multiple roots for a self-closing foreign element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<svg/><span></span>");
+      expect(meta.success).toBeFalse();
+    });
+  });
+
   // FIXME: Uncomment once bun string handling in macros bug is fixed.
   // ↳ Currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
   // test("does not escape HTML entities", () => {
@@ -1016,14 +1109,18 @@ describe("HTMLRewriter", () => {
       expect(fired).toEqual(["pre"]);
     });
 
-    // ↳ macro.ts guards onEndTag with `canHaveContent && !selfClosing`; without
-    // it a void root element throws "No end tag." and fails the build.
+    // ↳ macro.ts guards onEndTag with `canHaveContent`; without it a void root
+    // element throws "No end tag." and fails the build. Throwing correlates
+    // with `canHaveContent` ALONE — `selfClosing` plays no part, as the last
+    // two rows show — which is why the guard must not consult it.
     test.each([
       /* eslint-disable array-bracket-spacing */
       [/* html */ "<div></div>", true, false, false],
       [/* html */ "<input>", false, false, true],
       [/* html */ "<br>", false, false, true],
       [/* html */ "<svg/>", false, true, true],
+      [/* html */ "<div/>", true, true, false],
+      [/* html */ "<p/>", true, true, false],
       /* eslint-enable array-bracket-spacing */
     ])(
       "throws for %j when it has no end tag",
@@ -1047,10 +1144,12 @@ describe("HTMLRewriter", () => {
       },
     );
 
-    // NOTE: A self-closing foreign element claims it can have content and lets
-    // you register a handler, but never fires it — so `canHaveContent` alone is
-    // not enough, hence the `!selfClosing` half of the macro.ts guard.
-    test("never fires for a self-closing foreign element", () => {
+    // NOTE: An element written with a self-closing slash accepts an end tag
+    // handler but never fires it, since no end tag follows. That leaves
+    // macro.ts's insideRoot set for the rest of the template — which is
+    // CORRECT, because the HTML parser ignores "/>" here and keeps the element
+    // open too, making everything after it a child rather than a second root.
+    test("never fires for an element written with a self-closing slash", () => {
       expect.assertions(3);
       let wasFired = false;
       new HTMLRewriter()
@@ -1063,7 +1162,7 @@ describe("HTMLRewriter", () => {
             });
           },
         })
-        .transform(/* html */ "<circle/>");
+        .transform(/* html */ "<div/>");
       expect(wasFired).toBeFalse();
     });
 

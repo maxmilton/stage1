@@ -114,10 +114,21 @@ export function compile<R extends InferRefs<R> = object>(
     .on("*", {
       element(node) {
         const isRoot = insideRoot === undefined;
-        // Void and self-closing elements have no end tag to hook into
-        const hasEndTag = node.canHaveContent && !node.selfClosing;
+        // Void elements have no end tag to hook into; onEndTag throws for them.
+        // NOTE: `selfClosing` is deliberately not consulted — in HTML content
+        // "/>" is ignored by the parser, so <div/> is an OPEN div which does
+        // have an end tag. Foreign content which really does self-close (e.g.
+        // <svg/>) reports canHaveContent false, so this covers it already.
+        const hasEndTag = node.canHaveContent;
         const isVerbatim = hasEndTag && VERBATIM_TAGS.has(node.tagName);
-        const isRaw = hasEndTag && RAW_TAGS.has(node.tagName);
+        const isRaw = isVerbatim && RAW_TAGS.has(node.tagName);
+
+        // A DOM <template> keeps its children in .content, which the
+        // firstChild/nextSibling walk in collect() cannot enter, so every
+        // distance past it would be wrong — reject rather than crash at runtime
+        if (node.tagName === "template") {
+          fail("Found unsupported <template> element in template:");
+        }
 
         if (isRoot) {
           insideRoot = hasEndTag;
