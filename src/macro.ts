@@ -6,6 +6,12 @@ import type { IndicesOf, InferRefs, TupleOfKeys } from "./types.ts";
  */
 const REF_NAME_RE = /^[a-z][a-z0-9_-]*$/;
 
+/** Elements whose text content must be preserved verbatim. */
+const VERBATIM_TAGS = new Set(["pre", "code", "textarea", "script", "style"]);
+
+/** Subset of `VERBATIM_TAGS` whose text must never be read as a ref. */
+const RAW_TAGS = new Set(["script", "style"]);
+
 export interface CompileOptions {
   /**
    * Whether to keep spaces adjacent to tags in output HTML. When keepSpaces
@@ -13,6 +19,18 @@ export interface CompileOptions {
    * @default false
    */
   keepSpaces?: boolean;
+}
+
+export interface CompileResult<R> {
+  html: string;
+  /** Array of ref key names. */
+  k: readonly string[];
+  /** Array of distances from previous ref node or template root. */
+  d: readonly number[];
+  /** Object mapping ref key names to their indices in the `k` array. */
+  ref: IndicesOf<TupleOfKeys<R>>;
+  /** Whether the template was successfully compiled without any errors. */
+  success: boolean;
 }
 
 /**
@@ -24,22 +42,14 @@ export interface CompileOptions {
 export function compile<R extends InferRefs<R> = object>(
   template: string,
   { keepSpaces }: CompileOptions = {},
-): {
-  html: string;
-  /** Array of ref key names. */
-  k: readonly string[];
-  /** Array of distances from previous ref node or template root. */
-  d: readonly number[];
-  /** Object mapping ref key names to their indices in the `k` array. */
-  ref: IndicesOf<TupleOfKeys<R>>;
-  /** Whether the template was successfully compiled without any errors. */
-  success: boolean;
-} {
+): CompileResult<R> {
   let isSuccess = true;
   const k: string[] = [];
   const d: number[] = [];
   let distance = 0;
-  let wsDepth = 0;
+  let verbatimDepth = 0;
+  let isRawText = false;
+  let textBuffer = "";
   /** `undefined` = root not seen yet, `true` = inside root, `false` = root closed. */
   let insideRoot: boolean | undefined;
 
@@ -65,58 +75,71 @@ export function compile<R extends InferRefs<R> = object>(
       comments(node) {
         const text = node.text.trim();
         node.remove();
-        if (text[0] === "@") {
+        if (!isRawText && text[0] === "@") {
           addRef(text.slice(1));
           // Replace with <!> which renders a Comment node at runtime
           node.after("<!>", { html: true });
           distance++;
         }
       },
-      // This text handler is invoked twice for each Text node: first with the
-      // actual text, then with an empty last chunk. This behaviour stems from
-      // the fact that the data provided to `HTMLRewriter.transform()` can be
-      // streamed; where the last empty chunk signals the end of the text.
+      // A single Text node can arrive as several chunks — the tokenizer splits
+      // on a bare "<" which does not start a tag, e.g. "a < b" — always ending
+      // with an empty last chunk, so buffer it and handle the whole node once.
       text(chunk) {
-        if (chunk.lastInTextNode) return;
+        textBuffer += chunk.text;
+        if (!chunk.lastInTextNode) {
+          chunk.remove();
+          return;
+        }
+        const raw = textBuffer;
+        textBuffer = "";
+        const text = raw.trim();
 
-        const text = chunk.text.trim();
-        if (text[0] === "@") {
+        if (!isRawText && text[0] === "@") {
           addRef(text.slice(1));
           // Replace with single space which renders a Text node at runtime
           chunk.replace(" ", { html: true });
-        } else if (!wsDepth) {
-          if (!text) {
-            chunk.remove();
-            return; // a removed node does not count towards distance
-          }
+        } else if (verbatimDepth) {
+          // Whitespace-sensitive or raw content; never minified
+          chunk.replace(raw, { html: true });
+        } else if (text) {
           // Reduce any whitespace to a single space
-          chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, " "), { html: true });
+          chunk.replace((keepSpaces ? raw : text).replace(/\s+/g, " "), { html: true });
+        } else {
+          return; // a removed node does not count towards distance
         }
         distance++;
       },
     })
     .on("*", {
       element(node) {
-        if (insideRoot === undefined) {
-          insideRoot = true;
-          node.onEndTag(() => {
-            insideRoot = false;
-          });
+        const isRoot = insideRoot === undefined;
+        // Void and self-closing elements have no end tag to hook into
+        const hasEndTag = node.canHaveContent && !node.selfClosing;
+        const isVerbatim = hasEndTag && VERBATIM_TAGS.has(node.tagName);
+        const isRaw = hasEndTag && RAW_TAGS.has(node.tagName);
+
+        if (isRoot) {
+          insideRoot = hasEndTag;
         } else if (!insideRoot) {
           fail("Expected template to have a single root element:");
         }
+        if (isVerbatim) verbatimDepth++;
+        if (isRaw) isRawText = true;
 
-        if (node.tagName === "pre" || node.tagName === "code") {
-          wsDepth++;
+        // Registering a second end tag handler replaces the first, so
+        // everything which unwinds here has to share the one handler
+        if (hasEndTag && (isRoot || isVerbatim)) {
           node.onEndTag(() => {
-            wsDepth--;
+            if (isRoot) insideRoot = false;
+            if (isVerbatim) verbatimDepth--;
+            if (isRaw) isRawText = false;
           });
         }
 
+        // Collect first; removing an attribute while iterating is not safe
         const refAttrs: string[] = [];
-        for (const [name] of node.attributes) {
-          if (name[0] === "@") refAttrs.push(name);
-        }
+        for (const [name] of node.attributes) if (name[0] === "@") refAttrs.push(name);
         for (const name of refAttrs) node.removeAttribute(name);
         if (refAttrs.length > 1) {
           fail("Found multiple ref markers on a single element in template:");
