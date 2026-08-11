@@ -364,7 +364,7 @@ describe("append", () => {
     append(liB.cloneNode(), root);
     append(liC.cloneNode(), root);
     expect(root.outerHTML).toBe(
-      '<ul><li class="a"></li><li class="b"></li><li class="c"></li></ul>',
+      /* html */ '<ul><li class="a"></li><li class="b"></li><li class="c"></li></ul>',
     );
   });
 });
@@ -431,7 +431,7 @@ describe("prepend", () => {
     prepend(liB.cloneNode(), root);
     prepend(liC.cloneNode(), root);
     expect(root.outerHTML).toBe(
-      '<ul><li class="c"></li><li class="b"></li><li class="a"></li></ul>',
+      /* html */ '<ul><li class="c"></li><li class="b"></li><li class="a"></li></ul>',
     );
   });
 });
@@ -505,7 +505,7 @@ describe("insert", () => {
     insert(liB.cloneNode(), target);
     insert(liC.cloneNode(), target);
     expect(root.outerHTML).toBe(
-      '<ul><li class="a"></li><li class="c"></li><li class="b"></li></ul>',
+      /* html */ '<ul><li class="a"></li><li class="c"></li><li class="b"></li></ul>',
     );
   });
 
@@ -590,7 +590,7 @@ describe("replace", () => {
     const target = liA.cloneNode() as HTMLLIElement;
     root.appendChild(target);
     replace(liB.cloneNode(), target);
-    expect(root.outerHTML).toBe('<ul><li class="b"></li></ul>');
+    expect(root.outerHTML).toBe(/* html */ '<ul><li class="b"></li></ul>');
   });
 
   test("moves existing element to new parent", () => {
@@ -607,13 +607,13 @@ describe("replace", () => {
     parentX.appendChild(targetA1);
     parentY.appendChild(targetA2);
     expect(root.outerHTML).toBe(
-      '<div><ul id="x"><li class="a"></li></ul><ul id="y"><li class="a"></li></ul></div>',
+      /* html */ '<div><ul id="x"><li class="a"></li></ul><ul id="y"><li class="a"></li></ul></div>',
     );
     const targetB = liB.cloneNode();
     expect(targetB.parentNode).toBeNull(); // targetB not in DOM yet
     replace(targetB, targetA1);
     expect(root.outerHTML).toBe(
-      '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="a"></li></ul></div>',
+      /* html */ '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="a"></li></ul></div>',
     );
     expect(targetB.parentNode).toBe(parentX);
     expect(targetA1.parentNode).toBeNull(); // targetA1 removed from DOM
@@ -621,16 +621,18 @@ describe("replace", () => {
     expect(targetC.parentNode).toBeNull(); // targetC not in DOM yet
     replace(targetC, targetA2);
     expect(root.outerHTML).toBe(
-      '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="c"></li></ul></div>',
+      /* html */ '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="c"></li></ul></div>',
     );
     expect(targetC.parentNode).toBe(parentY);
     expect(targetA2.parentNode).toBeNull(); // targetA2 removed from DOM
     replace(targetB, targetC);
-    expect(root.outerHTML).toBe('<div><ul id="x"></ul><ul id="y"><li class="b"></li></ul></div>');
+    expect(root.outerHTML).toBe(
+      /* html */ '<div><ul id="x"></ul><ul id="y"><li class="b"></li></ul></div>',
+    );
     expect(targetB.parentNode).toBe(parentY);
     expect(targetC.parentNode).toBeNull(); // targetC removed from DOM
     replace(parentY, parentX);
-    expect(root.outerHTML).toBe('<div><ul id="y"><li class="b"></li></ul></div>');
+    expect(root.outerHTML).toBe(/* html */ '<div><ul id="y"><li class="b"></li></ul></div>');
     expect(targetB.parentNode).toBe(parentY); // did not move
     expect(parentX.parentNode).toBeNull(); // parentX removed from DOM
   });

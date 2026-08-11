@@ -10,7 +10,7 @@ interface Refs {
   t: Text;
 }
 
-const view = h<HTMLDivElement>(`
+const view = h<HTMLDivElement>(/* html */ `
   <div id=test>
     @t
   </div>

@@ -54,6 +54,7 @@ export default defineConfig(
       "unicorn/prefer-string-raw": "off", // TODO: Remove once String.raw doesn't crash bun macros
       "unicorn/prefer-string-replace-all": "off", // slower and worse browser support
       "unicorn/prefer-unicode-code-point-escapes": "off", // bad browser support
+      "unicorn/single-line-block-comment-style": "off",
       "unicorn/switch-case-braces": ["error", "avoid"], // byte savings when minification doesn't remove
     },
   },

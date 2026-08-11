@@ -32,7 +32,7 @@ describe("h", () => {
 
     test("renders basic template", () => {
       expect.assertions(2);
-      const meta = compile(`
+      const meta = compile(/* html */ `
         <ul>
           <li>A</li>
           <li>B</li>
@@ -41,13 +41,15 @@ describe("h", () => {
       `);
       const view = h(meta.html);
       const rendered = render(view);
-      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
+      expect(rendered.container.getHTML()).toBe(
+        /* html */ "<ul><li>A</li><li>B</li><li>C</li></ul>",
+      );
       expect(meta.success).toBeTrue();
     });
 
     test("renders basic template with messy whitespace", () => {
       expect.assertions(2);
-      const meta = compile(`
+      const meta = compile(/* html */ `
         <ul>
           <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
           <li
@@ -59,13 +61,15 @@ describe("h", () => {
       `);
       const view = h(meta.html);
       const rendered = render(view);
-      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
+      expect(rendered.container.getHTML()).toBe(
+        /* html */ "<ul><li>A</li><li>B</li><li>C</li></ul>",
+      );
       expect(meta.success).toBeTrue();
     });
 
     test("renders SVG template", () => {
       expect.assertions(3);
-      const meta = compile(`
+      const meta = compile(/* html */ `
         <svg>
           <circle cx=10 cy='10' r="10" />
         </svg>
@@ -74,14 +78,14 @@ describe("h", () => {
       const rendered = render(view);
       expect(view).toBeInstanceOf(window.SVGSVGElement);
       expect(rendered.container.getHTML()).toBe(
-        '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
+        /* html */ '<svg><circle cx="10" cy="10" r="10"></circle></svg>',
       );
       expect(meta.success).toBeTrue();
     });
 
     test("returns root element", () => {
       expect.assertions(4);
-      const meta = compile(`
+      const meta = compile(/* html */ `
         <ul id=root>
           <li>A</li>
           <li>B</li>
@@ -98,7 +102,7 @@ describe("h", () => {
 
     test("removes refs in template from output DOM", () => {
       expect.assertions(2);
-      const meta = compile(`
+      const meta = compile(/* html */ `
         <ul @list>
           <li @item-one>A</li>
           <li @item-two>B</li>
@@ -106,13 +110,13 @@ describe("h", () => {
       `);
       const view = h(meta.html);
       const rendered = render(view);
-      expect(rendered.container.getHTML()).toBe("<ul><li>A</li><li>B</li></ul>");
+      expect(rendered.container.getHTML()).toBe(/* html */ "<ul><li>A</li><li>B</li></ul>");
       expect(meta.success).toBeTrue();
     });
 
     test("does not minify in whitespace-sensitive blocks", () => {
       expect.assertions(2);
-      const meta = compile(`
+      const meta = compile(/* html */ `
         <div>
           <pre>
             a
@@ -136,7 +140,7 @@ describe("h", () => {
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.getHTML()).toBe(
-        "<div><pre>\n            a\n            b\n            c\n\n\n            &lt;span&gt; Foo  &lt;/span&gt;\n          </pre><span>Bar</span><code>\n            &lt;span&gt;\n              Baz\n            &lt;/span&gt;\n          </code></div>",
+        /* html */ "<div><pre>\n            a\n            b\n            c\n\n\n            &lt;span&gt; Foo  &lt;/span&gt;\n          </pre><span>Bar</span><code>\n            &lt;span&gt;\n              Baz\n            &lt;/span&gt;\n          </code></div>",
       );
       expect(meta.success).toBeTrue();
     });
@@ -171,7 +175,8 @@ describe("h", () => {
 //
 //     test("renders basic template", () => {
 //       expect.assertions(2);
-//       const meta = html`
+//       // biome-ignore format: no space between html and comment
+//       const meta = html/* html */`
 //         <ul>
 //           <li>A</li>
 //           <li>B</li>
@@ -180,7 +185,7 @@ describe("h", () => {
 //       `;
 //       const view = h(meta.html);
 //       const rendered = render(view);
-//       expect(rendered.container.innerHTML).toBe("<ul><li>A</li><li>B</li><li>C</li></ul>");
+//       expect(rendered.container.innerHTML).toBe(/* html */ "<ul><li>A</li><li>B</li><li>C</li></ul>");
 //       expect(meta.success).toBeTrue();
 //     });
 //   });
@@ -210,7 +215,7 @@ describe("collect", () => {
 
   test("collects all refs", () => {
     expect.assertions(42);
-    const meta = compile(`
+    const meta = compile(/* html */ `
       <div @a>
         <header @b>
           <nav @c>
@@ -285,7 +290,7 @@ describe("collect", () => {
 
   test("collects ref at start of element attributes", () => {
     expect.assertions(5);
-    const meta = compile(`
+    const meta = compile(/* html */ `
       <div>
         <input @search id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off />
       </div>
@@ -301,7 +306,7 @@ describe("collect", () => {
 
   test("collects ref at end of element attributes", () => {
     expect.assertions(5);
-    const meta = compile(`
+    const meta = compile(/* html */ `
       <div>
         <input id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off @search />
       </div>
@@ -317,7 +322,7 @@ describe("collect", () => {
 
   test("collects ref in middle of element attributes", () => {
     expect.assertions(5);
-    const meta = compile(`
+    const meta = compile(/* html */ `
       <div>
         <input id=search name=q class="input search" type=search minlength=2 @search maxlength=40 placeholder="Search..." autofocus autocomplete=off />
       </div>
@@ -333,7 +338,7 @@ describe("collect", () => {
 
   test("collects ref from template with only text", () => {
     expect.assertions(3);
-    const meta = compile<{ a: Text }>("@a");
+    const meta = compile<{ a: Text }>(/* html */ "@a");
     const view = h(meta.html);
     const refs = collect<{ a: Text }>(view, meta.k, meta.d);
     expect(refs.a.nodeName).toEqual("#text");
@@ -343,7 +348,7 @@ describe("collect", () => {
 
   test("collects ref from template with only comment", () => {
     expect.assertions(3);
-    const meta = compile<{ a: Comment }>("<!-- @a -->");
+    const meta = compile<{ a: Comment }>(/* html */ "<!-- @a -->");
     const view = h(meta.html);
     const refs = collect<{ a: Comment }>(view, meta.k, meta.d);
     expect(refs.a.nodeName).toEqual("#comment");
@@ -353,21 +358,21 @@ describe("collect", () => {
 
   test("collects refs from template with many comments", () => {
     expect.assertions(16);
-    const meta = compile<Refs>(`
-          <div>
-            <!-- -->
-            @a
-            <!-- -->
-            <!-- @b -->
-            <div @c>
-              <!-- -->
-              @d
-              <!-- @e -->
-              <!-- -->
-              <div @f></div>
-            </div>
-          </div>
-        `);
+    const meta = compile<Refs>(/* html */ `
+      <div>
+        <!-- -->
+        @a
+        <!-- -->
+        <!-- @b -->
+        <div @c>
+          <!-- -->
+          @d
+          <!-- @e -->
+          <!-- -->
+          <div @f></div>
+        </div>
+      </div>
+    `);
     const view = h(meta.html);
     const refs = collect<Refs>(view, meta.k, meta.d);
     expect(refs.a.nodeName).toEqual("#text");
@@ -391,7 +396,7 @@ describe("collect", () => {
   describe("keepSpaces option", () => {
     test("collects refs when option is default", () => {
       expect.assertions(8);
-      const meta = compile(`
+      const meta = compile(/* html */ `
         <div>
           @a
           <div @b>
@@ -415,7 +420,7 @@ describe("collect", () => {
     test("collects refs when option is true", () => {
       expect.assertions(8);
       const meta = compile(
-        `
+        /* html */ `
           <div>
             @a
             <div @b>
@@ -441,7 +446,7 @@ describe("collect", () => {
     test("collects refs when option is false", () => {
       expect.assertions(8);
       const meta = compile(
-        `
+        /* html */ `
           <div>
             @a
             <div @b>
@@ -478,6 +483,6 @@ describe("Test component", () => {
   test("renders basic template", () => {
     expect.assertions(1);
     const rendered = render(Test({ text: "Hello" }));
-    expect(rendered.container.getHTML()).toBe('<div id="test">Hello</div>');
+    expect(rendered.container.getHTML()).toBe(/* html */ '<div id="test">Hello</div>');
   });
 });

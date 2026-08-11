@@ -11,7 +11,7 @@ interface Refs {
   t: Text;
 }
 
-const meta = compile<Refs>(`
+const meta = compile<Refs>(/* html */ `
   <div id=test>
     @t
   </div>
