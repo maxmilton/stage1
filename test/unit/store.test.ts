@@ -139,6 +139,46 @@ describe("store", () => {
       expect(callback).toHaveBeenCalledWith("new", "old");
     });
 
+    test("calls callback for symbol key property", () => {
+      expect.assertions(2);
+      const key = Symbol("status");
+      const state = store({ [key]: "old" });
+      const callback = mock(() => {});
+      state.on(key, callback);
+      state[key] = "new";
+      expect(callback).toHaveBeenCalledWith("new", "old");
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    test("calls callback when new value is the same as previous value", () => {
+      expect.assertions(3);
+      const state = store({ a: "same" });
+      const callback = mock(() => {});
+      state.on("a", callback);
+      state.a = "same";
+      state.a = "same";
+      expect(callback).toHaveBeenNthCalledWith(1, "same", "same");
+      expect(callback).toHaveBeenNthCalledWith(2, "same", "same");
+      expect(callback).toHaveBeenCalledTimes(2);
+    });
+
+    test("does not call handler removed by an earlier handler", () => {
+      expect.assertions(2);
+      // Handlers are stored in a Set which src/store.ts iterates with forEach, so
+      // a handler deleted before it is reached during notification is skipped.
+      const state = store({ a: 0 });
+      const laterHandler = mock(() => {});
+      let removeLater: (() => boolean) | undefined;
+      const firstHandler = mock(() => {
+        removeLater?.();
+      });
+      state.on("a", firstHandler);
+      removeLater = state.on("a", laterHandler);
+      state.a = 1;
+      expect(firstHandler).toHaveBeenCalledTimes(1);
+      expect(laterHandler).not.toHaveBeenCalled();
+    });
+
     test("calls all callbacks for mutated property", () => {
       expect.assertions(9);
       const initialState = { a: 0 };
@@ -238,5 +278,13 @@ describe("store", () => {
     state.a = 2;
     state.a = 3;
     expect(callback).toHaveBeenCalledTimes(1); // still called only once
+  });
+
+  test("adds new properties to store state", () => {
+    expect.assertions(1);
+    const initialState: { a: number; b?: number } = { a: 1 };
+    const state = store(initialState);
+    state.b = 2;
+    expect(state.b).toBe(2);
   });
 });

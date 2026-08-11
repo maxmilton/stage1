@@ -367,6 +367,18 @@ describe("append", () => {
       /* html */ '<ul><li class="a"></li><li class="b"></li><li class="c"></li></ul>',
     );
   });
+
+  test("moves existing child element to new parent", () => {
+    expect.assertions(3);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const newParent = ul.cloneNode() as HTMLUListElement;
+    const node = liA.cloneNode() as HTMLLIElement;
+    root.appendChild(node);
+    append(node, newParent);
+    expect(root.childNodes).toHaveLength(0);
+    expect(newParent.firstChild).toBe(node);
+    expect(node.parentNode).toBe(newParent);
+  });
 });
 
 describe("prepend", () => {
@@ -433,6 +445,19 @@ describe("prepend", () => {
     expect(root.outerHTML).toBe(
       /* html */ '<ul><li class="c"></li><li class="b"></li><li class="a"></li></ul>',
     );
+  });
+
+  test("moves existing child element to start of new parent", () => {
+    expect.assertions(3);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const newParent = ul.cloneNode() as HTMLUListElement;
+    const node = liA.cloneNode() as HTMLLIElement;
+    newParent.appendChild(liB.cloneNode());
+    root.appendChild(node);
+    prepend(node, newParent);
+    expect(root.childNodes).toHaveLength(0);
+    expect(newParent.firstChild).toBe(node);
+    expect(node.parentNode).toBe(newParent);
   });
 });
 
@@ -509,18 +534,19 @@ describe("insert", () => {
     );
   });
 
-  // FIXME: Check DOM node is moved to new parent and is in fact the same node + removed from old parent.
-  // test("moves existing element to new parent", () => {
-  //   expect.assertions(1);
-  //   const root = ul.cloneNode() as HTMLUListElement;
-  //   const target = liA.cloneNode() as HTMLLIElement;
-  //   root.appendChild(target);
-  //   const newParent = ul.cloneNode() as HTMLUListElement;
-  //   newParent.appendChild(target);
-  //   insert(liB.cloneNode(), target);
-  //   insert(liC.cloneNode(), target);
-  //   expect(root.outerHTML).toBe("<ul><li class="b"></li><li class="c"></li></ul>");
-  // });
+  test("moves existing child element after target element", () => {
+    expect.assertions(3);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const newParent = ul.cloneNode() as HTMLUListElement;
+    const target = liA.cloneNode() as HTMLLIElement;
+    const node = liB.cloneNode() as HTMLLIElement;
+    root.appendChild(node);
+    newParent.appendChild(target);
+    insert(node, target);
+    expect(root.childNodes).toHaveLength(0);
+    expect(target.nextSibling).toBe(node);
+    expect(node.parentNode).toBe(newParent);
+  });
 });
 
 describe("replace", () => {

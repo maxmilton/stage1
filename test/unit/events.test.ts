@@ -69,6 +69,23 @@ describe("handleClick", () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
+    test("passes event to nearest synthetic event handler", () => {
+      expect.assertions(3);
+      const outer = document.createElement("div");
+      const button = document.createElement("button");
+      const event = { target: button } as unknown as Event;
+      const outerHandler = mock(() => {});
+      const buttonHandler = mock(() => {});
+      outer[ONCLICK] = outerHandler;
+      button[ONCLICK] = buttonHandler;
+      outer.appendChild(button);
+      render(outer);
+      handleClick(event);
+      expect(buttonHandler).toHaveBeenCalledWith(event);
+      expect(buttonHandler).toHaveBeenCalledTimes(1);
+      expect(outerHandler).not.toHaveBeenCalled();
+    });
+
     test("does not call native event handler", () => {
       expect.assertions(1);
       const button = document.createElement("button");
@@ -293,6 +310,19 @@ describe("removeSyntheticClick", () => {
       button.click();
       button.click();
       expect(handler).toHaveBeenCalledTimes(1); // still only one call
+    });
+
+    test("is safe to call more than once", () => {
+      expect.assertions(1);
+      const button = document.createElement("button");
+      const handler = mock(() => {});
+      button[ONCLICK] = handler;
+      render(button);
+      setupSyntheticClick();
+      removeSyntheticClick();
+      removeSyntheticClick();
+      button.click();
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });
