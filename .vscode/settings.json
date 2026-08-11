@@ -11,6 +11,8 @@
   "editor.tabSize": 2,
   "eslint.enable": true,
   "git.branchProtection": ["master", "next"],
+  "git.detectWorktrees": true,
+  "git.worktreeIncludeFiles": ["node_modules/**"],
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
 
