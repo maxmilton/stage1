@@ -1,5 +1,11 @@
 import type { IndicesOf, InferRefs, TupleOfKeys } from "./types.ts";
 
+/**
+ * Valid ref name; lowercase because browsers normalise element attribute names
+ * when rendering HTML, so a non-lowercase name would not survive a round trip.
+ */
+const REF_NAME_RE = /^[a-z][a-z0-9_-]*$/;
+
 export interface CompileOptions {
   /**
    * Whether to keep spaces adjacent to tags in output HTML. When keepSpaces
@@ -33,27 +39,35 @@ export function compile<R extends InferRefs<R> = object>(
   const k: string[] = [];
   const d: number[] = [];
   let distance = 0;
-  let isWhitespaceSensitiveBlock = false;
+  let wsDepth = 0;
   let root: boolean | undefined;
+
+  const fail = (message: string) => {
+    // eslint-disable-next-line no-console
+    console.error(message, template);
+    isSuccess = false;
+  };
+
+  const addRef = (name: string) => {
+    if (!REF_NAME_RE.test(name)) fail(`Invalid ref name "${name}" in template:`);
+    k.push(name);
+    d.push(distance);
+    distance = 0;
+  };
 
   const html = new HTMLRewriter()
     .onDocument({
       doctype() {
-        // eslint-disable-next-line no-console
-        console.error("Found doctype but none was expected in template:", template);
-        isSuccess = false;
+        fail("Found doctype but none was expected in template:");
       },
       comments(node) {
         const text = node.text.trim();
+        node.remove();
         if (text[0] === "@") {
-          k.push(text.slice(1));
-          d.push(distance);
-          distance = 1;
+          addRef(text.slice(1));
           // Replace with <!> which renders a Comment node at runtime
-          node.remove();
           node.after("<!>", { html: true });
-        } else {
-          node.remove();
+          distance++;
         }
       },
       // This text handler is invoked twice for each Text node: first with the
@@ -64,54 +78,50 @@ export function compile<R extends InferRefs<R> = object>(
         if (chunk.lastInTextNode) return;
 
         const text = chunk.text.trim();
-        if (!text) {
-          if (!isWhitespaceSensitiveBlock) {
-            chunk.remove();
-          }
-          return;
-        }
         if (text[0] === "@") {
-          k.push(text.slice(1));
-          d.push(distance);
-          distance = 0;
+          addRef(text.slice(1));
           // Replace with single space which renders a Text node at runtime
           chunk.replace(" ", { html: true });
-        } else if (!isWhitespaceSensitiveBlock) {
+        } else if (wsDepth) {
+          // Keep verbatim
+        } else if (text) {
           // Reduce any whitespace to a single space
           chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, " "), { html: true });
+        } else {
+          chunk.remove();
+          return; // a removed node does not count towards distance
         }
         distance++;
       },
     })
     .on("*", {
       element(node) {
-        if (!root) {
-          if (root === undefined) {
-            root = true;
-            node.onEndTag(() => {
-              root = false;
-            });
-          } else {
-            // eslint-disable-next-line no-console
-            console.error("Expected template to have a single root element:", template);
-            isSuccess = false;
-          }
+        if (root === undefined) {
+          root = true;
+          node.onEndTag(() => {
+            root = false;
+          });
+        } else if (!root) {
+          fail("Expected template to have a single root element:");
         }
 
         if (node.tagName === "pre" || node.tagName === "code") {
-          isWhitespaceSensitiveBlock = true;
+          wsDepth++;
           node.onEndTag(() => {
-            isWhitespaceSensitiveBlock = false;
+            wsDepth--;
           });
         }
+
+        const refAttrs: string[] = [];
         for (const [name] of node.attributes) {
-          if (name[0] === "@") {
-            k.push(name.slice(1));
-            d.push(distance);
-            distance = 0;
-            node.removeAttribute(name);
-            break;
+          if (name[0] === "@") refAttrs.push(name);
+        }
+        if (refAttrs.length) {
+          if (refAttrs.length > 1) {
+            fail("Found multiple ref markers on a single element in template:");
           }
+          for (const name of refAttrs) node.removeAttribute(name);
+          addRef(refAttrs[0].slice(1));
         }
         distance++;
       },
@@ -120,9 +130,7 @@ export function compile<R extends InferRefs<R> = object>(
 
   // Check k entries are unique
   if (new Set(k).size !== k.length) {
-    // eslint-disable-next-line no-console
-    console.error("Duplicate ref keys found in template:", template);
-    isSuccess = false;
+    fail("Duplicate ref keys found in template:");
   }
 
   return {
@@ -130,7 +138,7 @@ export function compile<R extends InferRefs<R> = object>(
     k,
     d,
     // @ts-expect-error - computed type
-    ref: Object.fromEntries(d.map((_, i) => [k[i], i])),
+    ref: Object.fromEntries(k.map((name, index) => [name, index])),
     success: isSuccess,
   };
 }
