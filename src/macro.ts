@@ -40,7 +40,8 @@ export function compile<R extends InferRefs<R> = object>(
   const d: number[] = [];
   let distance = 0;
   let wsDepth = 0;
-  let root: boolean | undefined;
+  /** `undefined` = root not seen yet, `true` = inside root, `false` = root closed. */
+  let insideRoot: boolean | undefined;
 
   const fail = (message: string) => {
     // eslint-disable-next-line no-console
@@ -50,6 +51,7 @@ export function compile<R extends InferRefs<R> = object>(
 
   const addRef = (name: string) => {
     if (!REF_NAME_RE.test(name)) fail(`Invalid ref name "${name}" in template:`);
+    if (k.includes(name)) fail(`Duplicate ref name "${name}" in template:`);
     k.push(name);
     d.push(distance);
     distance = 0;
@@ -82,26 +84,25 @@ export function compile<R extends InferRefs<R> = object>(
           addRef(text.slice(1));
           // Replace with single space which renders a Text node at runtime
           chunk.replace(" ", { html: true });
-        } else if (wsDepth) {
-          // Keep verbatim
-        } else if (text) {
+        } else if (!wsDepth) {
+          if (!text) {
+            chunk.remove();
+            return; // a removed node does not count towards distance
+          }
           // Reduce any whitespace to a single space
           chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, " "), { html: true });
-        } else {
-          chunk.remove();
-          return; // a removed node does not count towards distance
         }
         distance++;
       },
     })
     .on("*", {
       element(node) {
-        if (root === undefined) {
-          root = true;
+        if (insideRoot === undefined) {
+          insideRoot = true;
           node.onEndTag(() => {
-            root = false;
+            insideRoot = false;
           });
-        } else if (!root) {
+        } else if (!insideRoot) {
           fail("Expected template to have a single root element:");
         }
 
@@ -116,22 +117,15 @@ export function compile<R extends InferRefs<R> = object>(
         for (const [name] of node.attributes) {
           if (name[0] === "@") refAttrs.push(name);
         }
-        if (refAttrs.length) {
-          if (refAttrs.length > 1) {
-            fail("Found multiple ref markers on a single element in template:");
-          }
-          for (const name of refAttrs) node.removeAttribute(name);
-          addRef(refAttrs[0].slice(1));
+        for (const name of refAttrs) node.removeAttribute(name);
+        if (refAttrs.length > 1) {
+          fail("Found multiple ref markers on a single element in template:");
         }
+        if (refAttrs.length) addRef(refAttrs[0].slice(1));
         distance++;
       },
     })
     .transform(template.trim());
-
-  // Check k entries are unique
-  if (new Set(k).size !== k.length) {
-    fail("Duplicate ref keys found in template:");
-  }
 
   return {
     html,

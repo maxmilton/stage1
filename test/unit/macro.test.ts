@@ -363,8 +363,19 @@ describe("compile", () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div><span>@a</span><span>@a</span></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith("Duplicate ref keys found in template:", template);
+      expect(spy).toHaveBeenCalledWith('Duplicate ref name "a" in template:', template);
       expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    test("logs error for each duplicate ref key", () => {
+      expect.assertions(3);
+      const spy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<div>@a<span>@a</span><span @b-two></span><span>@a</span></div>";
+      compileNoMacro(template);
+      expect(spy).toHaveBeenCalledWith('Duplicate ref name "a" in template:', template);
+      expect(spy).not.toHaveBeenCalledWith('Duplicate ref name "b-two" in template:', template);
+      expect(spy).toHaveBeenCalledTimes(2);
       spy.mockRestore();
     });
 
