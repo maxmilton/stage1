@@ -1,5 +1,3 @@
-// XXX: This file has the same tests as test/unit/compile.test.ts, keep them in sync.
-
 import { describe, expect, expectTypeOf, spyOn, test } from "bun:test";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import { compile as compileNoMacro } from "../../src/macro.ts";
@@ -341,6 +339,7 @@ describe("compile", () => {
   });
 
   // TODO: Test once lol-html (which powers bun's HTMLRewriter) fix their whitespace handling.
+  // biome-ignore lint/suspicious/noSkippedTests: blocked on the lol-html bug noted above
   test.skip("returns expected html for basic template with messy whitespace", () => {
     expect.assertions(2);
     const meta = compile(/* html */ `

@@ -1,4 +1,5 @@
-// XXX: This file has the same tests as test/unit/runtime.test.ts, keep them in sync.
+// XXX: This file has the same tests as test/unit/runtime.test.ts and
+// test/unit/runtime-fast.test.ts, keep them in sync.
 
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
@@ -21,7 +22,7 @@ describe("h", () => {
     expect(h).not.toBeClass();
   });
 
-  test("expects 1 parameters", () => {
+  test("expects 1 parameter", () => {
     expect.assertions(1);
     expect(h).toHaveParameters(1, 0);
   });
@@ -105,6 +106,7 @@ describe("h", () => {
 
     // NOTE: This is not supported by the current implementation of the h()
     // function because it would be too slow.
+    // biome-ignore lint/suspicious/noSkippedTests: unsupported by design; see SPEC V7
     test.skip("does not minify in whitespace-sensitive blocks", () => {});
   });
 });
@@ -202,43 +204,43 @@ describe("collect", () => {
       </div>
     `);
     const refs = collect(view, view);
-    expect(refs.a.nodeName).toEqual("DIV");
+    expect(refs.a.nodeName).toBe("DIV");
     expect(refs.a).toBeInstanceOf(window.HTMLDivElement);
-    expect(refs.b.nodeName).toEqual("HEADER");
+    expect(refs.b.nodeName).toBe("HEADER");
     expect(refs.b).toBeInstanceOf(window.HTMLElement);
-    expect(refs.c.nodeName).toEqual("NAV");
+    expect(refs.c.nodeName).toBe("NAV");
     expect(refs.c).toBeInstanceOf(window.HTMLElement);
-    expect(refs.d.nodeName).toEqual("A");
+    expect(refs.d.nodeName).toBe("A");
     expect(refs.d).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.e.nodeName).toEqual("A");
+    expect(refs.e.nodeName).toBe("A");
     expect(refs.e).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.f.nodeName).toEqual("MAIN");
+    expect(refs.f.nodeName).toBe("MAIN");
     expect(refs.f).toBeInstanceOf(window.HTMLElement);
-    expect(refs.g.nodeName).toEqual("H1");
+    expect(refs.g.nodeName).toBe("H1");
     expect(refs.g).toBeInstanceOf(window.HTMLHeadingElement);
-    expect(refs.h.nodeName).toEqual("P");
+    expect(refs.h.nodeName).toBe("P");
     expect(refs.h).toBeInstanceOf(window.HTMLParagraphElement);
-    expect(refs.i.nodeName).toEqual("B");
+    expect(refs.i.nodeName).toBe("B");
     expect(refs.i).toBeInstanceOf(window.HTMLElement);
-    expect(refs.j.nodeName).toEqual("A");
+    expect(refs.j.nodeName).toBe("A");
     expect(refs.j).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs.k.nodeName).toEqual("OL");
+    expect(refs.k.nodeName).toBe("OL");
     expect(refs.k).toBeInstanceOf(window.HTMLOListElement);
-    expect(refs.l.nodeName).toEqual("LI");
+    expect(refs.l.nodeName).toBe("LI");
     expect(refs.l).toBeInstanceOf(window.HTMLLIElement);
-    expect(refs.m.nodeName).toEqual("LI");
+    expect(refs.m.nodeName).toBe("LI");
     expect(refs.m).toBeInstanceOf(window.HTMLLIElement);
-    expect(refs.n.nodeName).toEqual("FORM");
+    expect(refs.n.nodeName).toBe("FORM");
     expect(refs.n).toBeInstanceOf(window.HTMLFormElement);
-    expect(refs.o.nodeName).toEqual("INPUT");
+    expect(refs.o.nodeName).toBe("INPUT");
     expect(refs.o).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.p.nodeName).toEqual("TEXTAREA");
+    expect(refs.p.nodeName).toBe("TEXTAREA");
     expect(refs.p).toBeInstanceOf(window.HTMLTextAreaElement);
-    expect(refs.q.nodeName).toEqual("BUTTON");
+    expect(refs.q.nodeName).toBe("BUTTON");
     expect(refs.q).toBeInstanceOf(window.HTMLButtonElement);
-    expect(refs.r.nodeName).toEqual("FOOTER");
+    expect(refs.r.nodeName).toBe("FOOTER");
     expect(refs.r).toBeInstanceOf(window.HTMLElement);
-    expect(refs.s.nodeName).toEqual("#text");
+    expect(refs.s.nodeName).toBe("#text");
     expect(refs.s).toBeInstanceOf(window.Text);
     expect(Object.keys(refs)).toHaveLength(19);
   });
@@ -285,6 +287,61 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
+  test("collects ref from template with only text", () => {
+    expect.assertions(3);
+    const view = h<Text>(/* html */ "@a");
+    const refs = collect<{ a: Text }>(view, view);
+    expect(refs.a.nodeName).toBe("#text");
+    expect(refs.a).toBeInstanceOf(window.Text);
+    expect(Object.keys(refs)).toHaveLength(1);
+  });
+
+  // NOTE: Unlike the compile() macro, browser mode comment refs must have no
+  // surrounding whitespace. The h() whitespace collapse keeps spaces inside
+  // comments and collector() only matches when nodeValue starts with "@", so
+  // `<!-- @a -->` is silently not collected. See browser/runtime.ts:39.
+  test("collects ref from template with only comment", () => {
+    expect.assertions(3);
+    const view = h<Comment>(/* html */ "<!--@a-->");
+    const refs = collect<{ a: Comment }>(view, view);
+    expect(refs.a.nodeName).toBe("#comment");
+    expect(refs.a).toBeInstanceOf(window.Comment);
+    expect(Object.keys(refs)).toHaveLength(1);
+  });
+
+  test("collects refs from template with many comments", () => {
+    expect.assertions(13);
+    const view = h(/* html */ `
+      <div>
+        <!---->
+        @a
+        <!---->
+        <!--@b-->
+        <div @c>
+          <!---->
+          @d
+          <!--@e-->
+          <!---->
+          <div @f></div>
+        </div>
+      </div>
+    `);
+    const refs = collect(view, view);
+    expect(refs.a.nodeName).toBe("#text");
+    expect(refs.a).toBeInstanceOf(window.Text);
+    expect(refs.b.nodeName).toBe("#comment");
+    expect(refs.b).toBeInstanceOf(window.Comment);
+    expect(refs.c.nodeName).toBe("DIV");
+    expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
+    expect(refs.d.nodeName).toBe("#text");
+    expect(refs.d).toBeInstanceOf(window.Text);
+    expect(refs.e.nodeName).toBe("#comment");
+    expect(refs.e).toBeInstanceOf(window.Comment);
+    expect(refs.f.nodeName).toBe("DIV");
+    expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
+    expect(Object.keys(refs)).toHaveLength(6);
+  });
+
   // NOTE: The regular mode h() function does not support options like the
   // runtime mode compile() macro does. So there's no need to test them here.
 });
@@ -298,9 +355,13 @@ describe("Test component", () => {
     expectTypeOf(Test).returns.toEqualTypeOf<HTMLDivElement>();
   });
 
-  test("renders basic template", () => {
-    expect.assertions(1);
-    const rendered = render(Test({ text: "Hello" }));
-    expect(rendered.container.getHTML()).toBe(/* html */ '<div id="test">Hello</div>');
+  describe("render", () => {
+    afterEach(cleanup);
+
+    test("renders basic template", () => {
+      expect.assertions(1);
+      const rendered = render(Test({ text: "Hello" }));
+      expect(rendered.container.getHTML()).toBe(/* html */ '<div id="test">Hello</div>');
+    });
   });
 });

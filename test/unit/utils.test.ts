@@ -284,6 +284,18 @@ describe("clone", () => {
     expect(() => clone(undefined)).toThrow(window.TypeError);
   });
 
+  test("clones descendant nodes", () => {
+    expect.assertions(4);
+    const root = ul.cloneNode() as HTMLUListElement;
+    root.appendChild(liA.cloneNode());
+    root.appendChild(liB.cloneNode());
+    const result = clone(root);
+    expect(result.children).toHaveLength(2);
+    expect(result.firstChild).not.toBe(root.firstChild);
+    expect(result.lastChild).not.toBe(root.lastChild);
+    expect(result.outerHTML).toBe(root.outerHTML);
+  });
+
   const inputs = [
     document.createElement("div"),
     document.createElement("span"),

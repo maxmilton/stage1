@@ -1,4 +1,5 @@
-// XXX: This file has the same tests as test/unit/compile.test.ts and test/unit/runtime.test.ts, keep them in sync.
+// XXX: This file has the same tests as test/unit/runtime.test.ts and
+// test/unit/browser-runtime.test.ts, keep them in sync.
 
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
@@ -22,7 +23,7 @@ describe("h", () => {
     expect(h).not.toBeClass();
   });
 
-  test("expects 1 parameters", () => {
+  test("expects 1 parameter", () => {
     expect.assertions(1);
     expect(h).toHaveParameters(1, 0);
   });
@@ -242,47 +243,47 @@ describe("collect", () => {
     `);
     const view = h(meta.html);
     const refs = collect<Refs>(view, meta.d);
-    expect(refs[meta.ref.a].nodeName).toEqual("DIV");
+    expect(refs[meta.ref.a].nodeName).toBe("DIV");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.HTMLDivElement);
-    expect(refs[meta.ref.b].nodeName).toEqual("HEADER");
+    expect(refs[meta.ref.b].nodeName).toBe("HEADER");
     expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLElement);
-    expect(refs[meta.ref.c].nodeName).toEqual("NAV");
+    expect(refs[meta.ref.c].nodeName).toBe("NAV");
     expect(refs[meta.ref.c]).toBeInstanceOf(window.HTMLElement);
-    expect(refs[meta.ref.d].nodeName).toEqual("A");
+    expect(refs[meta.ref.d].nodeName).toBe("A");
     expect(refs[meta.ref.d]).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs[meta.ref.e].nodeName).toEqual("A");
+    expect(refs[meta.ref.e].nodeName).toBe("A");
     expect(refs[meta.ref.e]).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs[meta.ref.f].nodeName).toEqual("MAIN");
+    expect(refs[meta.ref.f].nodeName).toBe("MAIN");
     expect(refs[meta.ref.f]).toBeInstanceOf(window.HTMLElement);
-    expect(refs[meta.ref.g].nodeName).toEqual("H1");
+    expect(refs[meta.ref.g].nodeName).toBe("H1");
     expect(refs[meta.ref.g]).toBeInstanceOf(window.HTMLHeadingElement);
-    expect(refs[meta.ref.h].nodeName).toEqual("P");
+    expect(refs[meta.ref.h].nodeName).toBe("P");
     expect(refs[meta.ref.h]).toBeInstanceOf(window.HTMLParagraphElement);
-    expect(refs[meta.ref.i].nodeName).toEqual("B");
+    expect(refs[meta.ref.i].nodeName).toBe("B");
     expect(refs[meta.ref.i]).toBeInstanceOf(window.HTMLElement);
-    expect(refs[meta.ref.j].nodeName).toEqual("A");
+    expect(refs[meta.ref.j].nodeName).toBe("A");
     expect(refs[meta.ref.j]).toBeInstanceOf(window.HTMLAnchorElement);
-    expect(refs[meta.ref.k].nodeName).toEqual("OL");
+    expect(refs[meta.ref.k].nodeName).toBe("OL");
     expect(refs[meta.ref.k]).toBeInstanceOf(window.HTMLOListElement);
-    expect(refs[meta.ref.l].nodeName).toEqual("LI");
+    expect(refs[meta.ref.l].nodeName).toBe("LI");
     expect(refs[meta.ref.l]).toBeInstanceOf(window.HTMLLIElement);
-    expect(refs[meta.ref.m].nodeName).toEqual("LI");
+    expect(refs[meta.ref.m].nodeName).toBe("LI");
     expect(refs[meta.ref.m]).toBeInstanceOf(window.HTMLLIElement);
-    expect(refs[meta.ref.n].nodeName).toEqual("FORM");
+    expect(refs[meta.ref.n].nodeName).toBe("FORM");
     expect(refs[meta.ref.n]).toBeInstanceOf(window.HTMLFormElement);
-    expect(refs[meta.ref.o].nodeName).toEqual("INPUT");
+    expect(refs[meta.ref.o].nodeName).toBe("INPUT");
     expect(refs[meta.ref.o]).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs[meta.ref.p].nodeName).toEqual("TEXTAREA");
+    expect(refs[meta.ref.p].nodeName).toBe("TEXTAREA");
     expect(refs[meta.ref.p]).toBeInstanceOf(window.HTMLTextAreaElement);
-    expect(refs[meta.ref.q].nodeName).toEqual("BUTTON");
+    expect(refs[meta.ref.q].nodeName).toBe("BUTTON");
     expect(refs[meta.ref.q]).toBeInstanceOf(window.HTMLButtonElement);
-    expect(refs[meta.ref.r].nodeName).toEqual("#comment");
+    expect(refs[meta.ref.r].nodeName).toBe("#comment");
     expect(refs[meta.ref.r]).toBeInstanceOf(window.Comment);
-    expect(refs[meta.ref.s].nodeName).toEqual("FOOTER");
+    expect(refs[meta.ref.s].nodeName).toBe("FOOTER");
     expect(refs[meta.ref.s]).toBeInstanceOf(window.HTMLElement);
-    expect(refs[meta.ref.t].nodeName).toEqual("#text");
+    expect(refs[meta.ref.t].nodeName).toBe("#text");
     expect(refs[meta.ref.t]).toBeInstanceOf(window.Text);
-    expect(Object.keys(refs)).toHaveLength(20);
+    expect(refs).toHaveLength(20);
     expect(Object.keys(meta.ref)).toHaveLength(20);
     expect(meta.success).toBeTrue();
   });
@@ -299,7 +300,7 @@ describe("collect", () => {
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
     expect(refs[meta.ref.search].id).toBe("search");
     expect(refs[meta.ref.search].name).toBe("q");
-    expect(Object.keys(refs)).toHaveLength(1);
+    expect(refs).toHaveLength(1);
     expect(Object.keys(meta.ref)).toHaveLength(1);
     expect(meta.success).toBeTrue();
   });
@@ -316,7 +317,7 @@ describe("collect", () => {
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
     expect(refs[meta.ref.search].id).toBe("search");
     expect(refs[meta.ref.search].name).toBe("q");
-    expect(Object.keys(refs)).toHaveLength(1);
+    expect(refs).toHaveLength(1);
     expect(Object.keys(meta.ref)).toHaveLength(1);
     expect(meta.success).toBeTrue();
   });
@@ -333,7 +334,7 @@ describe("collect", () => {
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
     expect(refs[meta.ref.search].id).toBe("search");
     expect(refs[meta.ref.search].name).toBe("q");
-    expect(Object.keys(refs)).toHaveLength(1);
+    expect(refs).toHaveLength(1);
     expect(Object.keys(meta.ref)).toHaveLength(1);
     expect(meta.success).toBeTrue();
   });
@@ -343,7 +344,7 @@ describe("collect", () => {
     const meta = compile<{ a: Text }>(/* html */ "@a");
     const view = h(meta.html);
     const refs = collect<{ a: Text }>(view, meta.d);
-    expect(refs[meta.ref.a].nodeName).toEqual("#text");
+    expect(refs[meta.ref.a].nodeName).toBe("#text");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
     expect(meta.success).toBeTrue();
   });
@@ -353,7 +354,7 @@ describe("collect", () => {
     const meta = compile<{ a: Comment }>(/* html */ "<!-- @a -->");
     const view = h(meta.html);
     const refs = collect<{ a: Comment }>(view, meta.d);
-    expect(refs[meta.ref.a].nodeName).toEqual("#comment");
+    expect(refs[meta.ref.a].nodeName).toBe("#comment");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
     expect(meta.success).toBeTrue();
   });
@@ -377,21 +378,21 @@ describe("collect", () => {
     `);
     const view = h(meta.html);
     const refs = collect<Refs>(view, meta.d);
-    expect(refs[meta.ref.a].nodeName).toEqual("#text");
+    expect(refs[meta.ref.a].nodeName).toBe("#text");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
-    expect(refs[meta.ref.b].nodeName).toEqual("#comment");
+    expect(refs[meta.ref.b].nodeName).toBe("#comment");
     expect(refs[meta.ref.b]).toBeInstanceOf(window.Comment);
-    expect(refs[meta.ref.c].nodeName).toEqual("DIV");
+    expect(refs[meta.ref.c].nodeName).toBe("DIV");
     expect(refs[meta.ref.c]).toBeInstanceOf(window.HTMLDivElement);
-    expect(refs[meta.ref.d].nodeName).toEqual("#text");
+    expect(refs[meta.ref.d].nodeName).toBe("#text");
     expect(refs[meta.ref.d]).toBeInstanceOf(window.Text);
-    expect(refs[meta.ref.e].nodeName).toEqual("#comment");
+    expect(refs[meta.ref.e].nodeName).toBe("#comment");
     expect(refs[meta.ref.e]).toBeInstanceOf(window.Comment);
-    expect(refs[meta.ref.f].nodeName).toEqual("DIV");
+    expect(refs[meta.ref.f].nodeName).toBe("DIV");
     expect(refs[meta.ref.f]).toBeInstanceOf(window.HTMLDivElement);
-    expect(Object.keys(refs)).toHaveLength(6);
+    expect(refs).toHaveLength(6);
     expect(Object.keys(meta.ref)).toHaveLength(6);
-    expect(Object.keys(meta.d)).toHaveLength(6);
+    expect(meta.d).toHaveLength(6);
     expect(meta.success).toBeTrue();
   });
 
@@ -409,13 +410,13 @@ describe("collect", () => {
       `);
       const view = h(meta.html);
       const refs = collect<Refs>(view, meta.d);
-      expect(refs[meta.ref.a].nodeName).toEqual("#text");
+      expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
-      expect(refs[meta.ref.b].nodeName).toEqual("DIV");
+      expect(refs[meta.ref.b].nodeName).toBe("DIV");
       expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs[meta.ref.c].nodeName).toEqual("#text");
+      expect(refs[meta.ref.c].nodeName).toBe("#text");
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
-      expect(Object.keys(refs)).toHaveLength(4);
+      expect(refs).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
       expect(meta.success).toBeTrue();
     });
@@ -436,13 +437,13 @@ describe("collect", () => {
       );
       const view = h(meta.html);
       const refs = collect<Refs>(view, meta.d);
-      expect(refs[meta.ref.a].nodeName).toEqual("#text");
+      expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
-      expect(refs[meta.ref.b].nodeName).toEqual("DIV");
+      expect(refs[meta.ref.b].nodeName).toBe("DIV");
       expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs[meta.ref.c].nodeName).toEqual("#text");
+      expect(refs[meta.ref.c].nodeName).toBe("#text");
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
-      expect(Object.keys(refs)).toHaveLength(4);
+      expect(refs).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
       expect(meta.success).toBeTrue();
     });
@@ -463,13 +464,13 @@ describe("collect", () => {
       );
       const view = h(meta.html);
       const refs = collect<Refs>(view, meta.d);
-      expect(refs[meta.ref.a].nodeName).toEqual("#text");
+      expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
-      expect(refs[meta.ref.b].nodeName).toEqual("DIV");
+      expect(refs[meta.ref.b].nodeName).toBe("DIV");
       expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs[meta.ref.c].nodeName).toEqual("#text");
+      expect(refs[meta.ref.c].nodeName).toBe("#text");
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
-      expect(Object.keys(refs)).toHaveLength(4);
+      expect(refs).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
       expect(meta.success).toBeTrue();
     });
@@ -485,9 +486,13 @@ describe("Test component", () => {
     expectTypeOf(Test).returns.toEqualTypeOf<HTMLDivElement>();
   });
 
-  test("renders basic template", () => {
-    expect.assertions(1);
-    const rendered = render(Test({ text: "Hello" }));
-    expect(rendered.container.getHTML()).toBe(/* html */ '<div id="test">Hello</div>');
+  describe("render", () => {
+    afterEach(cleanup);
+
+    test("renders basic template", () => {
+      expect.assertions(1);
+      const rendered = render(Test({ text: "Hello" }));
+      expect(rendered.container.getHTML()).toBe(/* html */ '<div id="test">Hello</div>');
+    });
   });
 });
