@@ -64,5 +64,11 @@ export default defineConfig(
       "unicorn/filename-case": "off",
     },
   },
+  {
+    files: ["test/e2e/**"],
+    rules: {
+      "unicorn/isolated-functions": "off", // page.evaluate callbacks run in the browser
+    },
+  },
   { ignores: ["dist"] },
 );

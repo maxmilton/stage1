@@ -56,7 +56,7 @@
     "lint:js": "eslint",
     "lint:ts": "tsc --noEmit",
     "test": "bun test --only-failures",
-    "test:ci": "bun test --coverage --rerun-each=30",
+    "test:ci": "bun test --coverage --randomize --rerun-each=30",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
