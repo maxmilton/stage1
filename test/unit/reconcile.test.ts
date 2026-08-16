@@ -79,12 +79,15 @@ const createBoundedParent = (): [
 
 describe("keyed", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(reconcileKeyed).not.toBeAny();
     expectTypeOf(reconcileKeyed).toBeFunction();
+    // Characterization of the tooling, not a defect in `src/` (SPEC.md R18):
+    // erasure resolves the unconstrained `T` to `unknown` ∴ `keyof T` -> `never`
+    // and the return -> `any`. Pinned positively so this reds if bun fixes it.
     expectTypeOf(reconcileKeyed).parameters.toEqualTypeOf<
       [
-        key: never, // TODO: Fix inferred key type.
-        // key: string | number | symbol,
+        key: never,
         parent: Element,
         renderedData: unknown[],
         data: unknown[],
@@ -94,11 +97,20 @@ describe("keyed", () => {
         afterNode?: Node | null | undefined,
       ]
     >();
-    // @ts-expect-error - TODO: Fix inferred return type.
-    expectTypeOf(reconcileKeyed).returns.not.toBeAny();
-    // @ts-expect-error - TODO: Fix inferred return type.
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    expectTypeOf(reconcileKeyed).returns.toEqualTypeOf<void>();
+    expectTypeOf(reconcileKeyed).returns.toBeAny();
+    expectTypeOf<Parameters<typeof reconcileKeyed<Item, HTMLSpanElement>>>().toEqualTypeOf<
+      [
+        key: keyof Item,
+        parent: Element,
+        renderedData: Item[],
+        data: Item[],
+        createFn: (itemData: Item) => HTMLSpanElement,
+        updateFn?: ((node: HTMLSpanElement, itemData: Item) => void) | undefined,
+        beforeNode?: Node | undefined,
+        afterNode?: Node | null | undefined,
+      ]
+    >();
+    expectTypeOf<ReturnType<typeof reconcileKeyed<Item, HTMLSpanElement>>>().toBeVoid();
   });
 
   test("is a function", () => {
@@ -310,6 +322,7 @@ describe("keyed", () => {
 
 describe("non-keyed", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(reconcileNonKeyed).not.toBeAny();
     expectTypeOf(reconcileNonKeyed).toBeFunction();
     expectTypeOf(reconcileNonKeyed).parameters.toEqualTypeOf<
@@ -324,8 +337,20 @@ describe("non-keyed", () => {
       ]
     >();
     expectTypeOf(reconcileNonKeyed).returns.not.toBeAny();
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    expectTypeOf(reconcileNonKeyed).returns.toEqualTypeOf<void>();
+    expectTypeOf(reconcileNonKeyed).returns.toBeVoid();
+    // Erased above; instantiated to pin item and node types flowing through together.
+    expectTypeOf<Parameters<typeof reconcileNonKeyed<Item, HTMLSpanElement>>>().toEqualTypeOf<
+      [
+        parent: Element,
+        renderedData: Item[],
+        data: Item[],
+        createFn: (itemData: Item) => HTMLSpanElement,
+        updateFn?: ((node: HTMLSpanElement, itemData: Item) => void) | undefined,
+        beforeNode?: Node | undefined,
+        afterNode?: Node | null | undefined,
+      ]
+    >();
+    expectTypeOf<ReturnType<typeof reconcileNonKeyed<Item, HTMLSpanElement>>>().toBeVoid();
   });
 
   test("is a function", () => {
@@ -525,6 +550,7 @@ describe("non-keyed", () => {
 
 describe("reuse-nodes", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(reconcileReuseNodes).not.toBeAny();
     expectTypeOf(reconcileReuseNodes).toBeFunction();
     expectTypeOf(reconcileReuseNodes).parameters.toEqualTypeOf<
@@ -539,8 +565,20 @@ describe("reuse-nodes", () => {
       ]
     >();
     expectTypeOf(reconcileReuseNodes).returns.not.toBeAny();
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    expectTypeOf(reconcileReuseNodes).returns.toEqualTypeOf<void>();
+    expectTypeOf(reconcileReuseNodes).returns.toBeVoid();
+    // Erased above; instantiated to pin item and node types flowing through together.
+    expectTypeOf<Parameters<typeof reconcileReuseNodes<Item, HTMLSpanElement>>>().toEqualTypeOf<
+      [
+        parent: Element,
+        renderedData: Item[],
+        data: Item[],
+        createFn: (itemData: Item) => HTMLSpanElement,
+        updateFn?: ((node: HTMLSpanElement, itemData: Item) => void) | undefined,
+        beforeNode?: Node | undefined,
+        afterNode?: Node | null | undefined,
+      ]
+    >();
+    expectTypeOf<ReturnType<typeof reconcileReuseNodes<Item, HTMLSpanElement>>>().toBeVoid();
   });
 
   test("is a function", () => {

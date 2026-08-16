@@ -1,28 +1,36 @@
 import { describe, expect, expectTypeOf, spyOn, test } from "bun:test";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
+import type { CompileOptions, CompileResult } from "../../src/macro.ts";
 import { compile as compileNoMacro } from "../../src/macro.ts";
+import type { InferRefs } from "../../src/types.ts";
 
 describe("compile", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(compileNoMacro).not.toBeAny();
     expectTypeOf(compileNoMacro).toBeFunction();
-    // @ts-expect-error - TODO: Fix this type instead of using parameter(n).
+    // `?:` and `| undefined` are both required under `exactOptionalPropertyTypes`.
     expectTypeOf(compileNoMacro).parameters.toEqualTypeOf<
-      [template: string, opts: { keepSpaces?: boolean } | undefined]
+      [template: string, options?: CompileOptions | undefined]
     >();
-    // FIXME: The following type checks are broken on the latest bun versions.
-    // expectTypeOf(compileNoMacro).parameter(0).toBeString();
-    // expectTypeOf(compileNoMacro).parameter(1).toEqualTypeOf<{ keepSpaces?: boolean } | undefined>();
-    // expectTypeOf(compileNoMacro).returns.not.toBeAny();
-    // expectTypeOf(compileNoMacro).returns.omit("ref").toEqualTypeOf<{
-    //   html: string;
-    //   k: readonly string[];
-    //   d: readonly number[];
-    //   success: boolean;
-    // }>();
-    // expectTypeOf(compileNoMacro)
-    //   .returns.toHaveProperty("ref")
-    //   .toExtend<Record<string, `${number}`>>();
+    expectTypeOf(compileNoMacro).returns.not.toBeAny();
+    expectTypeOf(compileNoMacro).returns.not.toBeNever();
+    // Type operators, not `.omit`/`.toHaveProperty`: the extractor *methods*
+    // return `undefined` at runtime and throw when chained (SPEC.md R18).
+    type Result = ReturnType<typeof compileNoMacro>;
+    expectTypeOf<Omit<Result, "ref">>().toEqualTypeOf<{
+      html: string;
+      k: readonly string[];
+      d: readonly number[];
+      success: boolean;
+    }>();
+    expectTypeOf<Result["ref"]>().toExtend<Record<string, `${number}`>>();
+    // Erased above; instantiated to pin ref name -> ordinal. Keys and values are
+    // pinned apart — `toEqualTypeOf` cannot equate the deferred mapped type.
+    type Ref = CompileResult<{ foo: HTMLDivElement; bar: Text }>["ref"];
+    expectTypeOf<keyof Ref>().toEqualTypeOf<"foo" | "bar">();
+    expectTypeOf<Ref>().toExtend<{ foo: "0"; bar: "1" }>();
+    expectTypeOf<InferRefs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
   });
 
   test("is a function", () => {

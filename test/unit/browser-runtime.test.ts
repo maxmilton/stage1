@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { collect, h, html } from "../../src/browser/runtime.ts";
-import type { Refs } from "../../src/types.ts";
+import type { InferRefs, Refs } from "../../src/types.ts";
 import { Test } from "../TestComponent_browser.ts";
 
 // A deep mixed tree exercising every node kind the TreeWalker has to step
@@ -43,11 +43,18 @@ const deepTree = () =>
 
 describe("h", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(h).not.toBeAny();
     expectTypeOf(h).toBeFunction();
     expectTypeOf(h).parameters.toEqualTypeOf<[html: string]>();
+    // Erased: `T` -> its `Node` constraint, not the `= Element` default. `View`
+    // is not exported ∴ the return is pinned relationally, not by name.
     expectTypeOf(h).returns.not.toBeAny();
-    expectTypeOf(h).returns.toExtend<Node>();
+    expectTypeOf(h).returns.not.toBeNever();
+    expectTypeOf(h).returns.toExtend<ChildNode>();
+    // `ReturnType` instantiates the constraint too ∴ the default is call-site only.
+    expectTypeOf(h(/* html */ "<div></div>")).toEqualTypeOf<ReturnType<typeof h<Element>>>();
+    expectTypeOf<ReturnType<typeof h<HTMLDivElement>>>().toExtend<ChildNode & HTMLDivElement>();
   });
 
   test("is a function", () => {
@@ -147,13 +154,19 @@ describe("h", () => {
 
 describe("html", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(html).not.toBeAny();
     expectTypeOf(html).toBeFunction();
     expectTypeOf(html).parameters.toEqualTypeOf<
       [template: TemplateStringsArray, ...substitutions: unknown[]]
     >();
     expectTypeOf(html).returns.not.toBeAny();
+    expectTypeOf(html).returns.not.toBeNever();
     expectTypeOf(html).returns.toEqualTypeOf<ReturnType<typeof h>>();
+    expectTypeOf(html`<div></div>`).toEqualTypeOf<ReturnType<typeof h<Element>>>();
+    expectTypeOf<ReturnType<typeof html<HTMLDivElement>>>().toEqualTypeOf<
+      ReturnType<typeof h<HTMLDivElement>>
+    >();
   });
 
   test("is a function", () => {
@@ -190,11 +203,21 @@ describe("html", () => {
 
 describe("collect", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(collect).not.toBeAny();
     expectTypeOf(collect).toBeFunction();
+    // `view` is the unexported `View` ∴ `toExtend`, not `toEqualTypeOf`.
     expectTypeOf(collect).parameters.toExtend<[root: Node, view: Node]>();
+    // Erased: `R` -> its `= Refs` default, never reaching `LowercaseKeys<R>`.
     expectTypeOf(collect).returns.not.toBeAny();
+    expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Refs>();
+    // Ref keys are lowercased — browsers normalise attribute names.
+    expectTypeOf<ReturnType<typeof collect<{ Foo: HTMLDivElement; bar: Text }>>>().toEqualTypeOf<{
+      foo: HTMLDivElement;
+      bar: Text;
+    }>();
+    expectTypeOf<InferRefs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
   });
 
   test("is a function", () => {
@@ -365,6 +388,7 @@ describe("collect", () => {
 
 describe("Test component", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(Test).not.toBeAny();
     expectTypeOf(Test).toBeFunction();
     expectTypeOf(Test).parameters.toEqualTypeOf<[props: { text: string }]>();

@@ -17,10 +17,12 @@ declare global {
 
 describe("handleClick", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(handleClick).not.toBeAny();
     expectTypeOf(handleClick).toBeFunction();
     expectTypeOf(handleClick).parameters.toEqualTypeOf<[Event]>();
     expectTypeOf(handleClick).returns.not.toBeAny();
+    expectTypeOf(handleClick).returns.not.toBeNever();
     expectTypeOf(handleClick).returns.toEqualTypeOf<false | undefined>();
   });
 
@@ -100,12 +102,12 @@ describe("handleClick", () => {
 
 describe("setupSyntheticClick", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(setupSyntheticClick).not.toBeAny();
     expectTypeOf(setupSyntheticClick).toBeFunction();
     expectTypeOf(setupSyntheticClick).parameters.toEqualTypeOf<[]>();
     expectTypeOf(setupSyntheticClick).returns.not.toBeAny();
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    expectTypeOf(setupSyntheticClick).returns.toEqualTypeOf<void>();
+    expectTypeOf(setupSyntheticClick).returns.toBeVoid();
   });
 
   test("is a function", () => {
@@ -282,12 +284,12 @@ describe("setupSyntheticClick", () => {
 
 describe("removeSyntheticClick", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(removeSyntheticClick).not.toBeAny();
     expectTypeOf(removeSyntheticClick).toBeFunction();
     expectTypeOf(removeSyntheticClick).parameters.toEqualTypeOf<[]>();
     expectTypeOf(removeSyntheticClick).returns.not.toBeAny();
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    expectTypeOf(removeSyntheticClick).returns.toEqualTypeOf<void>();
+    expectTypeOf(removeSyntheticClick).returns.toBeVoid();
   });
 
   test("is a function", () => {

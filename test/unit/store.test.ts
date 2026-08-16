@@ -4,10 +4,13 @@ import { store } from "../../src/store.ts";
 
 describe("store", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(store).not.toBeAny();
     expectTypeOf(store).toBeFunction();
+    // Erased: `T`/`K` -> their constraints, never reaching the per-key narrowing.
     expectTypeOf(store).parameters.branded.toEqualTypeOf<[object & { on?: never }]>();
     expectTypeOf(store).returns.not.toBeAny();
+    expectTypeOf(store).returns.not.toBeNever();
     expectTypeOf(store).returns.toExtend<
       object & {
         on: (
@@ -16,6 +19,13 @@ describe("store", () => {
         ) => /** off */ () => boolean;
       }
     >();
+    expectTypeOf<ReturnType<typeof store<{ count: number }, "count">>["on"]>().toEqualTypeOf<
+      (key: "count", callback: (value: number, prev: number) => void) => () => boolean
+    >();
+    expectTypeOf<ReturnType<typeof store<{ count: number }, "count">>["count"]>().toBeNumber();
+    // The `on?: never` constraint is on the parameter ∴ call-site only.
+    // @ts-expect-error - `on` is reserved for the change handler registrar
+    store({ on: 1 });
   });
 
   test("is a function", () => {

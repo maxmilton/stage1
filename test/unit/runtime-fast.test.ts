@@ -5,16 +5,24 @@ import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { collect, h } from "../../src/fast/runtime.ts";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
-import type { Refs } from "../../src/types.ts";
+import type { InferRefs, Refs } from "../../src/types.ts";
 import { Test } from "../TestComponent_fast.ts";
 
 describe("h", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(h).not.toBeAny();
     expectTypeOf(h).toBeFunction();
     expectTypeOf(h).parameters.toEqualTypeOf<[html: string]>();
+    // Erased: `T` -> its `Node` constraint, not the `= Element` default.
     expectTypeOf(h).returns.not.toBeAny();
+    expectTypeOf(h).returns.not.toBeNever();
     expectTypeOf(h).returns.toEqualTypeOf<ChildNode & Node>();
+    // `ReturnType` instantiates the constraint too ∴ the default is call-site only.
+    expectTypeOf(h(/* html */ "<div></div>")).toEqualTypeOf<ChildNode & Element>();
+    expectTypeOf<ReturnType<typeof h<HTMLDivElement>>>().toEqualTypeOf<
+      ChildNode & HTMLDivElement
+    >();
   });
 
   test("is a function", () => {
@@ -194,11 +202,20 @@ describe("h", () => {
 
 describe("collect", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(collect).not.toBeAny();
     expectTypeOf(collect).toBeFunction();
     expectTypeOf(collect).parameters.toEqualTypeOf<[root: Node, d: readonly number[]]>();
+    // Erased: `R` -> its constraint, never reaching `FlatRefs<R>`.
     expectTypeOf(collect).returns.not.toBeAny();
+    expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Node[]>();
+    expectTypeOf(collect).returns.items.toExtend<Node>();
+    // Refs are positional, in key declaration order.
+    expectTypeOf<ReturnType<typeof collect<{ foo: HTMLDivElement; bar: Text }>>>().toEqualTypeOf<
+      [HTMLDivElement, Text]
+    >();
+    expectTypeOf<InferRefs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
   });
 
   test("is a function", () => {
@@ -505,6 +522,7 @@ describe("collect", () => {
 
 describe("Test component", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(Test).not.toBeAny();
     expectTypeOf(Test).toBeFunction();
     expectTypeOf(Test).parameters.toEqualTypeOf<[props: { text: string }]>();

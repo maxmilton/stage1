@@ -61,12 +61,12 @@ const NOT_DOM_NODES = [
 
 describe("noop", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(noop).not.toBeAny();
     expectTypeOf(noop).toBeFunction();
     expectTypeOf(noop).parameters.toEqualTypeOf<[]>();
     expectTypeOf(noop).returns.not.toBeAny();
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    expectTypeOf(noop).returns.toEqualTypeOf<void>();
+    expectTypeOf(noop).returns.toBeVoid();
   });
 
   test("is a function", () => {
@@ -94,6 +94,7 @@ describe("noop", () => {
 
 describe("fragment", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(fragment).not.toBeAny();
     expectTypeOf(fragment).toBeFunction();
     expectTypeOf(fragment).parameters.toEqualTypeOf<[]>();
@@ -120,6 +121,7 @@ describe("fragment", () => {
 
 describe("text", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(text).not.toBeAny();
     expectTypeOf(text).toBeFunction();
     expectTypeOf(text).parameters.toEqualTypeOf<[string]>();
@@ -151,13 +153,20 @@ describe("text", () => {
 
 describe("create", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(create).not.toBeAny();
     expectTypeOf(create).toBeFunction();
+    // Erased: `K` -> its constraint; instantiated below.
     expectTypeOf(create).parameters.toEqualTypeOf<[keyof HTMLElementTagNameMap]>();
     expectTypeOf(create).returns.not.toBeAny();
+    expectTypeOf(create).returns.not.toBeNever();
     expectTypeOf(create).returns.toEqualTypeOf<
       HTMLElementTagNameMap[keyof HTMLElementTagNameMap]
     >();
+    expectTypeOf<ReturnType<typeof create<"div">>>().toEqualTypeOf<HTMLDivElement>();
+    expectTypeOf<ReturnType<typeof create<"li">>>().toEqualTypeOf<HTMLLIElement>();
+    // @ts-expect-error - tag name outside `keyof HTMLElementTagNameMap`
+    expectTypeOf<ReturnType<typeof create<"nope">>>();
   });
 
   test("is a function", () => {
@@ -252,9 +261,14 @@ describe("clone", () => {
   test("types", () => {
     expectTypeOf(clone).not.toBeAny();
     expectTypeOf(clone).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(clone).parameters.toEqualTypeOf<[Node]>();
     expectTypeOf(clone).returns.not.toBeAny();
+    expectTypeOf(clone).returns.not.toBeNever();
     expectTypeOf(clone).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof clone<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -321,11 +335,17 @@ describe("clone", () => {
 
 describe("append", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(append).not.toBeAny();
     expectTypeOf(append).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(append).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(append).returns.not.toBeAny();
+    expectTypeOf(append).returns.not.toBeNever();
     expectTypeOf(append).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof append<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement, parent: Node) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -397,11 +417,17 @@ describe("append", () => {
 
 describe("prepend", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(prepend).not.toBeAny();
     expectTypeOf(prepend).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(prepend).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(prepend).returns.not.toBeAny();
+    expectTypeOf(prepend).returns.not.toBeNever();
     expectTypeOf(prepend).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof prepend<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement, parent: Node) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -477,11 +503,17 @@ describe("prepend", () => {
 
 describe("insert", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(insert).not.toBeAny();
     expectTypeOf(insert).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(insert).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(insert).returns.not.toBeAny();
+    expectTypeOf(insert).returns.not.toBeNever();
     expectTypeOf(insert).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof insert<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement, target: Node) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -565,11 +597,17 @@ describe("insert", () => {
 
 describe("replace", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(replace).not.toBeAny();
     expectTypeOf(replace).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(replace).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(replace).returns.not.toBeAny();
+    expectTypeOf(replace).returns.not.toBeNever();
     expectTypeOf(replace).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof replace<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement, target: Node) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
