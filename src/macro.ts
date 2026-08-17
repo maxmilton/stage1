@@ -55,13 +55,13 @@ export function compile<R extends InferRefs<R> = object>(
 
   const fail = (message: string) => {
     // eslint-disable-next-line no-console
-    console.error(message, template);
+    console.error(`${message} in template:\n\x1B[2m${template}\x1B[0m`);
     isSuccess = false;
   };
 
   const addRef = (name: string) => {
-    if (!REF_NAME_RE.test(name)) fail(`Invalid ref name "${name}" in template:`);
-    if (k.includes(name)) fail(`Duplicate ref name "${name}" in template:`);
+    if (!REF_NAME_RE.test(name)) fail(`Invalid ref name "${name}"`);
+    if (k.includes(name)) fail(`Duplicate ref name "${name}"`);
     k.push(name);
     d.push(distance);
     distance = 0;
@@ -70,7 +70,7 @@ export function compile<R extends InferRefs<R> = object>(
   const html = new HTMLRewriter()
     .onDocument({
       doctype() {
-        fail("Found doctype but none was expected in template:");
+        fail("Found doctype but none was expected");
       },
       comments(node) {
         const text = node.text.trim();
@@ -127,13 +127,13 @@ export function compile<R extends InferRefs<R> = object>(
         // firstChild/nextSibling walk in collect() cannot enter, so every
         // distance past it would be wrong — reject rather than crash at runtime
         if (node.tagName === "template") {
-          fail("Found unsupported <template> element in template:");
+          fail("Found unsupported <template> element");
         }
 
         if (isRoot) {
           insideRoot = hasEndTag;
         } else if (!insideRoot) {
-          fail("Expected template to have a single root element:");
+          fail("Expected single root element");
         }
         if (isVerbatim) verbatimDepth++;
         if (isRaw) isRawText = true;
@@ -153,7 +153,7 @@ export function compile<R extends InferRefs<R> = object>(
         for (const [name] of node.attributes) if (name[0] === "@") refAttrs.push(name);
         for (const name of refAttrs) node.removeAttribute(name);
         if (refAttrs.length > 1) {
-          fail("Found multiple ref markers on a single element in template:");
+          fail("Found multiple ref markers on single element");
         }
         if (refAttrs.length) addRef(refAttrs[0].slice(1));
         distance++;
