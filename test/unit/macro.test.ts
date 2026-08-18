@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, spyOn, test } from "bun:test";
+import { describe, expect, expectTypeOf, onTestFinished, spyOn, test } from "bun:test";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import type { CompileOptions, CompileResult } from "../../src/macro.ts";
 import { compile as compileNoMacro } from "../../src/macro.ts";
@@ -477,8 +477,7 @@ describe("compile", () => {
       const template = /* html */ "<div><template><span @a></span></template><b @b></b></div>";
       compileNoMacro(template);
       expect(spy).toHaveBeenCalledWith(
-        "Found unsupported <template> element in template:",
-        template,
+        `Found unsupported <template> element in template:\n${template}`,
       );
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
@@ -575,10 +574,7 @@ describe("compile", () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div></div><div></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(
-        "Expected template to have a single root element:",
-        template,
-      );
+      expect(spy).toHaveBeenCalledWith(`Expected single root element in template:\n${template}`);
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
     });
@@ -590,10 +586,7 @@ describe("compile", () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<pre>a</pre><div>b</div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(
-        "Expected template to have a single root element:",
-        template,
-      );
+      expect(spy).toHaveBeenCalledWith(`Expected single root element in template:\n${template}`);
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
     });
@@ -603,10 +596,7 @@ describe("compile", () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<input><input>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(
-        "Expected template to have a single root element:",
-        template,
-      );
+      expect(spy).toHaveBeenCalledWith(`Expected single root element in template:\n${template}`);
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
     });
@@ -617,8 +607,7 @@ describe("compile", () => {
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
       expect(spy).toHaveBeenCalledWith(
-        "Found doctype but none was expected in template:",
-        template,
+        `Found doctype but none was expected in template:\n${template}`,
       );
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
@@ -629,7 +618,7 @@ describe("compile", () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div><span>@a</span><span>@a</span></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith('Duplicate ref name "a" in template:', template);
+      expect(spy).toHaveBeenCalledWith(`Duplicate ref name "a" in template:\n${template}`);
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
     });
@@ -639,8 +628,8 @@ describe("compile", () => {
       const spy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div>@a<span>@a</span><span @b-two></span><span>@a</span></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith('Duplicate ref name "a" in template:', template);
-      expect(spy).not.toHaveBeenCalledWith('Duplicate ref name "b-two" in template:', template);
+      expect(spy).toHaveBeenCalledWith(`Duplicate ref name "a" in template:\n${template}`);
+      expect(spy).not.toHaveBeenCalledWith(`Duplicate ref name "b-two" in template:\n${template}`);
       expect(spy).toHaveBeenCalledTimes(2);
       spy.mockRestore();
     });
@@ -651,8 +640,7 @@ describe("compile", () => {
       const template = /* html */ "<div @a @b></div>";
       compileNoMacro(template);
       expect(spy).toHaveBeenCalledWith(
-        "Found multiple ref markers on a single element in template:",
-        template,
+        `Found multiple ref markers on single element in template:\n${template}`,
       );
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
@@ -678,7 +666,7 @@ describe("compile", () => {
       expect.assertions(2);
       const spy = spyOn(console, "error").mockImplementation(() => {});
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(`Invalid ref name "${name}" in template:`, template);
+      expect(spy).toHaveBeenCalledWith(`Invalid ref name "${name}" in template:\n${template}`);
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
     });
@@ -712,6 +700,33 @@ describe("compile", () => {
       expect.assertions(1);
       const meta = compile(/* html */ "<div><span>@a</span><span>@a</span></div>");
       expect(meta.success).toBeFalse();
+    });
+
+    test("wraps the template in dim escape codes when colors are enabled", () => {
+      expect.assertions(1);
+      // @ts-expect-error - writable at runtime despite readonly type
+      Bun.enableANSIColors = true;
+      onTestFinished(() => {
+        // @ts-expect-error - writable at runtime despite readonly type
+        Bun.enableANSIColors = false;
+      });
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<!DOCTYPE html><div></div>";
+      compileNoMacro(template);
+      expect(spy).toHaveBeenCalledWith(
+        `Found doctype but none was expected in template:\n\x1B[2m${template}\x1B[0m`,
+      );
+    });
+
+    // NOTE: Bun.enableANSIColors is forced false in test/unit/setup.ts.
+    test("does not wrap the template when colors are disabled", () => {
+      expect.assertions(1);
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<!DOCTYPE html><div></div>";
+      compileNoMacro(template);
+      expect(spy).toHaveBeenCalledWith(
+        `Found doctype but none was expected in template:\n${template}`,
+      );
     });
   });
 

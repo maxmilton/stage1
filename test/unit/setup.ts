@@ -10,6 +10,9 @@ import { setupDOM } from "@maxmilton/test-utils/dom";
 // plus `document.body[ONCLICK]` in one test) — each undoes its own via
 // onTestFinished, which unlike cleanup at the end of a body also runs when the
 // test fails — and test/unit/dist.test.ts, which reads dist/ from disk.
+// Bun.enableANSIColors otherwise defaults to whether a TTY is attached, which
+// would make any assertion on exact console output (e.g. test/unit/macro.test.ts's
+// error messages) pass or fail depending on how the suite is invoked.
 
 const noop = () => {};
 
@@ -18,6 +21,8 @@ function setupMocks(): void {
   global.performance.mark = noop;
   // @ts-expect-error - noop stub
   global.performance.measure = noop;
+  // @ts-expect-error - writable at runtime despite readonly type
+  Bun.enableANSIColors = false;
 }
 
 setupDOM();

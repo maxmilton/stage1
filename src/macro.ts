@@ -54,8 +54,9 @@ export function compile<R extends InferRefs<R> = object>(
   let insideRoot: boolean | undefined;
 
   const fail = (message: string) => {
+    const detail = Bun.enableANSIColors ? `\x1B[2m${template}\x1B[0m` : template;
     // eslint-disable-next-line no-console
-    console.error(`${message} in template:\n\x1B[2m${template}\x1B[0m`);
+    console.error(`${message} in template:\n${detail}`);
     isSuccess = false;
   };
 
