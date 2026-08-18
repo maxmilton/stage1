@@ -473,14 +473,13 @@ describe("compile", () => {
   describe("template element", () => {
     test("logs error for a nested template element", () => {
       expect.assertions(2);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div><template><span @a></span></template><b @b></b></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(
+      expect(consoleSpy).toHaveBeenCalledWith(
         `Found unsupported <template> element in template:\n${template}`,
       );
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     test("returns success false for a nested template element", () => {
@@ -571,79 +570,80 @@ describe("compile", () => {
   describe("errors", () => {
     test("logs error when more than one root element", () => {
       expect.assertions(2);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div></div><div></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(`Expected single root element in template:\n${template}`);
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        `Expected single root element in template:\n${template}`,
+      );
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     // NOTE: Only one end tag handler can be registered per element, so the root
     // element check and the whitespace-sensitive block check have to share one.
     test("logs error when more than one root element and the root is a pre", () => {
       expect.assertions(2);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<pre>a</pre><div>b</div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(`Expected single root element in template:\n${template}`);
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        `Expected single root element in template:\n${template}`,
+      );
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     test("logs error when more than one root element and the root is void", () => {
       expect.assertions(2);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<input><input>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(`Expected single root element in template:\n${template}`);
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        `Expected single root element in template:\n${template}`,
+      );
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     test("logs error when doctype found", () => {
       expect.assertions(2);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(
+      expect(consoleSpy).toHaveBeenCalledWith(
         `Found doctype but none was expected in template:\n${template}`,
       );
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     test("logs error when duplicate ref keys found", () => {
       expect.assertions(2);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div><span>@a</span><span>@a</span></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(`Duplicate ref name "a" in template:\n${template}`);
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledWith(`Duplicate ref name "a" in template:\n${template}`);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     test("logs error for each duplicate ref key", () => {
       expect.assertions(3);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div>@a<span>@a</span><span @b-two></span><span>@a</span></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(`Duplicate ref name "a" in template:\n${template}`);
-      expect(spy).not.toHaveBeenCalledWith(`Duplicate ref name "b-two" in template:\n${template}`);
-      expect(spy).toHaveBeenCalledTimes(2);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledWith(`Duplicate ref name "a" in template:\n${template}`);
+      expect(consoleSpy).not.toHaveBeenCalledWith(
+        `Duplicate ref name "b-two" in template:\n${template}`,
+      );
+      expect(consoleSpy).toHaveBeenCalledTimes(2);
     });
 
     test("logs error when an element has multiple ref markers", () => {
       expect.assertions(2);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div @a @b></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(
+      expect(consoleSpy).toHaveBeenCalledWith(
         `Found multiple ref markers on single element in template:\n${template}`,
       );
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     // NOTE: Ref names must be lowercase because browsers normalise element
@@ -664,18 +664,19 @@ describe("compile", () => {
 
     test.each(invalidRefNames)("logs error for invalid ref name in %j", (template, name) => {
       expect.assertions(2);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(`Invalid ref name "${name}" in template:\n${template}`);
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        `Invalid ref name "${name}" in template:\n${template}`,
+      );
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     test.each(invalidRefNames)("returns success false for invalid ref name in %j", (template) => {
       expect.assertions(1);
-      const spy = spyOn(console, "error").mockImplementation(() => {});
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       expect(compileNoMacro(template).success).toBeFalse();
-      spy.mockRestore();
     });
 
     test("returns success false when more than one root element", () => {
@@ -710,10 +711,10 @@ describe("compile", () => {
         // @ts-expect-error - writable at runtime despite readonly type
         Bun.enableANSIColors = false;
       });
-      using spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(
+      expect(consoleSpy).toHaveBeenCalledWith(
         `Found doctype but none was expected in template:\n\x1B[2m${template}\x1B[0m`,
       );
     });
@@ -721,10 +722,10 @@ describe("compile", () => {
     // NOTE: Bun.enableANSIColors is forced false in test/unit/setup.ts.
     test("does not wrap the template when colors are disabled", () => {
       expect.assertions(1);
-      using spy = spyOn(console, "error").mockImplementation(() => {});
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
-      expect(spy).toHaveBeenCalledWith(
+      expect(consoleSpy).toHaveBeenCalledWith(
         `Found doctype but none was expected in template:\n${template}`,
       );
     });

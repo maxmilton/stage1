@@ -199,13 +199,12 @@ describe("keyed", () => {
     const parent = document.createElement("div");
     reconcileKeyed("id", parent, [], SHUFFLE_FROM, createItemNode, updateItemNode);
     const nodes = new Set(parent.children);
-    const insertBefore = spyOn(parent, "insertBefore");
+    using insertBeforeSpy = spyOn(parent, "insertBefore");
     reconcileKeyed("id", parent, SHUFFLE_FROM, SHUFFLE_TO, createItemNode, updateItemNode);
     expect(itemOrder(parent)).toEqual(SHUFFLE_TO_IDS);
     expect(parent.textContent).toBe("CABFDE");
     expect([...parent.children].every((node) => nodes.has(node))).toBeTrue();
-    expect(insertBefore).toHaveBeenCalledTimes(2);
-    insertBefore.mockRestore();
+    expect(insertBeforeSpy).toHaveBeenCalledTimes(2);
   });
 
   test("removes trailing nodes when data shrinks", () => {
@@ -428,7 +427,7 @@ describe("non-keyed", () => {
     const parent = document.createElement("div");
     reconcileNonKeyed(parent, [], SHUFFLE_FROM_IDS, createStringItemNode, updateStringItemNode);
     const nodes = new Set(parent.children);
-    const insertBefore = spyOn(parent, "insertBefore");
+    using insertBeforeSpy = spyOn(parent, "insertBefore");
     reconcileNonKeyed(
       parent,
       SHUFFLE_FROM_IDS,
@@ -438,8 +437,7 @@ describe("non-keyed", () => {
     );
     expect(itemOrder(parent)).toEqual(SHUFFLE_TO_IDS);
     expect([...parent.children].every((node) => nodes.has(node))).toBeTrue();
-    expect(insertBefore).toHaveBeenCalledTimes(2);
-    insertBefore.mockRestore();
+    expect(insertBeforeSpy).toHaveBeenCalledTimes(2);
   });
 
   test("reuses the trailing nodes when only the first item changes", () => {

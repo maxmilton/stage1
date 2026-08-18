@@ -4,7 +4,7 @@ import pkg from "../../package.json" with { type: "json" };
 // NOTE: This is the only test file which needs `bun build.ts` to have run — it
 // reads dist/ from disk. Kept separate from the src/ tests for that reason.
 describe("dist files", () => {
-  // TODO: Remove the file MIME type checks? Bun inferrs it from the file
+  // TODO: Remove the file MIME type checks? Bun infers it from the file
   // extension, not the actual file data, so the usefulness is questionable.
 
   // NOTE: Files of unknown type (e.g., symlinks) fall back to the default
