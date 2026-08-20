@@ -449,7 +449,7 @@ describe("collect", () => {
 
   describe("keepSpaces option", () => {
     test("collects refs when option is default", () => {
-      expect.assertions(9);
+      expect.assertions(11);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
@@ -481,7 +481,7 @@ describe("collect", () => {
     });
 
     test("collects refs when option is true", () => {
-      expect.assertions(9);
+      expect.assertions(11);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
@@ -516,7 +516,7 @@ describe("collect", () => {
     });
 
     test("collects refs when option is false", () => {
-      expect.assertions(9);
+      expect.assertions(11);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
