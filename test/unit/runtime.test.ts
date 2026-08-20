@@ -414,7 +414,15 @@ describe("collect", () => {
 
   test("collects refs from template with many comments", () => {
     expect.assertions(16);
-    const meta = compile<Refs>(/* html */ `
+    interface TemplateRefs {
+      a: Text;
+      b: Comment;
+      c: HTMLDivElement;
+      d: Text;
+      e: Comment;
+      f: HTMLDivElement;
+    }
+    const meta = compile(/* html */ `
       <div>
         <!-- -->
         @a
@@ -431,7 +439,7 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
     const view = h(meta.html);
-    const refs = collect<Refs>(view, meta.k, meta.d);
+    const refs = collect<TemplateRefs>(view, meta.k, meta.d);
     expect(refs.a.nodeName).toBe("#text");
     expect(refs.a).toBeInstanceOf(window.Text);
     expect(refs.b.nodeName).toBe("#comment");
@@ -451,7 +459,13 @@ describe("collect", () => {
 
   describe("keepSpaces option", () => {
     test("collects refs when option is default", () => {
-      expect.assertions(8);
+      expect.assertions(10);
+      interface TemplateRefs {
+        a: Text;
+        b: HTMLDivElement;
+        c: Text;
+        d: HTMLDivElement;
+      }
       const meta = compile(/* html */ `
         <div>
           @a
@@ -463,18 +477,26 @@ describe("collect", () => {
       `);
       expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
       const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.k, meta.d);
+      const refs = collect<TemplateRefs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toBe("#text");
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b.nodeName).toBe("DIV");
       expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
       expect(refs.c.nodeName).toBe("#text");
       expect(refs.c).toBeInstanceOf(window.Text);
+      expect(refs.d.nodeName).toBe("DIV");
+      expect(refs.d).toBeInstanceOf(window.HTMLDivElement);
       expect(Object.keys(refs)).toHaveLength(4);
     });
 
     test("collects refs when option is true", () => {
-      expect.assertions(8);
+      expect.assertions(10);
+      interface TemplateRefs {
+        a: Text;
+        b: HTMLDivElement;
+        c: Text;
+        d: HTMLDivElement;
+      }
       const meta = compile(
         /* html */ `
           <div>
@@ -489,18 +511,26 @@ describe("collect", () => {
       );
       expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
       const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.k, meta.d);
+      const refs = collect<TemplateRefs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toBe("#text");
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b.nodeName).toBe("DIV");
       expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
       expect(refs.c.nodeName).toBe("#text");
       expect(refs.c).toBeInstanceOf(window.Text);
+      expect(refs.d.nodeName).toBe("DIV");
+      expect(refs.d).toBeInstanceOf(window.HTMLDivElement);
       expect(Object.keys(refs)).toHaveLength(4);
     });
 
     test("collects refs when option is false", () => {
-      expect.assertions(8);
+      expect.assertions(10);
+      interface TemplateRefs {
+        a: Text;
+        b: HTMLDivElement;
+        c: Text;
+        d: HTMLDivElement;
+      }
       const meta = compile(
         /* html */ `
           <div>
@@ -515,13 +545,15 @@ describe("collect", () => {
       );
       expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
       const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.k, meta.d);
+      const refs = collect<TemplateRefs>(view, meta.k, meta.d);
       expect(refs.a.nodeName).toBe("#text");
       expect(refs.a).toBeInstanceOf(window.Text);
       expect(refs.b.nodeName).toBe("DIV");
       expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
       expect(refs.c.nodeName).toBe("#text");
       expect(refs.c).toBeInstanceOf(window.Text);
+      expect(refs.d.nodeName).toBe("DIV");
+      expect(refs.d).toBeInstanceOf(window.HTMLDivElement);
       expect(Object.keys(refs)).toHaveLength(4);
     });
   });

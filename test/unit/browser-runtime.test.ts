@@ -351,6 +351,14 @@ describe("collect", () => {
 
   test("collects refs from template with many comments", () => {
     expect.assertions(13);
+    interface TemplateRefs {
+      a: Text;
+      b: Comment;
+      c: HTMLDivElement;
+      d: Text;
+      e: Comment;
+      f: HTMLDivElement;
+    }
     const view = h(/* html */ `
       <div>
         <!---->
@@ -366,7 +374,7 @@ describe("collect", () => {
         </div>
       </div>
     `);
-    const refs = collect(view, view);
+    const refs = collect<TemplateRefs>(view, view);
     expect(refs.a.nodeName).toBe("#text");
     expect(refs.a).toBeInstanceOf(window.Text);
     expect(refs.b.nodeName).toBe("#comment");

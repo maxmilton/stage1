@@ -74,9 +74,9 @@ describe("store", () => {
       u: window.location,
       v: new TestClass(),
       w: TestClass,
-      x: /test/,
+      x: /test/u,
       // biome-ignore lint/complexity/useRegexLiterals: intentional use of constructor
-      y: new RegExp("test"), // eslint-disable-line prefer-regex-literals
+      y: new RegExp("test", "u"), // eslint-disable-line prefer-regex-literals
       z: window,
     };
     const state = store(initialState);

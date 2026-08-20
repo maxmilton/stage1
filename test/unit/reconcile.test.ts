@@ -46,13 +46,13 @@ const REORDERED_IDS = ["d", "b", "e", "a"];
 
 const createItemNode = (item: Item): HTMLSpanElement => {
   const node = document.createElement("span");
-  node.dataset.id = item.id;
+  node.dataset["id"] = item.id;
   node.textContent = item.label;
   return node;
 };
 
 const updateItemNode = (node: HTMLSpanElement, item: Item): void => {
-  node.dataset.id = item.id;
+  node.dataset["id"] = item.id;
   node.textContent = item.label;
 };
 
@@ -62,7 +62,7 @@ const updateStringItemNode = (node: HTMLSpanElement, id: string): void => {
 };
 
 const itemOrder = (parent: Element): string[] =>
-  [...parent.children].map((node) => (node as HTMLElement).dataset.id ?? "");
+  [...parent.children].map((node) => (node as HTMLElement).dataset["id"] ?? "");
 
 /** Create a parent element with boundary nodes the reconcilers must not touch. */
 const createBoundedParent = (): [

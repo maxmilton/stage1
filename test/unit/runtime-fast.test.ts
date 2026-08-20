@@ -404,7 +404,15 @@ describe("collect", () => {
 
   test("collects refs from template with many comments", () => {
     expect.assertions(16);
-    const meta = compile<Refs>(/* html */ `
+    interface TemplateRefs {
+      a: Text;
+      b: Comment;
+      c: HTMLDivElement;
+      d: Text;
+      e: Comment;
+      f: HTMLDivElement;
+    }
+    const meta = compile<TemplateRefs>(/* html */ `
       <div>
         <!-- -->
         @a
@@ -421,7 +429,7 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
     const view = h(meta.html);
-    const refs = collect<Refs>(view, meta.d);
+    const refs = collect<TemplateRefs>(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#text");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
     expect(refs[meta.ref.b].nodeName).toBe("#comment");
@@ -442,7 +450,13 @@ describe("collect", () => {
   describe("keepSpaces option", () => {
     test("collects refs when option is default", () => {
       expect.assertions(9);
-      const meta = compile<Refs>(/* html */ `
+      interface TemplateRefs {
+        a: Text;
+        b: HTMLDivElement;
+        c: Text;
+        d: HTMLDivElement;
+      }
+      const meta = compile<TemplateRefs>(/* html */ `
         <div>
           @a
           <div @b>
@@ -453,20 +467,28 @@ describe("collect", () => {
       `);
       expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
       const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.d);
+      const refs = collect<TemplateRefs>(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
       expect(refs[meta.ref.b].nodeName).toBe("DIV");
       expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
       expect(refs[meta.ref.c].nodeName).toBe("#text");
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.d].nodeName).toBe("DIV");
+      expect(refs[meta.ref.d]).toBeInstanceOf(window.HTMLDivElement);
       expect(refs).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
     });
 
     test("collects refs when option is true", () => {
       expect.assertions(9);
-      const meta = compile<Refs>(
+      interface TemplateRefs {
+        a: Text;
+        b: HTMLDivElement;
+        c: Text;
+        d: HTMLDivElement;
+      }
+      const meta = compile<TemplateRefs>(
         /* html */ `
           <div>
             @a
@@ -480,20 +502,28 @@ describe("collect", () => {
       );
       expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
       const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.d);
+      const refs = collect<TemplateRefs>(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
       expect(refs[meta.ref.b].nodeName).toBe("DIV");
       expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
       expect(refs[meta.ref.c].nodeName).toBe("#text");
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.d].nodeName).toBe("DIV");
+      expect(refs[meta.ref.d]).toBeInstanceOf(window.HTMLDivElement);
       expect(refs).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
     });
 
     test("collects refs when option is false", () => {
       expect.assertions(9);
-      const meta = compile<Refs>(
+      interface TemplateRefs {
+        a: Text;
+        b: HTMLDivElement;
+        c: Text;
+        d: HTMLDivElement;
+      }
+      const meta = compile<TemplateRefs>(
         /* html */ `
           <div>
             @a
@@ -507,13 +537,15 @@ describe("collect", () => {
       );
       expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
       const view = h(meta.html);
-      const refs = collect<Refs>(view, meta.d);
+      const refs = collect<TemplateRefs>(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
       expect(refs[meta.ref.b].nodeName).toBe("DIV");
       expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
       expect(refs[meta.ref.c].nodeName).toBe("#text");
       expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.d].nodeName).toBe("DIV");
+      expect(refs[meta.ref.d]).toBeInstanceOf(window.HTMLDivElement);
       expect(refs).toHaveLength(4);
       expect(Object.keys(meta.ref)).toHaveLength(4);
     });
