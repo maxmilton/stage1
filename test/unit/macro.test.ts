@@ -573,9 +573,7 @@ describe("compile", () => {
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div></div><div></div>";
       compileNoMacro(template);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        `Expected single root element in template:\n${template}`,
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(`Multiple root nodes in template:\n${template}`);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -586,9 +584,7 @@ describe("compile", () => {
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<pre>a</pre><div>b</div>";
       compileNoMacro(template);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        `Expected single root element in template:\n${template}`,
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(`Multiple root nodes in template:\n${template}`);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -597,9 +593,7 @@ describe("compile", () => {
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<input><input>";
       compileNoMacro(template);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        `Expected single root element in template:\n${template}`,
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(`Multiple root nodes in template:\n${template}`);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -608,9 +602,7 @@ describe("compile", () => {
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        `Found doctype but none was expected in template:\n${template}`,
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(`Doctype not allowed in template:\n${template}`);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -641,7 +633,7 @@ describe("compile", () => {
       const template = /* html */ "<div @a @b></div>";
       compileNoMacro(template);
       expect(consoleSpy).toHaveBeenCalledWith(
-        `Found multiple ref markers on single element in template:\n${template}`,
+        `Multiple ref markers on one element in template:\n${template}`,
       );
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
@@ -715,7 +707,7 @@ describe("compile", () => {
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
       expect(consoleSpy).toHaveBeenCalledWith(
-        `Found doctype but none was expected in template:\n\x1B[2m${template}\x1B[0m`,
+        `Doctype not allowed in template:\n\x1B[2m${template}\x1B[0m`,
       );
     });
 
@@ -725,9 +717,7 @@ describe("compile", () => {
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        `Found doctype but none was expected in template:\n${template}`,
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(`Doctype not allowed in template:\n${template}`);
     });
   });
 
