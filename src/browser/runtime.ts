@@ -92,19 +92,18 @@ export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R> = Refs>(
   root: Node,
   view: View,
 ): LowercaseKeys<R> => {
-  const walker = treeWalker; // Local var is faster in some JS engines
   const refs: Refs = {};
   const len = view[REFS].length;
   let index = 0;
   let metadata: RefMeta;
   let distance: number;
-  walker.currentNode = root;
+  treeWalker.currentNode = root;
 
   for (; index < len; index++) {
     metadata = view[REFS][index];
     distance = metadata.d;
-    while (distance--) walker.nextNode();
-    refs[metadata.k] = walker.currentNode;
+    while (distance--) treeWalker.nextNode();
+    refs[metadata.k] = treeWalker.currentNode;
   }
 
   return refs as LowercaseKeys<R>;
