@@ -1,5 +1,5 @@
-// XXX: This file has the same tests as test/unit/runtime.test.ts and
-// test/unit/browser-runtime.test.ts, keep them in sync.
+// This file has the same tests as test/unit/runtime.test.ts and
+// test/unit/browser-runtime.test.ts — keep them in sync.
 
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
@@ -48,7 +48,7 @@ describe("h", () => {
           <li>C</li>
         </ul>
       `);
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.getHTML()).toBe(
@@ -68,7 +68,7 @@ describe("h", () => {
             </li>
         </ul>
       `);
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.getHTML()).toBe(
@@ -83,7 +83,7 @@ describe("h", () => {
           <circle cx=10 cy='10' r="10" />
         </svg>
       `);
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const rendered = render(view);
       expect(view).toBeInstanceOf(window.SVGSVGElement);
@@ -101,7 +101,7 @@ describe("h", () => {
           <li>C</li>
         </ul>
       `);
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const rendered = render(view);
       expect(view).toBeInstanceOf(window.HTMLUListElement);
@@ -117,7 +117,7 @@ describe("h", () => {
           <li @item-two>B</li>
         </ul>
       `);
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.getHTML()).toBe(/* html */ "<ul><li>A</li><li>B</li></ul>");
@@ -146,7 +146,7 @@ describe("h", () => {
 
         </div>
       `);
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const rendered = render(view);
       expect(rendered.container.getHTML()).toBe(
@@ -290,7 +290,7 @@ describe("collect", () => {
     'collects the "%s" ref at index %i as %s',
     (_name, index, nodeName) => {
       expect.assertions(2);
-      expect(DEEP_TREE.success).toBeTrue(); // guard: refs are meaningless if compile failed
+      expect(DEEP_TREE.success).toBeTrue();
       const view = h(DEEP_TREE.html);
       const refs = collect<Refs>(view, DEEP_TREE.d);
       expect(refs[index].nodeName).toBe(nodeName);
@@ -299,12 +299,12 @@ describe("collect", () => {
 
   test("collects one node per ref in a deep tree", () => {
     expect.assertions(2);
-    expect(DEEP_TREE.success).toBeTrue(); // guard
+    expect(DEEP_TREE.success).toBeTrue();
     const view = h(DEEP_TREE.html);
     expect(collect<Refs>(view, DEEP_TREE.d)).toHaveLength(20);
   });
 
-  // NOTE: The name→index `meta.ref` map is compile()'s output, not collect()'s,
+  // The name→index `meta.ref` map is compile()'s output, not collect()'s,
   // so it is pinned in macro.test.ts rather than duplicated here.
 
   test("collects ref at start of element attributes", () => {
@@ -314,7 +314,7 @@ describe("collect", () => {
         <input @search id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off />
       </div>
     `);
-    expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+    expect(meta.success).toBeTrue();
     const view = h(meta.html);
     const refs = collect<{ search: HTMLInputElement }>(view, meta.d);
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
@@ -331,7 +331,7 @@ describe("collect", () => {
         <input id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off @search />
       </div>
     `);
-    expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+    expect(meta.success).toBeTrue();
     const view = h(meta.html);
     const refs = collect<{ search: HTMLInputElement }>(view, meta.d);
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
@@ -348,7 +348,7 @@ describe("collect", () => {
         <input id=search name=q class="input search" type=search minlength=2 @search maxlength=40 placeholder="Search..." autofocus autocomplete=off />
       </div>
     `);
-    expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+    expect(meta.success).toBeTrue();
     const view = h(meta.html);
     const refs = collect<{ search: HTMLInputElement }>(view, meta.d);
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
@@ -361,7 +361,7 @@ describe("collect", () => {
   test("collects ref from template with only text", () => {
     expect.assertions(3);
     const meta = compile<{ a: Text }>(/* html */ "@a");
-    expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+    expect(meta.success).toBeTrue();
     const view = h(meta.html);
     const refs = collect<{ a: Text }>(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#text");
@@ -371,31 +371,31 @@ describe("collect", () => {
   test("collects ref from template with only comment", () => {
     expect.assertions(3);
     const meta = compile<{ a: Comment }>(/* html */ "<!-- @a -->");
-    expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+    expect(meta.success).toBeTrue();
     const view = h(meta.html);
     const refs = collect<{ a: Comment }>(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#comment");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
   });
 
-  // NOTE: The whitespace-only Text node kept inside <pre> is a real node in the
+  // The whitespace-only Text node kept inside <pre> is a real node in the
   // walk, so a template like this fails if compile() does not count it in `d`.
   test("collects ref after a whitespace-sensitive block", () => {
     expect.assertions(3);
     const meta = compile<{ a: Comment }>(/* html */ "<div><pre>   </pre><!-- @a --></div>");
-    expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+    expect(meta.success).toBeTrue();
     const view = h(meta.html);
     const refs = collect<{ a: Comment }>(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#comment");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
   });
 
-  // NOTE: A bare "<" splits the Text node into several compile-time chunks but
+  // A bare "<" splits the Text node into several compile-time chunks but
   // is still one node at runtime, so the walk distance must count it once.
   test("collects ref after text split across chunks", () => {
     expect.assertions(3);
     const meta = compile<{ x: Comment }>(/* html */ "<div>a < b<!-- @x --></div>");
-    expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+    expect(meta.success).toBeTrue();
     const view = h(meta.html);
     const refs = collect<{ x: Comment }>(view, meta.d);
     expect(refs[meta.ref.x].nodeName).toBe("#comment");
@@ -427,7 +427,7 @@ describe("collect", () => {
         </div>
       </div>
     `);
-    expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+    expect(meta.success).toBeTrue();
     const view = h(meta.html);
     const refs = collect<TemplateRefs>(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#text");
@@ -465,7 +465,7 @@ describe("collect", () => {
           </div>
         </div>
       `);
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const refs = collect<TemplateRefs>(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
@@ -500,7 +500,7 @@ describe("collect", () => {
         `,
         { keepSpaces: true },
       );
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const refs = collect<TemplateRefs>(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
@@ -535,7 +535,7 @@ describe("collect", () => {
         `,
         { keepSpaces: false },
       );
-      expect(meta.success).toBeTrue(); // guard: assertions below mean nothing if compile failed
+      expect(meta.success).toBeTrue();
       const view = h(meta.html);
       const refs = collect<TemplateRefs>(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");

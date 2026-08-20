@@ -11,7 +11,7 @@ import {
   text,
 } from "../../src/utils.ts";
 
-// NOTE: These are templates, never the subject of a test — every test clones
+// These are templates, never the subject of a test — every test clones
 // them and mutates the clone, so no state carries between tests.
 const ul = document.createElement("ul");
 const liA = document.createElement("li");

@@ -1,5 +1,5 @@
-// XXX: This file has the same tests as test/unit/runtime.test.ts and
-// test/unit/runtime-fast.test.ts, keep them in sync.
+// This file has the same tests as test/unit/runtime.test.ts and
+// test/unit/runtime-fast.test.ts — keep them in sync.
 
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
@@ -145,8 +145,8 @@ describe("h", () => {
       expect(rendered.container.getHTML()).toBe(/* html */ "<ul><li>A</li><li>B</li></ul>");
     });
 
-    // NOTE: This is not supported by the current implementation of the h()
-    // function because it would be too slow.
+    // Accepted tradeoff (V7): h() would be too slow if it minified inside
+    // whitespace-sensitive blocks, so live mode skips that entirely.
     // biome-ignore lint/suspicious/noSkippedTests: unsupported by design; see SPEC V7
     test.skip("does not minify in whitespace-sensitive blocks", () => {});
   });
@@ -306,10 +306,9 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
-  // NOTE: collector() scans attributes in reverse to save bytes, so the LAST
-  // marker wins here while compile() keeps the FIRST and treats several markers
-  // as an error. That divergence is accepted, not an oversight — see SPEC B1.
-  // Live mode does no validation, so the unused marker is left in the output.
+  // Accepted tradeoff (B1): collector() scans attributes in reverse to save
+  // bytes, so the LAST marker wins here while compile() keeps the FIRST and
+  // errors. Live mode does no validation, so the unused marker stays in the output.
   test("uses the last ref marker when an element has several", () => {
     expect.assertions(3);
     const view = h(/* html */ "<div @a @b></div>");
@@ -336,10 +335,9 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
-  // NOTE: Unlike the compile() macro, browser mode comment refs must have no
-  // surrounding whitespace. The h() whitespace collapse keeps spaces inside
-  // comments and collector() only matches when nodeValue starts with "@", so
-  // `<!-- @a -->` is silently not collected. See browser/runtime.ts:39.
+  // Unlike compile(), browser mode comment refs must have no surrounding
+  // whitespace: h()'s whitespace collapse keeps spaces inside comments and
+  // collector() only matches when nodeValue starts with "@" (V17).
   test("collects ref from template with only comment", () => {
     expect.assertions(3);
     const view = h<Comment>(/* html */ "<!--@a-->");
@@ -390,8 +388,8 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(6);
   });
 
-  // NOTE: The regular mode h() function does not support options like the
-  // runtime mode compile() macro does. So there's no need to test them here.
+  // The regular mode h() function does not support options like the runtime
+  // mode compile() macro does. So there's no need to test them here.
 });
 
 describe("Test component", () => {

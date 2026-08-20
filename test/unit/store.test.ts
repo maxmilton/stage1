@@ -133,7 +133,7 @@ describe("store", () => {
         expect.assertions(3);
         const state = store({ a: 1 });
         const off = state.on("a", () => {});
-        expect(off()).toBeTrue(); // first call removes handler
+        expect(off()).toBeTrue();
         expect(off()).toBeFalse();
         expect(off()).toBeFalse();
       });
@@ -157,7 +157,7 @@ describe("store", () => {
         valueDuringCallback = state.a;
       });
       state.a = "new";
-      expect(valueDuringCallback).toBe("old"); // not yet assigned
+      expect(valueDuringCallback).toBe("old");
       expect(state.a).toBe("new");
     });
 
@@ -299,7 +299,7 @@ describe("store", () => {
     off();
     state.a = 2;
     state.a = 3;
-    expect(callback).toHaveBeenCalledTimes(1); // still called only once
+    expect(callback).toHaveBeenCalledTimes(1);
   });
 
   test("adds new properties to store state", () => {

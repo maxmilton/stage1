@@ -218,7 +218,7 @@ describe("keyed", () => {
     expect(nodes[3].parentNode).toBeNull();
   });
 
-  // NOTE: Removing from the front makes the suffix-skip fast path consume the
+  // Removing from the front makes the suffix-skip fast path consume the
   // trailing match first, so the shrink loop ends with `prevEnd === 0`.
   test("removes the leading node when data shrinks from the front", () => {
     expect.assertions(3);
@@ -475,7 +475,7 @@ describe("non-keyed", () => {
     expect(nodes[1].parentNode).toBeNull();
   });
 
-  // NOTE: Removing from the front makes the suffix-skip fast path consume the
+  // Removing from the front makes the suffix-skip fast path consume the
   // trailing match first, so the shrink loop ends with `prevEnd === 0`.
   test("removes the leading node when data shrinks from the front", () => {
     expect.assertions(3);

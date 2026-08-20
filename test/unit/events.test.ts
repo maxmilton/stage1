@@ -121,15 +121,11 @@ describe("setupSyntheticClick", () => {
     expect(setupSyntheticClick).toHaveParameters(0, 0);
   });
 
-  // NOTE: An API-shape test still runs the function, so it inherits the side
-  // effect — this one leaves a live `click` listener on `document`. That is
-  // process-wide state, and it used to outlive the test: under `--randomize`,
-  // whenever "does not call handler if synthetic event is not setup" was
-  // scheduled as the first test of the block below, the stale listener made its
-  // click reach handleClick and the test failed for a reason that had nothing
-  // to do with it. Reproduced on seeds 1, 777 and 3305907093 (~3 runs in 20;
-  // 2026-08-12, bun 1.4.0-canary.1). onTestFinished runs even when the test
-  // fails (verified), which cleanup at the end of the body does not.
+  // An API-shape test still runs the function, so it inherits the side effect —
+  // this one leaves a live `click` listener on `document`, process-wide state
+  // that used to outlive the test and could leak into a sibling under
+  // `--randomize` (SPEC.md §X X8). Measured bun 1.4.0-canary.1: onTestFinished
+  // runs even when the test fails, which cleanup at the end of the body does not.
   test("returns undefined", () => {
     expect.assertions(1);
     onTestFinished(removeSyntheticClick);
@@ -205,7 +201,7 @@ describe("setupSyntheticClick", () => {
       expect(handler).toHaveBeenCalledTimes(3);
     });
 
-    // NOTE: The one test which writes to `document.body` — the other piece of
+    // The one test which writes to `document.body` — the other piece of
     // process-wide state in this file, so it undoes that here too.
     test("propagates up to document body", () => {
       expect.assertions(1);
@@ -235,7 +231,7 @@ describe("setupSyntheticClick", () => {
       setupSyntheticClick();
       onTestFinished(removeSyntheticClick);
       div2.click();
-      expect(handler).toHaveBeenCalledTimes(1); // only called once
+      expect(handler).toHaveBeenCalledTimes(1);
     });
 
     test("does not call handler if synthetic event is not setup", () => {
@@ -312,7 +308,7 @@ describe("removeSyntheticClick", () => {
   describe("in DOM", () => {
     afterEach(cleanup);
 
-    // NOTE: Both tests here call removeSyntheticClick() as the behaviour under
+    // Both tests here call removeSyntheticClick() as the behaviour under
     // test, but an assertion failing before that point would leak the listener,
     // so they register it as cleanup too — it is idempotent.
     test("does not call synthetic click handler after delete", () => {
@@ -329,7 +325,7 @@ describe("removeSyntheticClick", () => {
       button.click();
       button.click();
       button.click();
-      expect(handler).toHaveBeenCalledTimes(1); // still only one call
+      expect(handler).toHaveBeenCalledTimes(1);
     });
 
     test("is safe to call more than once", () => {

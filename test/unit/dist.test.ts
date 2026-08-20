@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import pkg from "../../package.json" with { type: "json" };
 
-// NOTE: This is the only test file which needs `bun build.ts` to have run — it
+// This is the only test file which needs `bun build.ts` to have run — it
 // reads dist/ from disk. Kept separate from the src/ tests for that reason.
 describe("dist files", () => {
   // TODO: Remove the file MIME type checks? Bun infers it from the file
   // extension, not the actual file data, so the usefulness is questionable.
 
-  // NOTE: Files of unknown type (e.g., symlinks) fall back to the default
+  // Files of unknown type (e.g., symlinks) fall back to the default
   // "application/octet-stream". Bun.file() does not resolve symlinks so it's
   // safe to infer that all these files are therefore regular files.
 
@@ -26,7 +26,7 @@ describe("dist files", () => {
     ["index.d.ts.map", "application/json;charset=utf-8"],
     ["index.js", "text/javascript;charset=utf-8", 1000, 1500],
     ["index.js.map", "application/json;charset=utf-8"],
-    // NOTE: Looser ceiling than the runtime bundles; macro.js runs at build
+    // Looser ceiling than the runtime bundles; macro.js runs at build
     // time in bun and is never shipped to a browser, so bytes are cheap here.
     ["macro.js", "text/javascript;charset=utf-8", 1000, 2000],
     ["macro.js.map", "application/json;charset=utf-8"],
