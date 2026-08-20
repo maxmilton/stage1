@@ -4,7 +4,7 @@ import type { IndicesOf, InferRefs, TupleOfKeys } from "./types.ts";
  * Valid ref name; lowercase because browsers normalise element attribute names
  * when rendering HTML, so a non-lowercase name would not survive a round trip.
  */
-const REF_NAME_RE = /^[a-z][a-z0-9_-]*$/;
+const REF_NAME_RE = /^[a-z][a-z0-9_-]*$/u;
 
 /** Elements whose text content must be preserved verbatim. */
 const VERBATIM_TAGS = new Set(["pre", "code", "textarea", "script", "style"]);
@@ -43,7 +43,11 @@ export function compile<R extends InferRefs<R> = object>(
   template: string,
   { keepSpaces }: CompileOptions = {},
 ): CompileResult<R> {
-  let isSuccess = true;
+  if (typeof template !== "string") {
+    throw new TypeError("Template must be a string literal");
+  }
+
+  let didFail = false;
   const k: string[] = [];
   const d: number[] = [];
   let distance = 0;
@@ -53,11 +57,13 @@ export function compile<R extends InferRefs<R> = object>(
   /** `undefined` = root not seen yet, `true` = inside root, `false` = root closed. */
   let insideRoot: boolean | undefined;
 
+  // TODO: Better message detail once feature is done: https://github.com/oven-sh/bun/issues/39695
   const fail = (message: string) => {
     const detail = Bun.enableANSIColors ? `\x1B[2m${template}\x1B[0m` : template;
     // eslint-disable-next-line no-console
-    console.error(`${message} in template:\n${detail}`);
-    isSuccess = false;
+    console.error("%s in template:\n%s", message, detail);
+
+    didFail = true;
   };
 
   const addRef = (name: string) => {
@@ -71,7 +77,7 @@ export function compile<R extends InferRefs<R> = object>(
   const html = new HTMLRewriter()
     .onDocument({
       doctype() {
-        fail("Found doctype but none was expected");
+        fail("Expected no doctype");
       },
       comments(node) {
         const text = node.text.trim();
@@ -105,7 +111,7 @@ export function compile<R extends InferRefs<R> = object>(
           chunk.replace(raw, { html: true });
         } else if (text) {
           // Reduce any whitespace to a single space
-          chunk.replace((keepSpaces ? raw : text).replace(/\s+/g, " "), { html: true });
+          chunk.replace((keepSpaces ? raw : text).replace(/\s+/gu, " "), { html: true });
         } else {
           return; // a removed node does not count towards distance
         }
@@ -128,7 +134,7 @@ export function compile<R extends InferRefs<R> = object>(
         // firstChild/nextSibling walk in collect() cannot enter, so every
         // distance past it would be wrong — reject rather than crash at runtime
         if (node.tagName === "template") {
-          fail("Found unsupported <template> element");
+          fail("Unsupported <template> element");
         }
 
         if (isRoot) {
@@ -154,7 +160,7 @@ export function compile<R extends InferRefs<R> = object>(
         for (const [name] of node.attributes) if (name[0] === "@") refAttrs.push(name);
         for (const name of refAttrs) node.removeAttribute(name);
         if (refAttrs.length > 1) {
-          fail("Found multiple ref markers on single element");
+          fail("Multiple ref markers on single element");
         }
         if (refAttrs.length) addRef(refAttrs[0].slice(1));
         distance++;
@@ -168,6 +174,6 @@ export function compile<R extends InferRefs<R> = object>(
     d,
     // @ts-expect-error - computed type
     ref: Object.fromEntries(k.map((name, index) => [name, index])),
-    success: isSuccess,
+    success: !didFail,
   };
 }
