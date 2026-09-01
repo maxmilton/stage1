@@ -11,6 +11,8 @@ import {
   text,
 } from "../../src/utils.ts";
 
+// NOTE: These are templates, never the subject of a test — every test clones
+// them and mutates the clone, so no state carries between tests.
 const ul = document.createElement("ul");
 const liA = document.createElement("li");
 liA.className = "a";
@@ -59,12 +61,12 @@ const NOT_DOM_NODES = [
 
 describe("noop", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(noop).not.toBeAny();
     expectTypeOf(noop).toBeFunction();
     expectTypeOf(noop).parameters.toEqualTypeOf<[]>();
     expectTypeOf(noop).returns.not.toBeAny();
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    expectTypeOf(noop).returns.toEqualTypeOf<void>();
+    expectTypeOf(noop).returns.toBeVoid();
   });
 
   test("is a function", () => {
@@ -92,6 +94,7 @@ describe("noop", () => {
 
 describe("fragment", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(fragment).not.toBeAny();
     expectTypeOf(fragment).toBeFunction();
     expectTypeOf(fragment).parameters.toEqualTypeOf<[]>();
@@ -118,6 +121,7 @@ describe("fragment", () => {
 
 describe("text", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(text).not.toBeAny();
     expectTypeOf(text).toBeFunction();
     expectTypeOf(text).parameters.toEqualTypeOf<[string]>();
@@ -149,13 +153,20 @@ describe("text", () => {
 
 describe("create", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(create).not.toBeAny();
     expectTypeOf(create).toBeFunction();
+    // Erased: `K` -> its constraint; instantiated below.
     expectTypeOf(create).parameters.toEqualTypeOf<[keyof HTMLElementTagNameMap]>();
     expectTypeOf(create).returns.not.toBeAny();
+    expectTypeOf(create).returns.not.toBeNever();
     expectTypeOf(create).returns.toEqualTypeOf<
       HTMLElementTagNameMap[keyof HTMLElementTagNameMap]
     >();
+    expectTypeOf<ReturnType<typeof create<"div">>>().toEqualTypeOf<HTMLDivElement>();
+    expectTypeOf<ReturnType<typeof create<"li">>>().toEqualTypeOf<HTMLLIElement>();
+    // @ts-expect-error - tag name outside `keyof HTMLElementTagNameMap`
+    expectTypeOf<ReturnType<typeof create<"nope">>>();
   });
 
   test("is a function", () => {
@@ -250,9 +261,14 @@ describe("clone", () => {
   test("types", () => {
     expectTypeOf(clone).not.toBeAny();
     expectTypeOf(clone).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(clone).parameters.toEqualTypeOf<[Node]>();
     expectTypeOf(clone).returns.not.toBeAny();
+    expectTypeOf(clone).returns.not.toBeNever();
     expectTypeOf(clone).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof clone<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -284,6 +300,18 @@ describe("clone", () => {
     expect(() => clone(undefined)).toThrow(window.TypeError);
   });
 
+  test("clones descendant nodes", () => {
+    expect.assertions(4);
+    const root = ul.cloneNode() as HTMLUListElement;
+    root.appendChild(liA.cloneNode());
+    root.appendChild(liB.cloneNode());
+    const result = clone(root);
+    expect(result.children).toHaveLength(2);
+    expect(result.firstChild).not.toBe(root.firstChild);
+    expect(result.lastChild).not.toBe(root.lastChild);
+    expect(result.outerHTML).toBe(root.outerHTML);
+  });
+
   const inputs = [
     document.createElement("div"),
     document.createElement("span"),
@@ -307,11 +335,17 @@ describe("clone", () => {
 
 describe("append", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(append).not.toBeAny();
     expectTypeOf(append).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(append).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(append).returns.not.toBeAny();
+    expectTypeOf(append).returns.not.toBeNever();
     expectTypeOf(append).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof append<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement, parent: Node) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -364,18 +398,36 @@ describe("append", () => {
     append(liB.cloneNode(), root);
     append(liC.cloneNode(), root);
     expect(root.outerHTML).toBe(
-      '<ul><li class="a"></li><li class="b"></li><li class="c"></li></ul>',
+      /* html */ '<ul><li class="a"></li><li class="b"></li><li class="c"></li></ul>',
     );
+  });
+
+  test("moves existing child element to new parent", () => {
+    expect.assertions(3);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const newParent = ul.cloneNode() as HTMLUListElement;
+    const node = liA.cloneNode() as HTMLLIElement;
+    root.appendChild(node);
+    append(node, newParent);
+    expect(root.childNodes).toHaveLength(0);
+    expect(newParent.firstChild).toBe(node);
+    expect(node.parentNode).toBe(newParent);
   });
 });
 
 describe("prepend", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(prepend).not.toBeAny();
     expectTypeOf(prepend).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(prepend).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(prepend).returns.not.toBeAny();
+    expectTypeOf(prepend).returns.not.toBeNever();
     expectTypeOf(prepend).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof prepend<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement, parent: Node) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -431,18 +483,37 @@ describe("prepend", () => {
     prepend(liB.cloneNode(), root);
     prepend(liC.cloneNode(), root);
     expect(root.outerHTML).toBe(
-      '<ul><li class="c"></li><li class="b"></li><li class="a"></li></ul>',
+      /* html */ '<ul><li class="c"></li><li class="b"></li><li class="a"></li></ul>',
     );
+  });
+
+  test("moves existing child element to start of new parent", () => {
+    expect.assertions(3);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const newParent = ul.cloneNode() as HTMLUListElement;
+    const node = liA.cloneNode() as HTMLLIElement;
+    newParent.appendChild(liB.cloneNode());
+    root.appendChild(node);
+    prepend(node, newParent);
+    expect(root.childNodes).toHaveLength(0);
+    expect(newParent.firstChild).toBe(node);
+    expect(node.parentNode).toBe(newParent);
   });
 });
 
 describe("insert", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(insert).not.toBeAny();
     expectTypeOf(insert).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(insert).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(insert).returns.not.toBeAny();
+    expectTypeOf(insert).returns.not.toBeNever();
     expectTypeOf(insert).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof insert<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement, target: Node) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -505,31 +576,38 @@ describe("insert", () => {
     insert(liB.cloneNode(), target);
     insert(liC.cloneNode(), target);
     expect(root.outerHTML).toBe(
-      '<ul><li class="a"></li><li class="c"></li><li class="b"></li></ul>',
+      /* html */ '<ul><li class="a"></li><li class="c"></li><li class="b"></li></ul>',
     );
   });
 
-  // FIXME: Check DOM node is moved to new parent and is in fact the same node + removed from old parent.
-  // test("moves existing element to new parent", () => {
-  //   expect.assertions(1);
-  //   const root = ul.cloneNode() as HTMLUListElement;
-  //   const target = liA.cloneNode() as HTMLLIElement;
-  //   root.appendChild(target);
-  //   const newParent = ul.cloneNode() as HTMLUListElement;
-  //   newParent.appendChild(target);
-  //   insert(liB.cloneNode(), target);
-  //   insert(liC.cloneNode(), target);
-  //   expect(root.outerHTML).toBe("<ul><li class="b"></li><li class="c"></li></ul>");
-  // });
+  test("moves existing child element after target element", () => {
+    expect.assertions(3);
+    const root = ul.cloneNode() as HTMLUListElement;
+    const newParent = ul.cloneNode() as HTMLUListElement;
+    const target = liA.cloneNode() as HTMLLIElement;
+    const node = liB.cloneNode() as HTMLLIElement;
+    root.appendChild(node);
+    newParent.appendChild(target);
+    insert(node, target);
+    expect(root.childNodes).toHaveLength(0);
+    expect(target.nextSibling).toBe(node);
+    expect(node.parentNode).toBe(newParent);
+  });
 });
 
 describe("replace", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(replace).not.toBeAny();
     expectTypeOf(replace).toBeFunction();
+    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(replace).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(replace).returns.not.toBeAny();
+    expectTypeOf(replace).returns.not.toBeNever();
     expectTypeOf(replace).returns.toEqualTypeOf<Node>();
+    expectTypeOf<typeof replace<HTMLLIElement>>().toEqualTypeOf<
+      (node: HTMLLIElement, target: Node) => HTMLLIElement
+    >();
   });
 
   test("is a function", () => {
@@ -590,48 +668,48 @@ describe("replace", () => {
     const target = liA.cloneNode() as HTMLLIElement;
     root.appendChild(target);
     replace(liB.cloneNode(), target);
-    expect(root.outerHTML).toBe('<ul><li class="b"></li></ul>');
+    expect(root.outerHTML).toBe(/* html */ '<ul><li class="b"></li></ul>');
   });
 
-  test("moves existing element to new parent", () => {
-    expect.assertions(15);
+  test("adopts a detached node into the target's parent", () => {
+    expect.assertions(3);
+    const parent = ul.cloneNode() as HTMLUListElement;
+    const target = liA.cloneNode() as HTMLLIElement;
+    parent.appendChild(target);
+    const newNode = liB.cloneNode() as HTMLLIElement;
+    expect(newNode.parentNode).toBeNull(); // guard: not in the DOM before the call
+    replace(newNode, target);
+    expect(newNode.parentNode).toBe(parent);
+    expect(target.parentNode).toBeNull();
+  });
+
+  test("moves an already-attached node to the target's parent", () => {
+    expect.assertions(3);
+    const parentX = ul.cloneNode() as HTMLUListElement;
+    const parentY = ul.cloneNode() as HTMLUListElement;
+    const node = liB.cloneNode() as HTMLLIElement;
+    const target = liC.cloneNode() as HTMLLIElement;
+    parentX.appendChild(node);
+    parentY.appendChild(target);
+    replace(node, target);
+    expect(node.parentNode).toBe(parentY);
+    expect(parentX.childNodes).toHaveLength(0);
+    expect(target.parentNode).toBeNull();
+  });
+
+  test("moves the replacement's descendants with it", () => {
+    expect.assertions(3);
     const root = document.createElement("div");
     const parentX = ul.cloneNode() as HTMLUListElement;
     parentX.id = "x";
     const parentY = ul.cloneNode() as HTMLUListElement;
     parentY.id = "y";
-    root.appendChild(parentX);
-    root.appendChild(parentY);
-    const targetA1 = liA.cloneNode() as HTMLLIElement;
-    const targetA2 = liA.cloneNode() as HTMLLIElement;
-    parentX.appendChild(targetA1);
-    parentY.appendChild(targetA2);
-    expect(root.outerHTML).toBe(
-      '<div><ul id="x"><li class="a"></li></ul><ul id="y"><li class="a"></li></ul></div>',
-    );
-    const targetB = liB.cloneNode();
-    expect(targetB.parentNode).toBeNull(); // targetB not in DOM yet
-    replace(targetB, targetA1);
-    expect(root.outerHTML).toBe(
-      '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="a"></li></ul></div>',
-    );
-    expect(targetB.parentNode).toBe(parentX);
-    expect(targetA1.parentNode).toBeNull(); // targetA1 removed from DOM
-    const targetC = liC.cloneNode();
-    expect(targetC.parentNode).toBeNull(); // targetC not in DOM yet
-    replace(targetC, targetA2);
-    expect(root.outerHTML).toBe(
-      '<div><ul id="x"><li class="b"></li></ul><ul id="y"><li class="c"></li></ul></div>',
-    );
-    expect(targetC.parentNode).toBe(parentY);
-    expect(targetA2.parentNode).toBeNull(); // targetA2 removed from DOM
-    replace(targetB, targetC);
-    expect(root.outerHTML).toBe('<div><ul id="x"></ul><ul id="y"><li class="b"></li></ul></div>');
-    expect(targetB.parentNode).toBe(parentY);
-    expect(targetC.parentNode).toBeNull(); // targetC removed from DOM
+    root.append(parentX, parentY);
+    const child = liB.cloneNode() as HTMLLIElement;
+    parentY.appendChild(child);
     replace(parentY, parentX);
-    expect(root.outerHTML).toBe('<div><ul id="y"><li class="b"></li></ul></div>');
-    expect(targetB.parentNode).toBe(parentY); // did not move
-    expect(parentX.parentNode).toBeNull(); // parentX removed from DOM
+    expect(root.outerHTML).toBe(/* html */ '<div><ul id="y"><li class="b"></li></ul></div>');
+    expect(child.parentNode).toBe(parentY);
+    expect(parentX.parentNode).toBeNull();
   });
 });

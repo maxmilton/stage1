@@ -25,7 +25,6 @@ export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R>>(
   d: readonly number[],
 ): FlatRefs<R> => {
   const len = d.length;
-  // eslint-disable-next-line unicorn/no-new-array
   const refs = new Array<Node>(len);
   let index = 0;
   let distance: number;

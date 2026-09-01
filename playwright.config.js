@@ -2,10 +2,14 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "test/e2e",
-  testMatch: "test/e2e/**/*.spec.ts",
-  failOnFlakyTests: !!process.env.CI,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: Boolean(process.env["CI"]),
+  forbidOnly: Boolean(process.env["CI"]),
+  // Every test is independent: each gets a fresh page, and the document-level
+  // click listener in browser-events.spec.ts belongs to that page, not the
+  // process. Parallel execution also enforces that (CLAUDE.md R5).
+  fullyParallel: true,
+  globalSetup: "./test/e2e/global-setup.ts",
+  retries: process.env["CI"] ? 1 : 0,
   use: {
     acceptDownloads: false,
     contextOptions: { strictSelectors: true },

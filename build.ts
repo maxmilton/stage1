@@ -100,6 +100,7 @@ console.timeEnd("build:2");
 console.time("dts");
 
 await createBundle({
+  project: "tsconfig.json",
   output: "dist/index.d.ts",
   modules: {
     stage1: "src/index.ts",

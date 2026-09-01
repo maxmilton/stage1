@@ -4,10 +4,13 @@ import { store } from "../../src/store.ts";
 
 describe("store", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(store).not.toBeAny();
     expectTypeOf(store).toBeFunction();
+    // Erased: `T`/`K` -> their constraints, never reaching the per-key narrowing.
     expectTypeOf(store).parameters.branded.toEqualTypeOf<[object & { on?: never }]>();
     expectTypeOf(store).returns.not.toBeAny();
+    expectTypeOf(store).returns.not.toBeNever();
     expectTypeOf(store).returns.toExtend<
       object & {
         on: (
@@ -16,6 +19,13 @@ describe("store", () => {
         ) => /** off */ () => boolean;
       }
     >();
+    expectTypeOf<ReturnType<typeof store<{ count: number }, "count">>["on"]>().toEqualTypeOf<
+      (key: "count", callback: (value: number, prev: number) => void) => () => boolean
+    >();
+    expectTypeOf<ReturnType<typeof store<{ count: number }, "count">>["count"]>().toBeNumber();
+    // The `on?: never` constraint is on the parameter ∴ call-site only.
+    // @ts-expect-error - `on` is reserved for the change handler registrar
+    store({ on: 1 });
   });
 
   test("is a function", () => {
@@ -64,9 +74,9 @@ describe("store", () => {
       u: window.location,
       v: new TestClass(),
       w: TestClass,
-      x: /test/,
+      x: /test/u,
       // biome-ignore lint/complexity/useRegexLiterals: intentional use of constructor
-      y: new RegExp("test"), // eslint-disable-line prefer-regex-literals
+      y: new RegExp("test", "u"), // eslint-disable-line prefer-regex-literals
       z: window,
     };
     const state = store(initialState);
@@ -137,6 +147,58 @@ describe("store", () => {
       state.on("a", callback);
       state.a = "new";
       expect(callback).toHaveBeenCalledWith("new", "old");
+    });
+
+    test("calls callback before the new value is assigned", () => {
+      expect.assertions(2);
+      const state = store({ a: "old" });
+      let valueDuringCallback: string | undefined;
+      state.on("a", () => {
+        valueDuringCallback = state.a;
+      });
+      state.a = "new";
+      expect(valueDuringCallback).toBe("old"); // not yet assigned
+      expect(state.a).toBe("new");
+    });
+
+    test("calls callback for symbol key property", () => {
+      expect.assertions(2);
+      const key = Symbol("status");
+      const state = store({ [key]: "old" });
+      const callback = mock(() => {});
+      state.on(key, callback);
+      state[key] = "new";
+      expect(callback).toHaveBeenCalledWith("new", "old");
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    test("calls callback when new value is the same as previous value", () => {
+      expect.assertions(3);
+      const state = store({ a: "same" });
+      const callback = mock(() => {});
+      state.on("a", callback);
+      state.a = "same";
+      state.a = "same";
+      expect(callback).toHaveBeenNthCalledWith(1, "same", "same");
+      expect(callback).toHaveBeenNthCalledWith(2, "same", "same");
+      expect(callback).toHaveBeenCalledTimes(2);
+    });
+
+    test("does not call handler removed by an earlier handler", () => {
+      expect.assertions(2);
+      // Handlers are stored in a Set which src/store.ts iterates with forEach, so
+      // a handler deleted before it is reached during notification is skipped.
+      const state = store({ a: 0 });
+      const laterHandler = mock(() => {});
+      let removeLater: (() => boolean) | undefined;
+      const firstHandler = mock(() => {
+        removeLater?.();
+      });
+      state.on("a", firstHandler);
+      removeLater = state.on("a", laterHandler);
+      state.a = 1;
+      expect(firstHandler).toHaveBeenCalledTimes(1);
+      expect(laterHandler).not.toHaveBeenCalled();
     });
 
     test("calls all callbacks for mutated property", () => {
@@ -238,5 +300,13 @@ describe("store", () => {
     state.a = 2;
     state.a = 3;
     expect(callback).toHaveBeenCalledTimes(1); // still called only once
+  });
+
+  test("adds new properties to store state", () => {
+    expect.assertions(1);
+    const initialState: { a: number; b?: number } = { a: 1 };
+    const state = store(initialState);
+    state.b = 2;
+    expect(state.b).toBe(2);
   });
 });

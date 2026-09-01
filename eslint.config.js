@@ -41,6 +41,8 @@ export default defineConfig(
       "unicorn/no-array-callback-reference": "warn", // byte savings + faster
       "unicorn/no-array-for-each": "off", // forEach is often faster (in Chrome and Bun but not Firefox)
       "unicorn/no-computed-property-existence-check": "off", // used carefully
+      "unicorn/no-for-loop": "off", // faster
+      "unicorn/no-new-array": "off", // faster when used intentionally
       "unicorn/no-top-level-assignment-in-function": "off", // used carefully
       "unicorn/prefer-add-event-listener": "off", // stage1
       "unicorn/prefer-at": "off", // bad browser support
@@ -52,7 +54,20 @@ export default defineConfig(
       "unicorn/prefer-string-raw": "off", // TODO: Remove once String.raw doesn't crash bun macros
       "unicorn/prefer-string-replace-all": "off", // slower and worse browser support
       "unicorn/prefer-unicode-code-point-escapes": "off", // bad browser support
+      "unicorn/single-line-block-comment-style": "off",
       "unicorn/switch-case-braces": ["error", "avoid"], // byte savings when minification doesn't remove
+    },
+  },
+  {
+    files: ["test/TestComponent*.ts"],
+    rules: {
+      "unicorn/filename-case": "off",
+    },
+  },
+  {
+    files: ["test/e2e/**"],
+    rules: {
+      "unicorn/isolated-functions": "off", // page.evaluate callbacks run in the browser
     },
   },
   { ignores: ["dist"] },

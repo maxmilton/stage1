@@ -43,7 +43,9 @@ describe("globals", () => {
   )("has window.%s mapped to global", (globalName) => {
     expect.assertions(3);
     expect(global[globalName]).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(window[globalName]).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(global[globalName]).toBe(window[globalName]);
   });
 

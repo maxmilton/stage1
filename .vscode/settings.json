@@ -2,7 +2,8 @@
   "biome.enabled": true,
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit",
-    "source.fixAll": "explicit"
+    "source.fixAll": "explicit",
+    "source.fixAllDangerous": "never"
   },
   "editor.formatOnPaste": false,
   "editor.formatOnSave": true,
@@ -10,9 +11,10 @@
   "editor.tabSize": 2,
   "eslint.enable": true,
   "git.branchProtection": ["master", "next"],
+  "git.detectWorktrees": true,
+  "git.worktreeIncludeFiles": ["node_modules/**"],
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
-  "prettier.enable": false, // use biome
 
   "[css]": {
     "editor.defaultFormatter": "biomejs.biome"
@@ -21,13 +23,6 @@
     "editor.defaultFormatter": "biomejs.biome"
   },
   "[javascript]": {
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "never",
-      "source.fixAll.eslint": "never"
-    },
-    "editor.defaultFormatter": "biomejs.biome"
-  },
-  "[javascriptreact]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": "never",
       "source.fixAll.eslint": "never"
@@ -46,14 +41,10 @@
     "editor.unicodeHighlight.invisibleCharacters": true,
     "files.trimTrailingWhitespace": false
   },
-  "[typescript]": {
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "never",
-      "source.fixAll.eslint": "never"
-    },
+  "[toml]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
-  "[typescriptreact]": {
+  "[typescript]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": "never",
       "source.fixAll.eslint": "never"

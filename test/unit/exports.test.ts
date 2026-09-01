@@ -2,6 +2,7 @@
 
 import { describe, expect, test } from "bun:test";
 import * as browserExports from "../../src/browser/index.ts";
+import * as fastExports from "../../src/fast/index.ts";
 import * as indexExports from "../../src/index.ts";
 import * as macroExports from "../../src/macro.ts";
 import * as keyedExports from "../../src/reconcile/keyed.ts";
@@ -90,15 +91,59 @@ describe("index", () => {
   });
 });
 
-describe("macro", () => {
-  const publicExports = [["compile", Function]] as const;
+describe("fast", () => {
+  const publicExports = [
+    ["h", "Function"],
+    ["collect", "Function"],
+    ["ONCLICK", "Symbol"],
+    ["handleClick", "Function"],
+    ["setupSyntheticClick", "Function"],
+    ["removeSyntheticClick", "Function"],
+    ["noop", "Function"],
+    ["fragment", "Function"],
+    ["text", "Function"],
+    ["create", "Function"],
+    ["clone", "Function"],
+    ["append", "Function"],
+    ["prepend", "Function"],
+    ["insert", "Function"],
+    ["replace", "Function"],
+    ["store", "Function"],
+  ] as const;
 
   for (const [name, type] of publicExports) {
-    test(`exports public "${name}" ${type.name}`, () => {
+    test(`exports public "${name}" ${type}`, () => {
+      expect.assertions(2);
+      expect(fastExports).toHaveProperty(name);
+      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
+      expect(fastExports[name]).toHaveObjectType(`[object ${type}]`);
+    });
+  }
+
+  test("does not export any private internals", () => {
+    expect.assertions(publicExports.length + 1);
+    const publicExportNames: string[] = publicExports.map((x) => x[0]);
+    for (const name in fastExports) {
+      expect(publicExportNames).toContain(name);
+    }
+    expect(publicExportNames).toHaveLength(Object.keys(fastExports).length);
+  });
+
+  test("has no default export", () => {
+    expect.assertions(1);
+    expect(fastExports).not.toHaveProperty("default");
+  });
+});
+
+describe("macro", () => {
+  const publicExports = [["compile", "Function"]] as const;
+
+  for (const [name, type] of publicExports) {
+    test(`exports public "${name}" ${type}`, () => {
       expect.assertions(2);
       expect(macroExports).toHaveProperty(name);
       // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(macroExports[name]).toBeInstanceOf(type);
+      expect(macroExports[name]).toHaveObjectType(`[object ${type}]`);
     });
   }
 
@@ -117,14 +162,14 @@ describe("macro", () => {
   });
 });
 
-const reconsilers = [
+const reconcilers = [
   ["keyed", keyedExports],
   ["non-keyed", nonKeyedExports],
   ["reuse-nodes", reuseNodesExports],
 ] as const;
 
-for (const [reconsiler, exports] of reconsilers) {
-  describe(`reconcile/${reconsiler}`, () => {
+for (const [reconciler, exports] of reconcilers) {
+  describe(`reconcile/${reconciler}`, () => {
     test('exports public "reconcile" Function', () => {
       expect.assertions(2);
       expect(exports).toHaveProperty("reconcile");

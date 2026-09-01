@@ -1,5 +1,17 @@
 import type { IndicesOf, InferRefs, TupleOfKeys } from "./types.ts";
 
+/**
+ * Valid ref name; lowercase because browsers normalise element attribute names
+ * when rendering HTML, so a non-lowercase name would not survive a round trip.
+ */
+const REF_NAME_RE = /^[a-z][a-z0-9_-]*$/u;
+
+/** Elements whose text content must be preserved verbatim. */
+const VERBATIM_TAGS = new Set(["pre", "code", "textarea", "script", "style"]);
+
+/** Subset of `VERBATIM_TAGS` whose text must never be read as a ref. */
+const RAW_TAGS = new Set(["script", "style"]);
+
 export interface CompileOptions {
   /**
    * Whether to keep spaces adjacent to tags in output HTML. When keepSpaces
@@ -7,6 +19,18 @@ export interface CompileOptions {
    * @default false
    */
   keepSpaces?: boolean;
+}
+
+export interface CompileResult<R> {
+  html: string;
+  /** Array of ref key names. */
+  k: readonly string[];
+  /** Array of distances from previous ref node or template root. */
+  d: readonly number[];
+  /** Object mapping ref key names to their indices in the `k` array. */
+  ref: IndicesOf<TupleOfKeys<R>>;
+  /** Whether the template was successfully compiled without any errors. */
+  success: boolean;
 }
 
 /**
@@ -18,119 +42,138 @@ export interface CompileOptions {
 export function compile<R extends InferRefs<R> = object>(
   template: string,
   { keepSpaces }: CompileOptions = {},
-): {
-  html: string;
-  /** Array of ref key names. */
-  k: readonly string[];
-  /** Array of distances from previous ref node or template root. */
-  d: readonly number[];
-  /** Object mapping ref key names to their indices in the `k` array. */
-  ref: IndicesOf<TupleOfKeys<R>>;
-  /** Whether the template was successfully compiled without any errors. */
-  success: boolean;
-} {
-  let isSuccess = true;
+): CompileResult<R> {
+  if (typeof template !== "string") {
+    throw new TypeError("Template must be a string literal");
+  }
+
+  let didFail = false;
   const k: string[] = [];
   const d: number[] = [];
   let distance = 0;
-  let isWhitespaceSensitiveBlock = false;
-  let root: boolean | undefined;
+  let verbatimDepth = 0;
+  let isRawText = false;
+  let textBuffer = "";
+  /** `undefined` = root not seen yet, `true` = inside root, `false` = root closed. */
+  let insideRoot: boolean | undefined;
+
+  // TODO: Better message detail once feature is done: https://github.com/oven-sh/bun/issues/39695
+  const fail = (message: string) => {
+    const detail = Bun.enableANSIColors ? `\x1B[2m${template}\x1B[0m` : template;
+    // eslint-disable-next-line no-console
+    console.error("%s in template:\n%s", message, detail);
+
+    didFail = true;
+  };
+
+  const addRef = (name: string) => {
+    if (!REF_NAME_RE.test(name)) fail(`Invalid ref name "${name}"`);
+    if (k.includes(name)) fail(`Duplicate ref name "${name}"`);
+    k.push(name);
+    d.push(distance);
+    distance = 0;
+  };
 
   const html = new HTMLRewriter()
     .onDocument({
       doctype() {
-        // eslint-disable-next-line no-console
-        console.error("Found doctype but none was expected in template:", template);
-        isSuccess = false;
+        fail("Expected no doctype");
       },
       comments(node) {
         const text = node.text.trim();
-        if (text[0] === "@") {
-          k.push(text.slice(1));
-          d.push(distance);
-          distance = 1;
+        node.remove();
+        if (!isRawText && text[0] === "@") {
+          addRef(text.slice(1));
           // Replace with <!> which renders a Comment node at runtime
-          node.remove();
           node.after("<!>", { html: true });
-        } else {
-          node.remove();
+          distance++;
         }
       },
-      // This text handler is invoked twice for each Text node: first with the
-      // actual text, then with an empty last chunk. This behaviour stems from
-      // the fact that the data provided to `HTMLRewriter.transform()` can be
-      // streamed; where the last empty chunk signals the end of the text.
+      // A single Text node can arrive as several chunks — the tokenizer splits
+      // on a bare "<" which does not start a tag, e.g. "a < b" — always ending
+      // with an empty last chunk, so buffer it and handle the whole node once.
       text(chunk) {
-        if (chunk.lastInTextNode) return;
-
-        const text = chunk.text.trim();
-        if (!text) {
-          if (!isWhitespaceSensitiveBlock) {
-            chunk.remove();
-          }
+        textBuffer += chunk.text;
+        if (!chunk.lastInTextNode) {
+          chunk.remove();
           return;
         }
-        if (text[0] === "@") {
-          k.push(text.slice(1));
-          d.push(distance);
-          distance = 0;
+        const raw = textBuffer;
+        textBuffer = "";
+        const text = raw.trim();
+
+        if (!isRawText && text[0] === "@") {
+          addRef(text.slice(1));
           // Replace with single space which renders a Text node at runtime
           chunk.replace(" ", { html: true });
-        } else if (!isWhitespaceSensitiveBlock) {
+        } else if (verbatimDepth) {
+          // Whitespace-sensitive or raw content; never minified
+          chunk.replace(raw, { html: true });
+        } else if (text) {
           // Reduce any whitespace to a single space
-          chunk.replace((keepSpaces ? chunk.text : text).replace(/\s+/g, " "), { html: true });
+          chunk.replace((keepSpaces ? raw : text).replace(/\s+/gu, " "), { html: true });
+        } else {
+          return; // a removed node does not count towards distance
         }
         distance++;
       },
     })
     .on("*", {
       element(node) {
-        if (!root) {
-          if (root === undefined) {
-            root = true;
-            node.onEndTag(() => {
-              root = false;
-            });
-          } else {
-            // eslint-disable-next-line no-console
-            console.error("Expected template to have a single root element:", template);
-            isSuccess = false;
-          }
+        const isRoot = insideRoot === undefined;
+        // Void elements have no end tag to hook into; onEndTag throws for them.
+        // NOTE: `selfClosing` is deliberately not consulted — in HTML content
+        // "/>" is ignored by the parser, so <div/> is an OPEN div which does
+        // have an end tag. Foreign content which really does self-close (e.g.
+        // <svg/>) reports canHaveContent false, so this covers it already.
+        const hasEndTag = node.canHaveContent;
+        const isVerbatim = hasEndTag && VERBATIM_TAGS.has(node.tagName);
+        const isRaw = isVerbatim && RAW_TAGS.has(node.tagName);
+
+        // A DOM <template> keeps its children in .content, which the
+        // firstChild/nextSibling walk in collect() cannot enter, so every
+        // distance past it would be wrong — reject rather than crash at runtime
+        if (node.tagName === "template") {
+          fail("Unsupported <template> element");
         }
 
-        if (node.tagName === "pre" || node.tagName === "code") {
-          isWhitespaceSensitiveBlock = true;
+        if (isRoot) {
+          insideRoot = hasEndTag;
+        } else if (!insideRoot) {
+          fail("Expected single root element");
+        }
+        if (isVerbatim) verbatimDepth++;
+        if (isRaw) isRawText = true;
+
+        // Registering a second end tag handler replaces the first, so
+        // everything which unwinds here has to share the one handler
+        if (hasEndTag && (isRoot || isVerbatim)) {
           node.onEndTag(() => {
-            isWhitespaceSensitiveBlock = false;
+            if (isRoot) insideRoot = false;
+            if (isVerbatim) verbatimDepth--;
+            if (isRaw) isRawText = false;
           });
         }
-        for (const [name] of node.attributes) {
-          if (name[0] === "@") {
-            k.push(name.slice(1));
-            d.push(distance);
-            distance = 0;
-            node.removeAttribute(name);
-            break;
-          }
+
+        // Collect first; removing an attribute while iterating is not safe
+        const refAttrs: string[] = [];
+        for (const [name] of node.attributes) if (name[0] === "@") refAttrs.push(name);
+        for (const name of refAttrs) node.removeAttribute(name);
+        if (refAttrs.length > 1) {
+          fail("Multiple ref markers on single element");
         }
+        if (refAttrs.length) addRef(refAttrs[0].slice(1));
         distance++;
       },
     })
     .transform(template.trim());
-
-  // Check k entries are unique
-  if (new Set(k).size !== k.length) {
-    // eslint-disable-next-line no-console
-    console.error("Duplicate ref keys found in template:", template);
-    isSuccess = false;
-  }
 
   return {
     html,
     k,
     d,
     // @ts-expect-error - computed type
-    ref: Object.fromEntries(d.map((_, i) => [k[i], i])),
-    success: isSuccess,
+    ref: Object.fromEntries(k.map((name, index) => [name, index])),
+    success: !didFail,
   };
 }
