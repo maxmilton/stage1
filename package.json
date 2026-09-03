@@ -67,7 +67,7 @@
     "@playwright/test": "1.62.1",
     "@types/bun": "1.4.0",
     "dts-buddy": "0.8.2",
-    "eslint": "10.8.0",
+    "eslint": "10.9.1",
     "eslint-plugin-unicorn": "72.0.0",
     "happy-dom": "20.11.6",
     "rollup": "4.63.0",
