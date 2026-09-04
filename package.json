@@ -66,7 +66,7 @@
     "@maxmilton/test-utils": "0.0.18",
     "@playwright/test": "1.62.1",
     "@types/bun": "1.4.0",
-    "dts-buddy": "0.8.2",
+    "dts-buddy": "0.8.3",
     "eslint": "10.9.1",
     "eslint-plugin-unicorn": "73.0.0",
     "happy-dom": "20.11.6",
