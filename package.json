@@ -73,7 +73,7 @@
     "rollup": "4.63.0",
     "terser": "5.51.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.64.0"
+    "typescript-eslint": "8.68.0"
   },
   "__FIXME__sideEffects": false
 }
