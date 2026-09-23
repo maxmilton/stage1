@@ -51,12 +51,13 @@
   ],
   "scripts": {
     "build": "bun build.ts",
-    "lint": "bun lint:fmt && bun lint:js && bun lint:ts",
-    "lint:fmt": "biome check",
-    "lint:js": "eslint",
+    "lint": "bun lint:fmt && bun lint:js && bun lint:js2 && bun lint:ts",
+    "lint:fmt": "oxfmt --check",
+    "lint:js": "oxlint",
+    "lint:js2": "eslint",
     "lint:ts": "tsc --noEmit",
     "test": "bun test --only-failures",
-    "test:ci": "bun test --coverage --randomize --rerun-each=30",
+    "test:ci": "bun test --coverage --randomize --rerun-each=50",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

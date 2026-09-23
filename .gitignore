@@ -4,6 +4,7 @@
 *.lock
 !/bun.lock
 /.claude/settings.local.json
+/.claude/worktrees/
 /coverage/
 /dist/
 /node_modules/

@@ -1,0 +1,108 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "./node_modules/@maxmilton/oxlint-config/recommended.json",
+    "./node_modules/@maxmilton/oxlint-config/pedantic.json",
+    "./node_modules/@maxmilton/oxlint-config/stage1.json",
+  ],
+  "options": {
+    "maxWarnings": 20,
+    "reportUnusedDisableDirectives": "error",
+    "respectEslintDisableDirectives": false,
+    "typeAware": true,
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "warn",
+    "perf": "error",
+    "style": "warn",
+    "restriction": "error",
+    "nursery": "warn",
+  },
+  // https://github.com/oxc-project/javascript-globals/blob/main/src/lib.rs
+  "env": {
+    "builtin": true,
+    "es2026": true, // TODO: es2027 once in oxc.
+    "bun": true,
+    "commonjs": false,
+    "browser": true,
+  },
+  "rules": {
+    "eslint/no-magic-numbers": "off", // too pedantic
+    "eslint/no-plusplus": "off", // byte savings
+    "eslint/no-undefined": "off", // too pedantic
+    "eslint/symbol-description": "off", // byte savings; symbols used as unique keys, not for debugging
+    "typescript/prefer-string-starts-ends-with": "off", // faster
+    "typescript/strict-boolean-expressions": "off", // too pedantic
+    "unicorn/prefer-global-this": "off", // prefer clear distinction between Bun and DOM
+    "unicorn/prefer-modern-dom-apis": "off",
+
+    // TODO: Remove when we can fix all the issues.
+    "typescript/no-unsafe-type-assertion": "off",
+
+    // TODO: These are buggy. Remove after future oxlint updates.
+    "oxclippy/bool-to-int-with-if": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/prefer-readonly-parameter-types": "off",
+  },
+  "overrides": [
+    {
+      "files": ["src/**"],
+      "rules": {
+        "eslint/id-length": [
+          "error",
+          {
+            "exceptionPatterns": ["^[A-Z]$"], // type names
+            "exceptions": ["h", "k", "d"],
+          },
+        ],
+        "typescript/prefer-nullish-coalescing": "off", // compat
+        "unicorn/no-new-array": "off", // byte savings + faster
+      },
+    },
+    {
+      "files": ["src/reconcile/*"],
+      "rules": {
+        // TODO: The `src/reconcile/*.ts` files have a lot of rules disabled at
+        // the top as a temporary measure. Much of the reconcile code comes
+        // from the original stage0 project and needs to be rewritten anyway.
+
+        "eslint/id-length": ["error", { "exceptions": ["a", "b", "i", "j", "n", "T", "N"] }],
+        "oxclippy/similar-names": "off",
+        "oxclippy/too-many-arguments": "off",
+      },
+    },
+    {
+      "files": ["src/browser/**"],
+      "rules": {
+        "eslint/require-unicode-regexp": "off", // compat
+        "typescript/prefer-optional-chain": "off", // compat
+      },
+    },
+    {
+      "files": ["test/fixtures/**"],
+      "rules": {
+        "unicorn/filename-case": "off",
+      },
+    },
+    {
+      "files": ["test/e2e/**"],
+      "plugins": ["vitest"],
+      "rules": {
+        "vitest/consistent-test-filename": ["error", { "pattern": ".*\\.spec\\.ts$" }],
+      },
+    },
+    {
+      "files": ["test/**/*.test.ts", "test/**/*.spec.ts"],
+      "rules": {
+        "eslint/id-length": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "unicorn/consistent-function-scoping": "off", // tests may define scoped helpers
+
+        // TODO: Remove once bun macros support it; passed to compile() macro.
+        "unicorn/prefer-string-raw": "off",
+      },
+    },
+  ],
+}

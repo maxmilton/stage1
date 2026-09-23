@@ -1,11 +1,17 @@
 {
   "recommendations": [
     "bierner.comment-tagged-templates",
-    "biomejs.biome",
-    "dbaeumer.vscode-eslint",
     "ms-playwright.playwright",
     "oven.bun-vscode",
-    "tekumara.typos-vscode"
+    "oxc.oxc-vscode",
+    "tekumara.typos-vscode",
+    "typescriptteam.native-preview"
   ],
-  "unwantedRecommendations": ["dprint.dprint", "esbenp.prettier-vscode", "prettier.prettier-vscode"]
+  "unwantedRecommendations": [
+    "biomejs.biome",
+    "dbaeumer.vscode-eslint",
+    "dprint.dprint",
+    "esbenp.prettier-vscode",
+    "prettier.prettier-vscode"
+  ]
 }
