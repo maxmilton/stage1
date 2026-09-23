@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion, no-param-reassign */
+// oxlint-disable typescript/no-non-null-assertion
 
 import { noop } from "../utils.ts";
 
@@ -17,6 +17,7 @@ export const reconcile = <T, N extends Node>(
       let node = beforeNode === undefined ? parent.firstChild : beforeNode.nextSibling;
       let tmp: ChildNode | null;
 
+      // oxlint-disable-next-line no-param-reassign
       if (afterNode === undefined) afterNode = null;
 
       while (node !== afterNode) {
@@ -31,6 +32,7 @@ export const reconcile = <T, N extends Node>(
   }
   if (renderedData.length > len) {
     let index = renderedData.length;
+    // oxlint-disable-next-line no-eq-null
     let tail = afterNode == null ? parent.lastChild : afterNode.previousSibling;
     let tmp: ChildNode | null;
     while (index > len) {

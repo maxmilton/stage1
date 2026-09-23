@@ -3,7 +3,6 @@
 [![NPM version](https://badgen.net/npm/v/stage1)](https://www.npmjs.com/package/stage1)
 [![Licence](https://badgen.net/github/license/maxmilton/stage1)](./LICENSE)
 
-
 [![Minified size](https://badgen.net/bundlephobia/minzip/stage1)](https://bundlephobia.com/package/stage1)
 ![Dependency count](https://badgen.net/bundlephobia/dependency-count/stage1)
 
@@ -17,7 +16,6 @@ Originally started as a fork of the excellent <https://github.com/Freak613/stage
 
 ## TODO
 
-- In `package.json`, rename `__FIXME__sideEffects` to `sideEffects` once [Bun bug #27709](https://github.com/oven-sh/bun/issues/27709) is fixed.
 - Decide whether to keep multiple implementations
   - Browser "live" compile, browser runtime mode
   - Bun default precompiled mode

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { collect, h, html } from "../../src/browser/runtime.ts";
 import type { InferRefs, Refs } from "../../src/types.ts";
-import { Test } from "../TestComponent_browser.ts";
+import { Test } from "../fixtures/TestComponent_browser.ts";
 
 // A deep mixed tree exercising every node kind the TreeWalker has to step
 // over. Each ref is its own test so a miss names the ref that went missing
@@ -147,7 +147,6 @@ describe("h", () => {
 
     // Accepted tradeoff (V7): h() would be too slow if it minified inside
     // whitespace-sensitive blocks, so live mode skips that entirely.
-    // biome-ignore lint/suspicious/noSkippedTests: unsupported by design; see SPEC V7
     test.skip("does not minify in whitespace-sensitive blocks", () => {});
   });
 });
@@ -185,7 +184,7 @@ describe("html", () => {
 
     test("renders basic template", () => {
       expect.assertions(1);
-      // biome-ignore format: no space between html and comment
+      // oxfmt-ignore
       const view = html/* html */`
         <ul>
           <li>A</li>
@@ -320,10 +319,10 @@ describe("collect", () => {
 
   test("does not collect an escaped ref marker", () => {
     expect.assertions(2);
-    const view = h(/* html */ "<div \\@a></div>");
+    const view = h(/* html */ String.raw`<div \@a></div>`);
     const refs = collect(view, view);
     expect(Object.keys(refs)).toBeEmpty();
-    expect(view.outerHTML).toBe(/* html */ '<div \\@a=""></div>');
+    expect(view.outerHTML).toBe(/* html */ String.raw`<div \@a=""></div>`);
   });
 
   test("collects ref from template with only text", () => {

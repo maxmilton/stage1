@@ -1,4 +1,4 @@
-import { collect, h } from "../src/browser/runtime.ts";
+import { collect, h } from "../../src/browser/runtime.ts";
 
 type TestComponent = HTMLDivElement;
 
@@ -7,12 +7,12 @@ interface TestProps {
 }
 
 interface Refs {
-  t: Text;
+  text: Text;
 }
 
 const view = h<HTMLDivElement>(/* html */ `
   <div id=test>
-    @t
+    @text
   </div>
 `);
 
@@ -20,7 +20,7 @@ export function Test(props: TestProps): TestComponent {
   const root = view;
   const refs = collect<Refs>(root, view);
 
-  refs.t.nodeValue = props.text;
+  refs.text.nodeValue = props.text;
 
   return root;
 }

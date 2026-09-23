@@ -1,4 +1,6 @@
-export const noop = (): void => {};
+export const noop = (): void => {
+  /* empty */
+};
 
 // DOM utilities
 
@@ -16,10 +18,9 @@ export const prepend = <T extends Node>(node: T, parent: Node): T =>
   parent.insertBefore(node, parent.firstChild);
 /** Insert a node after the target node. Target must have a parent node! */
 export const insert = <T extends Node>(node: T, target: Node): T =>
+  // oxlint-disable-next-line typescript/no-non-null-assertion
   target.parentNode!.insertBefore(node, target.nextSibling);
 /** Replace a target node with a new node. Target must have a parent node! */
 export const replace = <T extends Node>(node: T, target: Node): T =>
-  (
-    // biome-ignore lint/complexity/noCommaOperator: save bytes on return statement
-    target.parentNode!.replaceChild(node, target), node // eslint-disable-line no-sequences
-  );
+  // oxlint-disable-next-line no-sequences typescript/no-non-null-assertion
+  (target.parentNode!.replaceChild(node, target), node);

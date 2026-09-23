@@ -10,8 +10,8 @@ import {
 declare global {
   interface HTMLElement {
     /** `stage1` synthetic click event handler. */
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    [ONCLICK]?(event: Event): false | void | Promise<void>;
+    // oxlint-disable-next-line typescript/no-invalid-void-type
+    [ONCLICK]?: (event: Event) => false | void | Promise<void>;
   }
 }
 
@@ -129,7 +129,7 @@ describe("setupSyntheticClick", () => {
   test("returns undefined", () => {
     expect.assertions(1);
     onTestFinished(removeSyntheticClick);
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+    // oxlint-disable-next-line typescript/no-confusing-void-expression
     expect(setupSyntheticClick()).toBeUndefined();
   });
 
@@ -209,7 +209,7 @@ describe("setupSyntheticClick", () => {
       const handler = mock(() => {});
       document.body[ONCLICK] = handler;
       onTestFinished(() => {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        // oxlint-disable-next-line typescript/no-dynamic-delete
         delete document.body[ONCLICK];
       });
       render(button);
@@ -301,7 +301,7 @@ describe("removeSyntheticClick", () => {
 
   test("returns undefined", () => {
     expect.assertions(1);
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+    // oxlint-disable-next-line typescript/no-confusing-void-expression
     expect(removeSyntheticClick()).toBeUndefined();
   });
 

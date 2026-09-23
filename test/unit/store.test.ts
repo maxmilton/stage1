@@ -47,7 +47,7 @@ describe("store", () => {
 
   test("returns an object with the same properties", () => {
     expect.assertions(25);
-    // eslint-disable-next-line @typescript-eslint/no-extraneous-class
+    // oxlint-disable-next-line typescript/no-extraneous-class
     class TestClass {}
     const s = Symbol("s");
     const initialState = {
@@ -68,6 +68,7 @@ describe("store", () => {
       o: document.createElement("div"),
       p: new Error("test"),
       q: Promise.resolve(),
+      // oxlint-disable-next-line promise/avoid-new
       r: new Promise(() => {}),
       [s]: "symbol",
       t: new Uint8Array(),
@@ -75,12 +76,12 @@ describe("store", () => {
       v: new TestClass(),
       w: TestClass,
       x: /test/u,
-      // biome-ignore lint/complexity/useRegexLiterals: intentional use of constructor
-      y: new RegExp("test", "u"), // eslint-disable-line prefer-regex-literals
+      // oxlint-disable-next-line prefer-regex-literals
+      y: new RegExp("test", "u"),
       z: window,
     };
     const state = store(initialState);
-    // eslint-disable-next-line guard-for-in
+    // oxlint-disable-next-line guard-for-in
     for (const key in initialState) {
       expect(state).toHaveProperty(key, initialState[key as keyof typeof initialState]);
     }
@@ -190,6 +191,7 @@ describe("store", () => {
       // a handler deleted before it is reached during notification is skipped.
       const state = store({ a: 0 });
       const laterHandler = mock(() => {});
+      // oxlint-disable-next-line prefer-const
       let removeLater: (() => boolean) | undefined;
       const firstHandler = mock(() => {
         removeLater?.();

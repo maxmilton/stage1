@@ -82,6 +82,7 @@ export function compile<R extends InferRefs<R> = object>(
       comments(node) {
         const text = node.text.trim();
         node.remove();
+        // eslint-disable-next-line unicorn/prefer-early-return
         if (!isRawText && text[0] === "@") {
           addRef(text.slice(1));
           // Replace with <!> which renders a Comment node at runtime
@@ -162,7 +163,7 @@ export function compile<R extends InferRefs<R> = object>(
         if (refAttrs.length > 1) {
           fail("Multiple ref markers on single element");
         }
-        if (refAttrs.length) addRef(refAttrs[0].slice(1));
+        if (refAttrs.length > 0) addRef(refAttrs[0].slice(1));
         distance++;
       },
     })

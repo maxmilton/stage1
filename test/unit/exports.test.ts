@@ -1,5 +1,3 @@
-/* eslint-disable guard-for-in */
-
 import { describe, expect, test } from "bun:test";
 import * as browserExports from "../../src/browser/index.ts";
 import * as fastExports from "../../src/fast/index.ts";
@@ -23,18 +21,17 @@ describe("browser", () => {
     ["append", "Function"],
   ] as const;
 
-  for (const [name, type] of publicExports) {
-    test(`exports public "${name}" ${type}`, () => {
-      expect.assertions(2);
-      expect(browserExports).toHaveProperty(name);
-      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(browserExports[name]).toHaveObjectType(`[object ${type}]`);
-    });
-  }
+  test.each(publicExports)('exports public "%s" %s', (name, type) => {
+    expect.assertions(2);
+    expect(browserExports).toHaveProperty(name);
+    // oxlint-disable-next-line import/namespace
+    expect(browserExports[name]).toHaveObjectType(`[object ${type}]`);
+  });
 
   test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
-    const publicExportNames: string[] = publicExports.map((x) => x[0]);
+    const publicExportNames: string[] = publicExports.map(([name, _type]) => name);
+    // oxlint-disable-next-line guard-for-in
     for (const name in browserExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -67,18 +64,17 @@ describe("index", () => {
     ["store", "Function"],
   ] as const;
 
-  for (const [name, type] of publicExports) {
-    test(`exports public "${name}" ${type}`, () => {
-      expect.assertions(2);
-      expect(indexExports).toHaveProperty(name);
-      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(indexExports[name]).toHaveObjectType(`[object ${type}]`);
-    });
-  }
+  test.each(publicExports)('exports public "%s" %s', (name, type) => {
+    expect.assertions(2);
+    expect(indexExports).toHaveProperty(name);
+    // oxlint-disable-next-line import/namespace
+    expect(indexExports[name]).toHaveObjectType(`[object ${type}]`);
+  });
 
   test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
-    const publicExportNames: string[] = publicExports.map((x) => x[0]);
+    const publicExportNames: string[] = publicExports.map(([name, _type]) => name);
+    // oxlint-disable-next-line guard-for-in
     for (const name in indexExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -111,18 +107,17 @@ describe("fast", () => {
     ["store", "Function"],
   ] as const;
 
-  for (const [name, type] of publicExports) {
-    test(`exports public "${name}" ${type}`, () => {
-      expect.assertions(2);
-      expect(fastExports).toHaveProperty(name);
-      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(fastExports[name]).toHaveObjectType(`[object ${type}]`);
-    });
-  }
+  test.each(publicExports)('exports public "%s" %s', (name, type) => {
+    expect.assertions(2);
+    expect(fastExports).toHaveProperty(name);
+    // oxlint-disable-next-line import/namespace
+    expect(fastExports[name]).toHaveObjectType(`[object ${type}]`);
+  });
 
   test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
-    const publicExportNames: string[] = publicExports.map((x) => x[0]);
+    const publicExportNames: string[] = publicExports.map(([name, _type]) => name);
+    // oxlint-disable-next-line guard-for-in
     for (const name in fastExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -138,18 +133,17 @@ describe("fast", () => {
 describe("macro", () => {
   const publicExports = [["compile", "Function"]] as const;
 
-  for (const [name, type] of publicExports) {
-    test(`exports public "${name}" ${type}`, () => {
-      expect.assertions(2);
-      expect(macroExports).toHaveProperty(name);
-      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: used in test
-      expect(macroExports[name]).toHaveObjectType(`[object ${type}]`);
-    });
-  }
+  test.each(publicExports)('exports public "%s" %s', (name, type) => {
+    expect.assertions(2);
+    expect(macroExports).toHaveProperty(name);
+    // oxlint-disable-next-line import/namespace
+    expect(macroExports[name]).toHaveObjectType(`[object ${type}]`);
+  });
 
   test("does not export any private internals", () => {
     expect.assertions(publicExports.length + 1);
-    const publicExportNames: string[] = publicExports.map((x) => x[0]);
+    const publicExportNames: string[] = publicExports.map(([name, _type]) => name);
+    // oxlint-disable-next-line guard-for-in
     for (const name in macroExports) {
       expect(publicExportNames).toContain(name);
     }
@@ -168,26 +162,25 @@ const reconcilers = [
   ["reuse-nodes", reuseNodesExports],
 ] as const;
 
-for (const [reconciler, exports] of reconcilers) {
-  describe(`reconcile/${reconciler}`, () => {
-    test('exports public "reconcile" Function', () => {
-      expect.assertions(2);
-      expect(exports).toHaveProperty("reconcile");
-      expect(exports.reconcile).toBeInstanceOf(Function);
-    });
-
-    test("does not export any private internals", () => {
-      expect.assertions(2);
-      const publicExportNames = ["reconcile"];
-      for (const name in exports) {
-        expect(publicExportNames).toContain(name);
-      }
-      expect(publicExportNames).toHaveLength(Object.keys(exports).length);
-    });
-
-    test("has no default export", () => {
-      expect.assertions(1);
-      expect(exports).not.toHaveProperty("default");
-    });
+describe.each(reconcilers)("reconcile/%s", (_reconciler, exports) => {
+  test('exports public "reconcile" Function', () => {
+    expect.assertions(2);
+    expect(exports).toHaveProperty("reconcile");
+    expect(exports.reconcile).toBeInstanceOf(Function);
   });
-}
+
+  test("does not export any private internals", () => {
+    expect.assertions(2);
+    const publicExportNames = ["reconcile"];
+    // oxlint-disable-next-line guard-for-in
+    for (const name in exports) {
+      expect(publicExportNames).toContain(name);
+    }
+    expect(publicExportNames).toHaveLength(Object.keys(exports).length);
+  });
+
+  test("has no default export", () => {
+    expect.assertions(1);
+    expect(exports).not.toHaveProperty("default");
+  });
+});

@@ -1,7 +1,6 @@
 import type { InferRefs, LowercaseKeys, Refs } from "../types.ts";
 import { create } from "../utils.ts";
 
-// eslint-disable-next-line symbol-description
 const REFS = Symbol();
 
 interface RefMeta {
@@ -12,7 +11,7 @@ interface RefMeta {
 }
 
 interface View extends Node, ChildNode {
-  /** @private */
+  /** @internal */
   [REFS]: readonly RefMeta[];
 }
 
@@ -35,10 +34,12 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
         return str.slice(1);
       }
     }
+    // oxlint-disable-next-line typescript/consistent-return
     return;
   }
 
   str = node.nodeValue;
+  // eslint-disable-next-line unicorn/prefer-early-return
   if (str && str[0] === "@") {
     node.nodeValue = "";
     return str.slice(1);
@@ -58,7 +59,9 @@ export const h = <T extends Node = Element>(template: string): View & T => {
     .replace(/ </g, "<");
 
   const node = compilerTemplate.content.firstChild as View & T;
+  // oxlint-disable-next-line no-multi-assign
   const metadata: RefMeta[] = (node[REFS] = []);
+  // oxlint-disable-next-line no-multi-assign
   let current: Node | null = (treeWalker.currentNode = node);
   let distance = 0;
 

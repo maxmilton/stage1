@@ -36,10 +36,10 @@ export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R>>(
 
     while (distance--) {
       current = node;
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       node = node.firstChild || node.nextSibling;
 
       while (!node) {
+        // oxlint-disable-next-line typescript/no-non-null-assertion
         current = current.parentNode!;
         node = current.nextSibling;
       }

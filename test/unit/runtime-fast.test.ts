@@ -6,7 +6,7 @@ import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { collect, h } from "../../src/fast/runtime.ts";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import type { InferRefs, Refs } from "../../src/types.ts";
-import { Test } from "../TestComponent_fast.ts";
+import { Test } from "../fixtures/TestComponent_fast.ts";
 
 describe("h", () => {
   test("types", () => {
@@ -159,6 +159,8 @@ describe("h", () => {
 // TODO: Once bun supports macros used as template literals tag functions, we
 // should consider adding a html function similar to the browser runtime.
 
+// oxlint-disable vitest/no-commented-out-tests
+
 // describe("html", () => {
 //   test("types", () => {
 //     expectTypeOf(html).not.toBeAny();
@@ -184,7 +186,7 @@ describe("h", () => {
 //
 //     test("renders basic template", () => {
 //       expect.assertions(2);
-//       // biome-ignore format: no space between html and comment
+//       // oxfmt-ignore
 //       const meta = html/* html */`
 //         <ul>
 //           <li>A</li>
@@ -199,6 +201,8 @@ describe("h", () => {
 //     });
 //   });
 // });
+
+// oxlint-enable vitest/no-commented-out-tests
 
 describe("collect", () => {
   test("types", () => {

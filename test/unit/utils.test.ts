@@ -1,3 +1,5 @@
+// oxlint-disable unicorn/no-useless-undefined
+
 import { describe, expect, expectTypeOf, test } from "bun:test";
 import {
   append,
@@ -21,7 +23,7 @@ liB.className = "b";
 const liC = document.createElement("li");
 liC.className = "c";
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+// oxlint-disable-next-line typescript/no-extraneous-class
 class Sample {}
 
 const NOT_DOM_NODES = [
@@ -40,7 +42,7 @@ const NOT_DOM_NODES = [
   Number.MIN_VALUE,
   Infinity,
   -Infinity,
-  NaN,
+  Number.NaN,
   BigInt(Number.MAX_SAFE_INTEGER + 1),
   true,
   false,
@@ -82,7 +84,7 @@ describe("noop", () => {
 
   test("returns undefined", () => {
     expect.assertions(1);
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+    // oxlint-disable-next-line typescript/no-confusing-void-expression
     expect(noop()).toBeUndefined();
   });
 
@@ -180,7 +182,7 @@ describe("create", () => {
     expect(create).toHaveParameters(1, 0);
   });
 
-  const inputs = [
+  const inputs: [tag: string, ctor: new () => HTMLElement][] = [
     ["x", window.HTMLUnknownElement],
     ["div", window.HTMLDivElement],
     ["span", window.HTMLSpanElement],
@@ -240,15 +242,13 @@ describe("create", () => {
     ["time", window.HTMLTimeElement],
     ["template", window.HTMLTemplateElement],
     ["slot", window.HTMLSlotElement],
-  ] as const;
+  ];
 
-  for (const [input, expected] of inputs) {
-    test(`returns ${expected.name} for "${input}" argument`, () => {
-      expect.assertions(1);
-      // @ts-expect-error - "x" is an intentional invalid element name
-      expect(create(input)).toBeInstanceOf(expected);
-    });
-  }
+  test.each(inputs)("returns the expected element for %s argument", (input, expected) => {
+    expect.assertions(1);
+    // @ts-expect-error - "x" is an intentional invalid element name
+    expect(create(input)).toBeInstanceOf(expected);
+  });
 
   test("throws when parameter is an empty string", () => {
     expect.assertions(1);
@@ -303,8 +303,8 @@ describe("clone", () => {
   test("clones descendant nodes", () => {
     expect.assertions(4);
     const root = ul.cloneNode() as HTMLUListElement;
-    root.appendChild(liA.cloneNode());
-    root.appendChild(liB.cloneNode());
+    root.append(liA.cloneNode());
+    root.append(liB.cloneNode());
     const result = clone(root);
     expect(result.children).toHaveLength(2);
     expect(result.firstChild).not.toBe(root.firstChild);
@@ -312,7 +312,7 @@ describe("clone", () => {
     expect(result.outerHTML).toBe(root.outerHTML);
   });
 
-  const inputs = [
+  const inputs: HTMLElement[] = [
     document.createElement("div"),
     document.createElement("span"),
     document.createElement("p"),
@@ -321,16 +321,14 @@ describe("clone", () => {
     document.createElement("input"),
     document.createElement("textarea"),
     document.createElement("select"),
-  ] as const;
+  ];
 
-  for (const input of inputs) {
-    test(`returns cloned ${input.tagName} element`, () => {
-      expect.assertions(2);
-      const result = clone(input);
-      expect(result).not.toBe(input);
-      expect(result.tagName).toBe(input.tagName);
-    });
-  }
+  test.each(inputs)("returns cloned element", (input) => {
+    expect.assertions(2);
+    const result = clone(input);
+    expect(result).not.toBe(input);
+    expect(result.tagName).toBe(input.tagName);
+  });
 });
 
 describe("append", () => {
@@ -407,7 +405,7 @@ describe("append", () => {
     const root = ul.cloneNode() as HTMLUListElement;
     const newParent = ul.cloneNode() as HTMLUListElement;
     const node = liA.cloneNode() as HTMLLIElement;
-    root.appendChild(node);
+    root.append(node);
     append(node, newParent);
     expect(root.childNodes).toHaveLength(0);
     expect(newParent.firstChild).toBe(node);
@@ -468,8 +466,8 @@ describe("prepend", () => {
     for (const input of NOT_DOM_NODES) {
       // @ts-expect-error - intentional invalid parameters
       expect(() => prepend(ul.cloneNode(), input)).toThrow(window.TypeError);
-      // FIXME: happy-dom does not handle this as per spec.
-      // eslint-disable-next-line no-continue
+      // TODO: happy-dom does not handle this as per spec.
+      // oxlint-disable-next-line no-continue vitest/no-conditional-in-test
       if (input === null) continue;
       // @ts-expect-error - intentional invalid parameters
       expect(() => prepend(input, ul.cloneNode())).toThrow(window.TypeError);
@@ -492,8 +490,8 @@ describe("prepend", () => {
     const root = ul.cloneNode() as HTMLUListElement;
     const newParent = ul.cloneNode() as HTMLUListElement;
     const node = liA.cloneNode() as HTMLLIElement;
-    newParent.appendChild(liB.cloneNode());
-    root.appendChild(node);
+    newParent.append(liB.cloneNode());
+    root.append(node);
     prepend(node, newParent);
     expect(root.childNodes).toHaveLength(0);
     expect(newParent.firstChild).toBe(node);
@@ -531,7 +529,7 @@ describe("insert", () => {
     expect.assertions(1);
     const root = ul.cloneNode() as HTMLUListElement;
     const target = liA.cloneNode() as HTMLLIElement;
-    root.appendChild(target);
+    root.append(target);
     const newNode = liB.cloneNode() as HTMLLIElement;
     const result = insert(newNode, target);
     expect(result).toBe(newNode);
@@ -572,7 +570,7 @@ describe("insert", () => {
     expect.assertions(1);
     const root = ul.cloneNode() as HTMLUListElement;
     const target = liA.cloneNode() as HTMLLIElement;
-    root.appendChild(target);
+    root.append(target);
     insert(liB.cloneNode(), target);
     insert(liC.cloneNode(), target);
     expect(root.outerHTML).toBe(
@@ -586,8 +584,8 @@ describe("insert", () => {
     const newParent = ul.cloneNode() as HTMLUListElement;
     const target = liA.cloneNode() as HTMLLIElement;
     const node = liB.cloneNode() as HTMLLIElement;
-    root.appendChild(node);
-    newParent.appendChild(target);
+    root.append(node);
+    newParent.append(target);
     insert(node, target);
     expect(root.childNodes).toHaveLength(0);
     expect(target.nextSibling).toBe(node);
@@ -625,7 +623,7 @@ describe("replace", () => {
     expect.assertions(1);
     const root = ul.cloneNode() as HTMLUListElement;
     const target = liA.cloneNode() as HTMLLIElement;
-    root.appendChild(target);
+    root.append(target);
     const newNode = liB.cloneNode() as HTMLLIElement;
     const result = replace(newNode, target);
     expect(result).toBe(newNode);
@@ -666,7 +664,7 @@ describe("replace", () => {
     expect.assertions(1);
     const root = ul.cloneNode() as HTMLUListElement;
     const target = liA.cloneNode() as HTMLLIElement;
-    root.appendChild(target);
+    root.append(target);
     replace(liB.cloneNode(), target);
     expect(root.outerHTML).toBe(/* html */ '<ul><li class="b"></li></ul>');
   });
@@ -675,7 +673,7 @@ describe("replace", () => {
     expect.assertions(3);
     const parent = ul.cloneNode() as HTMLUListElement;
     const target = liA.cloneNode() as HTMLLIElement;
-    parent.appendChild(target);
+    parent.append(target);
     const newNode = liB.cloneNode() as HTMLLIElement;
     expect(newNode.parentNode).toBeNull(); // guard: not in the DOM before the call
     replace(newNode, target);
@@ -689,8 +687,8 @@ describe("replace", () => {
     const parentY = ul.cloneNode() as HTMLUListElement;
     const node = liB.cloneNode() as HTMLLIElement;
     const target = liC.cloneNode() as HTMLLIElement;
-    parentX.appendChild(node);
-    parentY.appendChild(target);
+    parentX.append(node);
+    parentY.append(target);
     replace(node, target);
     expect(node.parentNode).toBe(parentY);
     expect(parentX.childNodes).toHaveLength(0);
@@ -706,7 +704,7 @@ describe("replace", () => {
     parentY.id = "y";
     root.append(parentX, parentY);
     const child = liB.cloneNode() as HTMLLIElement;
-    parentY.appendChild(child);
+    parentY.append(child);
     replace(parentY, parentX);
     expect(root.outerHTML).toBe(/* html */ '<div><ul id="y"><li class="b"></li></ul></div>');
     expect(child.parentNode).toBe(parentY);

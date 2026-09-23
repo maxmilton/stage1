@@ -1,5 +1,4 @@
 import "@maxmilton/test-utils/extend";
-
 import { setupDOM } from "@maxmilton/test-utils/dom";
 
 // Everything below is process-wide state, set once per test process and
@@ -14,19 +13,19 @@ import { setupDOM } from "@maxmilton/test-utils/dom";
 // would make any assertion on exact console output (e.g. test/unit/macro.test.ts's
 // error messages) pass or fail depending on how the suite is invoked.
 
-const noop = () => {};
-
 function setupMocks(): void {
   // @ts-expect-error - noop stub
-  global.performance.mark = noop;
+  global.performance.mark = () => {};
   // @ts-expect-error - noop stub
-  global.performance.measure = noop;
+  global.performance.measure = () => {};
   // @ts-expect-error - writable at runtime despite readonly type
   Bun.enableANSIColors = false;
+
+  // eslint-disable-next-line unicorn/no-global-object-property-assignment
+  global.Node = window.Node;
 }
 
+// oxlint-disable-next-line vitest/require-hook
 setupDOM();
+// oxlint-disable-next-line vitest/require-hook
 setupMocks();
-
-// eslint-disable-next-line unicorn/no-global-object-property-assignment
-global.Node = window.Node;

@@ -39,8 +39,8 @@ export const store = <
     },
     {
       set(target, property: K, value: T[K]) {
+        // oxlint-disable-next-line unicorn/no-array-for-each typescript/no-confusing-void-expression
         handlers.get(property)?.forEach((fn): void => fn(value, target[property]));
-        // eslint-disable-next-line no-param-reassign
         (target as T)[property] = value;
         return true;
       },

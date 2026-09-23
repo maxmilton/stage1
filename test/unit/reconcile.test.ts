@@ -1,5 +1,3 @@
-/* eslint-disable no-param-reassign */
-
 import { describe, expect, expectTypeOf, spyOn, test } from "bun:test";
 import { reconcile as reconcileKeyed } from "../../src/reconcile/keyed.ts";
 import { reconcile as reconcileNonKeyed } from "../../src/reconcile/non-keyed.ts";
@@ -127,9 +125,8 @@ describe("keyed", () => {
   test("returns undefined", () => {
     expect.assertions(1);
     const parent = document.createElement("div");
-    // eslint-disable-next-line unicorn/consistent-function-scoping
     const create = () => document.createElement("div");
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+    // oxlint-disable-next-line typescript/no-confusing-void-expression
     expect(reconcileKeyed("id", parent, [], [], create)).toBeUndefined();
   });
 
@@ -168,7 +165,7 @@ describe("keyed", () => {
     reconcileKeyed("id", parent, [], ITEMS, createItemNode, updateItemNode);
     const nodes = [...parent.children];
     reconcileKeyed("id", parent, ITEMS, REORDERED_ITEMS, createItemNode, updateItemNode);
-    const thirdNode = [...parent.children][2];
+    const [_firstNode, _secondNode, thirdNode] = [...parent.children];
     expect(nodes).not.toContain(thirdNode);
     expect(thirdNode.textContent).toBe("Epsilon");
   });
@@ -366,9 +363,8 @@ describe("non-keyed", () => {
   test("returns undefined", () => {
     expect.assertions(1);
     const parent = document.createElement("div");
-    // eslint-disable-next-line unicorn/consistent-function-scoping
     const create = () => document.createElement("div");
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+    // oxlint-disable-next-line typescript/no-confusing-void-expression
     expect(reconcileNonKeyed(parent, [], [], create)).toBeUndefined();
   });
 
@@ -593,9 +589,8 @@ describe("reuse-nodes", () => {
   test("returns undefined", () => {
     expect.assertions(1);
     const parent = document.createElement("div");
-    // eslint-disable-next-line unicorn/consistent-function-scoping
     const create = () => document.createElement("div");
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+    // oxlint-disable-next-line typescript/no-confusing-void-expression
     expect(reconcileReuseNodes(parent, [], [], create)).toBeUndefined();
   });
 

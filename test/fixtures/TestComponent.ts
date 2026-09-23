@@ -1,5 +1,5 @@
-import { compile } from "../src/macro.ts" with { type: "macro" };
-import { collect, h } from "../src/runtime.ts";
+import { compile } from "../../src/macro.ts" with { type: "macro" };
+import { collect, h } from "../../src/runtime.ts";
 
 type TestComponent = HTMLDivElement;
 
@@ -8,12 +8,12 @@ interface TestProps {
 }
 
 interface Refs {
-  t: Text;
+  text: Text;
 }
 
 const meta = compile(/* html */ `
   <div id=test>
-    @t
+    @text
   </div>
 `);
 const view = h<HTMLDivElement>(meta.html);
@@ -22,7 +22,7 @@ export function Test(props: TestProps): TestComponent {
   const root = view;
   const refs = collect<Refs>(root, meta.k, meta.d);
 
-  refs.t.nodeValue = props.text;
+  refs.text.nodeValue = props.text;
 
   return root;
 }

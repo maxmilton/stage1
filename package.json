@@ -3,10 +3,18 @@
   "version": "0.11.0-next.0",
   "description": "High-performance JavaScript micro framework",
   "bugs": "https://github.com/maxmilton/stage1/issues",
-  "repository": "github:maxmilton/stage1",
   "license": "MIT",
   "author": "Max Milton <max@2okki.com>",
+  "repository": "github:maxmilton/stage1",
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "browser": "dist/browser.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -42,13 +50,6 @@
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
-  "main": "dist/index.js",
-  "browser": "dist/browser.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist",
-    "src"
-  ],
   "scripts": {
     "build": "bun build.ts",
     "lint": "bun lint:fmt && bun lint:js && bun lint:js2 && bun lint:ts",
@@ -63,7 +64,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@maxmilton/eslint-config": "0.3.5",
-    "@maxmilton/oxlint-config": "0.0.20",
+    "@maxmilton/oxlint-config": "0.0.19",
     "@maxmilton/test-utils": "0.0.18",
     "@playwright/test": "1.63.0",
     "@types/bun": "1.4.2",
@@ -79,6 +80,5 @@
     "terser": "5.51.2",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.0"
-  },
-  "__FIXME__sideEffects": false
+  }
 }

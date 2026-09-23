@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test";
 
 type Mutable<T> = {
-  -readonly [P in keyof T]: T[P];
+  -readonly [K in keyof T]: T[K];
 };
 
 describe("globals", () => {
@@ -43,23 +43,21 @@ describe("globals", () => {
   )("has window.%s mapped to global", (globalName) => {
     expect.assertions(3);
     expect(global[globalName]).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(window[globalName]).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(global[globalName]).toBe(window[globalName]);
   });
 
   describe("performance", () => {
     test("mark is a noop function", () => {
       expect.assertions(2);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+      // oxlint-disable-next-line typescript/unbound-method
       expect(performance.mark).toBeFunction();
       expect(performance.mark.toString()).toBe("() => {}");
     });
 
     test("measure is a noop function", () => {
       expect.assertions(2);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+      // oxlint-disable-next-line typescript/unbound-method
       expect(performance.measure).toBeFunction();
       expect(performance.measure.toString()).toBe("() => {}");
     });

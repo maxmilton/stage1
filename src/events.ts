@@ -1,7 +1,6 @@
-// eslint-disable-next-line symbol-description
 export const ONCLICK = Symbol();
 
-// eslint-disable-next-line consistent-return
+// oxlint-disable-next-line typescript/consistent-return
 export const handleClick = (event: Event): false | undefined => {
   let node = event.target as (Node & { [ONCLICK]?: (event: Event) => false | undefined }) | null;
 
@@ -21,9 +20,11 @@ export const handleClick = (event: Event): false | undefined => {
  * ```
  */
 export const setupSyntheticClick = (): void => {
+  // oxlint-disable-next-line typescript/strict-void-return
   document.addEventListener("click", handleClick);
 };
 
 export const removeSyntheticClick = (): void => {
+  // oxlint-disable-next-line typescript/strict-void-return
   document.removeEventListener("click", handleClick);
 };

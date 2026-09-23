@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable no-continue, no-labels, no-param-reassign */
+// TODO: Fix these lint issues rather than disabling them.
+// oxlint-disable complexity id-length no-continue no-labels no-multi-assign no-param-reassign typescript/no-non-null-assertion typescript/no-unsafe-member-access typescript/prefer-for-of
 
 import { noop } from "../utils.ts";
 
@@ -136,7 +136,6 @@ export const reconcile = <T, N extends Node>(
       updateFn(prevStartNode, b);
       prevStart++;
       newStart++;
-      // eslint-disable-next-line no-multi-assign
       newStartNode = prevStartNode = prevStartNode!.nextSibling;
       if (prevEnd < prevStart || newEnd < newStart) break fixes;
       a = renderedData[prevStart];
