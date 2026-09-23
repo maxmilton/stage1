@@ -10,7 +10,6 @@ export default defineConfig({
   // click listener in browser-events.spec.ts belongs to that page, not the
   // process. Parallel execution also enforces that (CLAUDE.md R5).
   fullyParallel: true,
-  globalSetup: "./test/e2e/global-setup.ts",
   retries: process.env["CI"] ? 1 : 0,
   use: {
     acceptDownloads: false,
