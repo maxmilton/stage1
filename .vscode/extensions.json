@@ -1,6 +1,7 @@
 {
   "recommendations": [
     "bierner.comment-tagged-templates",
+    "dbaeumer.vscode-eslint",
     "ms-playwright.playwright",
     "oven.bun-vscode",
     "oxc.oxc-vscode",
@@ -9,7 +10,6 @@
   ],
   "unwantedRecommendations": [
     "biomejs.biome",
-    "dbaeumer.vscode-eslint",
     "dprint.dprint",
     "esbenp.prettier-vscode",
     "prettier.prettier-vscode"
