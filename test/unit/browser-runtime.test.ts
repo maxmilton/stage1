@@ -346,6 +346,69 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
+  test("collects refs against a cloned root", () => {
+    expect.assertions(3);
+    // How components actually render: compile the view once, clone it per
+    // instance, collect against the clone. The walker is rooted at the
+    // module-level <template>, and the clone was never in it.
+    const view = h(/* html */ "<ul @l><li @a>A</li><li @b>B</li></ul>");
+    const root = view.cloneNode(true) as HTMLUListElement;
+    const refs = collect<{ l: Element; a: Element; b: Element }>(root, view);
+    const [first, second] = root.getElementsByTagName("li");
+    expect(refs.l).toBe(root);
+    expect(refs.a).toBe(first);
+    expect(refs.b).toBe(second);
+  });
+
+  test("collects refs from a view compiled before a later h() call", () => {
+    expect.assertions(2);
+    // h() reuses one module-level <template>, so a second call replaces its
+    // content and orphans the first view. Module-scope views (see
+    // test/TestComponent_browser.ts) depend on surviving that.
+    const view = h(/* html */ "<div @a><span @b>x</span></div>");
+    h(/* html */ "<p @c>other</p>");
+    const refs = collect<{ a: Element; b: Element }>(view, view);
+    const [span] = view.getElementsByTagName("span");
+    expect(refs.b.nodeName).toBe("SPAN");
+    expect(refs.b).toBe(span);
+  });
+
+  // Characterization (T11): text refs are read from nodeValue, which the
+  // parser does not normalise, so the runtime key keeps its case while
+  // LowercaseKeys<T> claims lowercase. compile() rejects the name instead (V19).
+  test("keeps the case of a text ref name", () => {
+    expect.assertions(1);
+    const view = h(/* html */ "<div>@Foo</div>");
+    expect(Object.keys(collect(view, view))).toEqual(["Foo"]);
+  });
+
+  // Characterization (V17): the whitespace collapse does not reach inside
+  // comments and collector() only matches nodeValue[0]. compile() accepts
+  // both spellings.
+  test("does not collect a comment ref with surrounding whitespace", () => {
+    expect.assertions(1);
+    const view = h(/* html */ "<div><!-- @a --><b @c></b></div>");
+    expect(Object.keys(collect(view, view))).toEqual(["c"]);
+  });
+
+  // Accepted tradeoff (B9): <style> content is a text node, and any text node
+  // starting with "@" is a ref. compile() is protected by RAW_TAGS (B7);
+  // guarding live mode costs bytes. Use precompiled mode for <script>/<style>.
+  test("reads a style at-rule as a ref name", () => {
+    expect.assertions(1);
+    const view = h(/* html */ "<div><style>@media print{a{b:c}}</style></div>");
+    // eslint-disable-next-line array-bracket-spacing
+    expect(Object.keys(collect(view, view))).toEqual([/* css */ "media print{a{b:c}}"]);
+  });
+
+  test("wipes the CSS of a style element read as a ref", () => {
+    expect.assertions(1);
+    // Accepted tradeoff (B9), destructive half: the stylesheet is blanked.
+    const view = h(/* html */ "<div><style>@media print{a{b:c}}</style></div>");
+    collect(view, view);
+    expect(view.outerHTML).toBe(/* html */ "<div><style></style></div>");
+  });
+
   test("collects refs from template with many comments", () => {
     expect.assertions(13);
     interface TemplateRefs {

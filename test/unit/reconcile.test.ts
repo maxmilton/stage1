@@ -255,6 +255,20 @@ describe("keyed", () => {
     expect(parent.textContent).toBe("ABCD");
   });
 
+  test("adds trailing nodes before the after boundary", () => {
+    expect.assertions(5);
+    const [parent, before, after] = createBoundedParent();
+    const first = ITEMS.slice(0, 2);
+    reconcileKeyed("id", parent, [], first, createItemNode, updateItemNode, before, after);
+    const nodes = [...parent.children].slice(1, -1);
+    reconcileKeyed("id", parent, first, ITEMS, createItemNode, updateItemNode, before, after);
+    expect(parent.firstChild).toBe(before);
+    expect(parent.lastChild).toBe(after);
+    expect(itemOrder(parent).slice(1, -1)).toEqual(IDS);
+    expect([...parent.children].slice(1, 3)).toEqual(nodes);
+    expect(parent.textContent).toBe("ABCD");
+  });
+
   test("replaces every node when no keys match", () => {
     expect.assertions(4);
     const parent = document.createElement("div");
