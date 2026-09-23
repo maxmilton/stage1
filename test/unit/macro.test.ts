@@ -1,7 +1,12 @@
+// oxlint-disable eslint/no-duplicate-imports import/no-duplicates
+
 import { describe, expect, expectTypeOf, onTestFinished, spyOn, test } from "bun:test";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
-import type { CompileOptions, CompileResult } from "../../src/macro.ts";
-import { compile as compileNoMacro } from "../../src/macro.ts";
+import {
+  compile as compileNoMacro,
+  type CompileOptions,
+  type CompileResult,
+} from "../../src/macro.ts";
 import type { InferRefs } from "../../src/types.ts";
 
 describe("compile", () => {
@@ -263,8 +268,8 @@ describe("compile", () => {
   // otherwise reads as a duplicate of "…when 1 text ref".
   test("has correct meta ref properties when escaped node ref", () => {
     expect.assertions(2);
-    // biome-ignore lint/suspicious/noUselessEscapeInString: explicitly testing
-    const meta = compile(/* html */ "<div>\@a</div>"); // eslint-disable-line no-useless-escape
+    // oxlint-disable-next-line no-useless-escape
+    const meta = compile(/* html */ "<div>\@a</div>");
     expect(meta.success).toBeTrue();
     expect(meta.ref).toHaveProperty("a", 0);
   });
@@ -559,6 +564,8 @@ describe("compile", () => {
 
   // FIXME: Uncomment once bun string handling in macros bug is fixed.
   // ↳ Currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
+
+  // oxlint-disable-next-line vitest/no-commented-out-tests
   // test("does not escape HTML entities", () => {
   //   expect.assertions(2);
   //   const template = /* html */ "<div>&lt;span&gt;Foo&lt;/span&gt;</div>";
@@ -568,6 +575,31 @@ describe("compile", () => {
   // });
 
   describe("errors", () => {
+    test("throws when input template is not a string", () => {
+      expect.assertions(10);
+      const expectedError = new TypeError("Template must be a string literal");
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro(123)).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro(123n)).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro(true)).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro()).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro(null)).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro(Symbol("test"))).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro(["<div></div>"])).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro(() => "<div></div>")).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro({ template: "<div></div>" })).toThrowError(expectedError);
+      // @ts-expect-error: test invalid input
+      expect(() => compileNoMacro(String)).toThrowError(expectedError);
+    });
+
     test("logs error when more than one root element", () => {
       expect.assertions(2);
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
@@ -595,6 +627,70 @@ describe("compile", () => {
       compileNoMacro(template);
       expect(consoleSpy).toHaveBeenCalledWith(`Multiple root nodes in template:\n${template}`);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test("logs error once when a second root element has children", () => {
+      expect.assertions(2);
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<div></div><div><span></span><b></b></div>";
+      compileNoMacro(template);
+      expect(consoleSpy).toHaveBeenCalledWith(`Multiple root nodes in template:\n${template}`);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test("logs error once when there are three top-level root elements", () => {
+      expect.assertions(2);
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "<div></div><div></div><div></div>";
+      compileNoMacro(template);
+      expect(consoleSpy).toHaveBeenCalledWith(`Multiple root nodes in template:\n${template}`);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test("logs error for text before the root element", () => {
+      expect.assertions(2);
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "lead text<div @a></div>";
+      compileNoMacro(template);
+      expect(consoleSpy).toHaveBeenCalledWith(`Multiple root nodes in template:\n${template}`);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test("returns success false for text after the root element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<div></div>tail text");
+      expect(meta.success).toBeFalse();
+    });
+
+    test("returns success false for a ref comment after the root element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<div></div><!-- @after -->");
+      expect(meta.success).toBeFalse();
+    });
+
+    // Guard: a non-ref comment after the root is discarded before render, so
+    // it cannot corrupt the walk and stays legal.
+    test("returns success true for a plain comment after the root element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "<div></div><!-- hi -->");
+      expect(meta.success).toBeTrue();
+    });
+
+    // Guard: a bare text ref with no wrapping element is itself the (single)
+    // root — it must not be treated as a stray node before an absent one.
+    test("returns success true for a template with only a text ref", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "@a");
+      expect(meta.success).toBeTrue();
+    });
+
+    // Regression: text never closed the root it stands in for, so text
+    // followed by a real root element was accepted with the element as root,
+    // silently discarding the leading text instead of failing.
+    test("returns success false for text before the root element", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "lead text<div @a></div>");
+      expect(meta.success).toBeFalse();
     });
 
     test("logs error when doctype found", () => {
@@ -666,8 +762,8 @@ describe("compile", () => {
 
     test.each(invalidRefNames)("returns success false for invalid ref name in %j", (template) => {
       expect.assertions(1);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      // oxlint-disable-next-line no-underscore-dangle
+      using _consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       expect(compileNoMacro(template).success).toBeFalse();
     });
 
@@ -707,7 +803,7 @@ describe("compile", () => {
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
       expect(consoleSpy).toHaveBeenCalledWith(
-        `Doctype not allowed in template:\n\x1B[2m${template}\x1B[0m`,
+        `Doctype not allowed in template:\n\u001B[2m${template}\u001B[0m`,
       );
     });
 
@@ -735,7 +831,6 @@ describe("compile", () => {
   });
 
   // TODO: Test once lol-html (which powers bun's HTMLRewriter) fix their whitespace handling.
-  // biome-ignore lint/suspicious/noSkippedTests: blocked on the lol-html bug noted above
   test.skip("returns expected html for basic template with messy whitespace", () => {
     expect.assertions(2);
     const meta = compile(/* html */ `
@@ -925,6 +1020,16 @@ describe("compile", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<!>");
     });
+
+    // Regression: a comment ref never closed the root it stands in for, so a
+    // second top-level comment ref was silently accepted as a second root.
+    test("returns success false for two top-level comment refs", () => {
+      expect.assertions(1);
+      // oxlint-disable-next-line no-underscore-dangle
+      using _consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const meta = compile(/* html */ "<!-- @a --><!-- @b -->");
+      expect(meta.success).toBeFalse();
+    });
   });
 
   describe("keepSpaces option", () => {
@@ -994,6 +1099,7 @@ describe("HTMLRewriter", () => {
       new HTMLRewriter()
         .onDocument({
           text(chunk) {
+            // oxlint-disable-next-line vitest/no-conditional-in-test
             if (!chunk.lastInTextNode) chunks++;
           },
         })
@@ -1015,6 +1121,7 @@ describe("HTMLRewriter", () => {
       new HTMLRewriter()
         .onDocument({
           text(chunk) {
+            // oxlint-disable-next-line vitest/no-conditional-in-test
             if (!chunk.lastInTextNode) chunks++;
           },
         })
@@ -1044,6 +1151,7 @@ describe("HTMLRewriter", () => {
       new HTMLRewriter()
         .onDocument({
           text(chunk) {
+            // oxlint-disable-next-line vitest/no-conditional-in-test
             sequence.push(chunk.lastInTextNode ? "END" : `t:${chunk.text}`);
           },
         })
@@ -1065,6 +1173,7 @@ describe("HTMLRewriter", () => {
         .onDocument({
           text(chunk) {
             buffer += chunk.text;
+            // oxlint-disable-next-line vitest/no-conditional-in-test
             if (!chunk.lastInTextNode) {
               chunk.remove();
               return;
@@ -1190,6 +1299,7 @@ describe("HTMLRewriter", () => {
         .on("*", {
           element(node) {
             const { tagName } = node;
+            // oxlint-disable-next-line vitest/no-conditional-in-test
             if (node.canHaveContent && !node.selfClosing) {
               node.onEndTag(() => {
                 fired.push(tagName);
@@ -1213,6 +1323,7 @@ describe("HTMLRewriter", () => {
           element(node) {
             for (const [name] of node.attributes) {
               iterated.push(name);
+              // oxlint-disable-next-line vitest/no-conditional-in-test
               if (name[0] === "@") node.removeAttribute(name);
             }
           },

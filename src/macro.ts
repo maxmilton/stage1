@@ -54,16 +54,20 @@ export function compile<R extends InferRefs<R> = object>(
   let verbatimDepth = 0;
   let isRawText = false;
   let textBuffer = "";
-  /** `undefined` = root not seen yet, `true` = inside root, `false` = root closed. */
-  let insideRoot: boolean | undefined;
+  let isInsideRoot = false;
+  let roots = 0;
 
   // TODO: Better message detail once feature is done: https://github.com/oven-sh/bun/issues/39695
   const fail = (message: string) => {
-    const detail = Bun.enableANSIColors ? `\x1B[2m${template}\x1B[0m` : template;
-    // eslint-disable-next-line no-console
-    console.error("%s in template:\n%s", message, detail);
-
+    const detail = Bun.enableANSIColors ? `\u001B[2m${template}\u001B[0m` : template;
+    // oxlint-disable-next-line no-console
+    console.error(`${message} in template:\n${detail}`);
     didFail = true;
+  };
+
+  const claimRoot = () => {
+    if (isInsideRoot) return;
+    if (++roots === 2) fail("Multiple root nodes");
   };
 
   const addRef = (name: string) => {
@@ -77,13 +81,14 @@ export function compile<R extends InferRefs<R> = object>(
   const html = new HTMLRewriter()
     .onDocument({
       doctype() {
-        fail("Expected no doctype");
+        fail("Doctype not allowed");
       },
       comments(node) {
         const text = node.text.trim();
         node.remove();
         // eslint-disable-next-line unicorn/prefer-early-return
         if (!isRawText && text[0] === "@") {
+          claimRoot();
           addRef(text.slice(1));
           // Replace with <!> which renders a Comment node at runtime
           node.after("<!>", { html: true });
@@ -103,6 +108,8 @@ export function compile<R extends InferRefs<R> = object>(
         textBuffer = "";
         const text = raw.trim();
 
+        if (text) claimRoot();
+
         if (!isRawText && text[0] === "@") {
           addRef(text.slice(1));
           // Replace with single space which renders a Text node at runtime
@@ -121,7 +128,7 @@ export function compile<R extends InferRefs<R> = object>(
     })
     .on("*", {
       element(node) {
-        const isRoot = insideRoot === undefined;
+        const isRoot = !isInsideRoot;
         // Void elements have no end tag to hook into; onEndTag throws for them.
         // NOTE: `selfClosing` is deliberately not consulted — in HTML content
         // "/>" is ignored by the parser, so <div/> is an OPEN div which does
@@ -139,9 +146,8 @@ export function compile<R extends InferRefs<R> = object>(
         }
 
         if (isRoot) {
-          insideRoot = hasEndTag;
-        } else if (!insideRoot) {
-          fail("Expected single root element");
+          claimRoot();
+          isInsideRoot = hasEndTag;
         }
         if (isVerbatim) verbatimDepth++;
         if (isRaw) isRawText = true;
@@ -150,7 +156,7 @@ export function compile<R extends InferRefs<R> = object>(
         // everything which unwinds here has to share the one handler
         if (hasEndTag && (isRoot || isVerbatim)) {
           node.onEndTag(() => {
-            if (isRoot) insideRoot = false;
+            if (isRoot) isInsideRoot = false;
             if (isVerbatim) verbatimDepth--;
             if (isRaw) isRawText = false;
           });
@@ -161,7 +167,7 @@ export function compile<R extends InferRefs<R> = object>(
         for (const [name] of node.attributes) if (name[0] === "@") refAttrs.push(name);
         for (const name of refAttrs) node.removeAttribute(name);
         if (refAttrs.length > 1) {
-          fail("Multiple ref markers on single element");
+          fail("Multiple ref markers on one element");
         }
         if (refAttrs.length > 0) addRef(refAttrs[0].slice(1));
         distance++;
