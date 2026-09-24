@@ -1,8 +1,9 @@
-type Handler<T, K extends keyof T> = (value: T[K], prev: Readonly<T[K]>) => void;
-type Store<T, K extends keyof T> = T & {
-  readonly on: (
+type Key<T> = Extract<keyof T, string | symbol>;
+type Handler<T> = (value: T, prev: Readonly<T>) => void;
+type Store<T> = T & {
+  readonly on: <K extends Key<T>>(
     key: K,
-    callback: Handler<T, K>,
+    callback: Handler<T[K]>,
   ) => /**
    * Off
    *
@@ -18,13 +19,10 @@ type Store<T, K extends keyof T> = T & {
  * @returns A proxied state object that triggers registered callback handler
  *   functions when its properties are set.
  */
-export const store = <
-  T extends Record<string | symbol, unknown>,
-  K extends Exclude<keyof T, number>,
->(
+export const store = <T extends Record<string | symbol, unknown>>(
   initialState: Readonly<T> & { on?: never },
-): Store<T, K> => {
-  const handlers = new Map<K, Set<Handler<T, K>>>();
+): Store<T> => {
+  const handlers = new Map<Key<T>, Set<Handler<never>>>();
 
   return new Proxy(
     {
@@ -38,9 +36,11 @@ export const store = <
       },
     },
     {
-      set(target, property: K, value: T[K]) {
-        // oxlint-disable-next-line unicorn/no-array-for-each typescript/no-confusing-void-expression
-        handlers.get(property)?.forEach((fn): void => fn(value, target[property]));
+      set(target, property: Key<T>, value: T[Key<T>]) {
+        handlers
+          .get(property)
+          // oxlint-disable-next-line unicorn/no-array-for-each typescript/no-confusing-void-expression
+          ?.forEach((fn): void => (fn as Handler<T[Key<T>]>)(value, target[property]));
         (target as T)[property] = value;
         return true;
       },

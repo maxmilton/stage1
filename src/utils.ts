@@ -6,9 +6,12 @@ export const noop = (): void => {
 
 export const fragment = (): DocumentFragment => document.createDocumentFragment();
 export const text = (data: string): Text => document.createTextNode(data);
-export const create = <K extends keyof HTMLElementTagNameMap>(
-  tagName: K,
-): HTMLElementTagNameMap[K] => document.createElement(tagName);
+interface Create {
+  <K extends keyof HTMLElementTagNameMap>(tagName: K): HTMLElementTagNameMap[K];
+  (tagName: `${string}-${string}`): HTMLElement;
+}
+export const create: Create = (tagName: keyof HTMLElementTagNameMap | `${string}-${string}`) =>
+  document.createElement(tagName);
 /** Clone a node, including all its descendants. */
 export const clone = <T extends Node>(node: T): T => node.cloneNode(true) as T;
 /** Append a node to the end of the parent node. */

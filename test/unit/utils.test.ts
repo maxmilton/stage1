@@ -158,17 +158,20 @@ describe("create", () => {
     expect.assertions(0);
     expectTypeOf(create).not.toBeAny();
     expectTypeOf(create).toBeFunction();
-    // Erased: `K` -> its constraint; instantiated below.
-    expectTypeOf(create).parameters.toEqualTypeOf<[keyof HTMLElementTagNameMap]>();
+    expectTypeOf(create).parameters.toEqualTypeOf<
+      [keyof HTMLElementTagNameMap] | [`${string}-${string}`]
+    >();
     expectTypeOf(create).returns.not.toBeAny();
     expectTypeOf(create).returns.not.toBeNever();
     expectTypeOf(create).returns.toEqualTypeOf<
       HTMLElementTagNameMap[keyof HTMLElementTagNameMap]
     >();
-    expectTypeOf<ReturnType<typeof create<"div">>>().toEqualTypeOf<HTMLDivElement>();
-    expectTypeOf<ReturnType<typeof create<"li">>>().toEqualTypeOf<HTMLLIElement>();
-    // @ts-expect-error - tag name outside `keyof HTMLElementTagNameMap`
-    expectTypeOf<ReturnType<typeof create<"nope">>>();
+    expectTypeOf(create("div")).not.toBeAny();
+    expectTypeOf(create("div")).toEqualTypeOf<HTMLDivElement>();
+    expectTypeOf(create("li")).toEqualTypeOf<HTMLLIElement>();
+    expectTypeOf(create("x-widget")).toEqualTypeOf<HTMLElement>();
+    // @ts-expect-error - neither a known HTML tag nor a hyphenated name
+    create("nope");
   });
 
   test("is a function", () => {
@@ -261,7 +264,6 @@ describe("clone", () => {
   test("types", () => {
     expectTypeOf(clone).not.toBeAny();
     expectTypeOf(clone).toBeFunction();
-    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(clone).parameters.toEqualTypeOf<[Node]>();
     expectTypeOf(clone).returns.not.toBeAny();
     expectTypeOf(clone).returns.not.toBeNever();
@@ -336,7 +338,6 @@ describe("append", () => {
     expect.assertions(0);
     expectTypeOf(append).not.toBeAny();
     expectTypeOf(append).toBeFunction();
-    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(append).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(append).returns.not.toBeAny();
     expectTypeOf(append).returns.not.toBeNever();
@@ -418,7 +419,6 @@ describe("prepend", () => {
     expect.assertions(0);
     expectTypeOf(prepend).not.toBeAny();
     expectTypeOf(prepend).toBeFunction();
-    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(prepend).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(prepend).returns.not.toBeAny();
     expectTypeOf(prepend).returns.not.toBeNever();
@@ -504,7 +504,6 @@ describe("insert", () => {
     expect.assertions(0);
     expectTypeOf(insert).not.toBeAny();
     expectTypeOf(insert).toBeFunction();
-    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(insert).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(insert).returns.not.toBeAny();
     expectTypeOf(insert).returns.not.toBeNever();
@@ -598,7 +597,6 @@ describe("replace", () => {
     expect.assertions(0);
     expectTypeOf(replace).not.toBeAny();
     expectTypeOf(replace).toBeFunction();
-    // Erased: `T` -> `Node`; instantiated below.
     expectTypeOf(replace).parameters.toEqualTypeOf<[Node, Node]>();
     expectTypeOf(replace).returns.not.toBeAny();
     expectTypeOf(replace).returns.not.toBeNever();

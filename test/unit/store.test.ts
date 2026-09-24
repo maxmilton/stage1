@@ -7,7 +7,6 @@ describe("store", () => {
     expect.assertions(0);
     expectTypeOf(store).not.toBeAny();
     expectTypeOf(store).toBeFunction();
-    // Erased: `T`/`K` -> their constraints, never reaching the per-key narrowing.
     expectTypeOf(store).parameters.branded.toEqualTypeOf<[object & { on?: never }]>();
     expectTypeOf(store).returns.not.toBeAny();
     expectTypeOf(store).returns.not.toBeNever();
@@ -19,10 +18,23 @@ describe("store", () => {
         ) => /** Off */ () => boolean;
       }
     >();
-    expectTypeOf<ReturnType<typeof store<{ count: number }, "count">>["on"]>().toEqualTypeOf<
-      (key: "count", callback: (value: number, prev: number) => void) => () => boolean
-    >();
-    expectTypeOf<ReturnType<typeof store<{ count: number }, "count">>["count"]>().toBeNumber();
+    expectTypeOf<ReturnType<typeof store<{ count: number }>>["count"]>().toBeNumber();
+    const key = Symbol();
+    const state = store({ count: 0, label: "", [key]: true });
+    state.on("count", (value, prev) => {
+      expectTypeOf(value).toEqualTypeOf<number>();
+      expectTypeOf(prev).toEqualTypeOf<number>();
+    });
+    state.on("label", (value) => {
+      expectTypeOf(value).toEqualTypeOf<string>();
+    });
+    state.on(key, (value) => {
+      expectTypeOf(value).toEqualTypeOf<boolean>();
+    });
+    // @ts-expect-error - unknown state key
+    state.on("missing", () => {});
+    // @ts-expect-error - count handlers receive numbers
+    state.on("count", (_value: string) => {});
     // The `on?: never` constraint is on the parameter ∴ call-site only.
     // @ts-expect-error - `on` is reserved for the change handler registrar
     store({ on: 1 });
