@@ -1,4 +1,5 @@
 import { collect, h } from "../../src/browser/runtime.ts";
+import { clone } from "../../src/utils.ts";
 
 type TestComponent = HTMLDivElement;
 
@@ -17,7 +18,7 @@ const view = h<HTMLDivElement>(/* html */ `
 `);
 
 export function Test(props: TestProps): TestComponent {
-  const root = view;
+  const root = clone(view);
   const refs = collect<Refs>(root, view);
 
   refs.text.nodeValue = props.text;

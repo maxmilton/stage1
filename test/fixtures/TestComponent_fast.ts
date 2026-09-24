@@ -1,5 +1,6 @@
 import { collect, h } from "../../src/fast/runtime.ts";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
+import { clone } from "../../src/utils.ts";
 
 type TestComponent = HTMLDivElement;
 
@@ -19,7 +20,7 @@ const meta = compile<Refs>(/* html */ `
 const view = h<HTMLDivElement>(meta.html);
 
 export function Test(props: TestProps): TestComponent {
-  const root = view;
+  const root = clone(view);
   const refs = collect<Refs>(root, meta.d);
 
   refs[meta.ref.text].nodeValue = props.text;
