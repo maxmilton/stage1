@@ -152,7 +152,7 @@ describe("compile", () => {
     expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
-  // TODO: Add documentation about this since it differs from browser runtime h() behaviour.
+  // TODO: Add documentation about this; it differs from browser runtime h() behaviour.
   test("has 1 k, d, and ref properties when 1 text ref with whitespace", () => {
     expect.assertions(4);
     const meta = compile(/* html */ "<div> @a</div>");
@@ -162,7 +162,7 @@ describe("compile", () => {
     expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
-  // TODO: Add documentation about this since it differs from browser runtime h() behaviour.
+  // TODO: Add documentation about this; it differs from browser runtime h() behaviour.
   test("has 1 k, d, and ref properties when 1 comment ref with whitespace", () => {
     expect.assertions(4);
     const meta = compile(/* html */ "<div><!--  @a --></div>");
@@ -616,7 +616,7 @@ describe("compile", () => {
     test("removes comment when template is only comment", () => {
       expect.assertions(2);
       const meta = compile(/* html */ "<!-- comment -->");
-      expect(meta.success).toBeTrue();
+      expect(meta.success).toBeFalse(); // empty html string is invalid
       expect(meta.html).toBe(/* html */ "");
     });
 
@@ -1198,6 +1198,24 @@ describe("compile", () => {
       expect(() => compileNoMacro(String)).toThrowError(expectedError);
     });
 
+    test("logs error when empty string", () => {
+      expect.assertions(2);
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "";
+      compileNoMacro(template);
+      expect(consoleSpy).toHaveBeenCalledWith(`Empty html string in template:\n${template}`);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test("logs error when template compiles to empty string", () => {
+      expect.assertions(2);
+      using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const template = /* html */ "  <!-- comment -->\n\n";
+      compileNoMacro(template);
+      expect(consoleSpy).toHaveBeenCalledWith(`Empty html string in template:\n${template}`);
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+    });
+
     test("logs error when more than one root element", () => {
       expect.assertions(2);
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
@@ -1252,6 +1270,26 @@ describe("compile", () => {
       compileNoMacro(template);
       expect(consoleSpy).toHaveBeenCalledWith(`Multiple root nodes in template:\n${template}`);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test("returns success false for empty string", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "");
+      expect(meta.success).toBeFalse();
+    });
+
+    test("returns success false for whitespace-only string", () => {
+      expect.assertions(1);
+      const meta = compile(
+        /* html */ " \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF",
+      );
+      expect(meta.success).toBeFalse();
+    });
+
+    test("returns success false for template that compiles to empty string", () => {
+      expect.assertions(1);
+      const meta = compile(/* html */ "  <!-- comment -->\n\n");
+      expect(meta.success).toBeFalse();
     });
 
     test("returns success false for text after the root element", () => {

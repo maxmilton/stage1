@@ -176,6 +176,10 @@ export function compile<R extends InferRefs<R> = object>(
     })
     .transform(template.trim());
 
+  if (html === "") {
+    fail("Empty html string");
+  }
+
   return {
     html,
     k,
