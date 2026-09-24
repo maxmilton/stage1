@@ -68,6 +68,24 @@ describe("h", () => {
     expect(h).toHaveParameters(1, 0);
   });
 
+  test("returns a DOM node for div", () => {
+    expect.assertions(1);
+    const node = h(/* html */ "<div></div>");
+    expect(node).toBeInstanceOf(Node);
+  });
+
+  test("returns a DOM node for text", () => {
+    expect.assertions(1);
+    const node = h(/* html */ "foo");
+    expect(node).toBeInstanceOf(Node);
+  });
+
+  // TODO: Add documentation about this; it differs from precompiled runtime h() behaviour.
+  test("throws for empty string", () => {
+    expect.assertions(1);
+    expect(() => h(/* html */ "")).toThrow();
+  });
+
   describe("render", () => {
     afterEach(cleanup);
 
