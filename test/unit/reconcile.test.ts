@@ -136,6 +136,46 @@ describe("keyed", () => {
     expect(itemOrder(parent)).toEqual(["d", "b", "e", "a"]);
   });
 
+  test("preserves both input arrays when reordering", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    const renderedData = [
+      { id: "b", label: "B" },
+      { id: "a", label: "A" },
+      { id: "c", label: "C" },
+    ] as const;
+    const data = [
+      { id: "c", label: "C" },
+      { id: "b", label: "B" },
+      { id: "a", label: "A" },
+    ] as const;
+    const originalRenderedData = [...renderedData] as const;
+    const originalData = [...data] as const;
+    reconcileKeyed("id", parent, [], renderedData, createItemNode, updateItemNode);
+    reconcileKeyed("id", parent, renderedData, data, createItemNode, updateItemNode);
+    expect(renderedData).toEqual(originalRenderedData);
+    expect(data).toEqual(originalData);
+  });
+
+  test("reorders frozen arrays of frozen items", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    const renderedData = Object.freeze([
+      Object.freeze({ id: "b", label: "B" }),
+      Object.freeze({ id: "a", label: "A" }),
+      Object.freeze({ id: "c", label: "C" }),
+    ]);
+    const data = Object.freeze([
+      Object.freeze({ id: "c", label: "Sea" }),
+      Object.freeze({ id: "b", label: "Bee" }),
+      Object.freeze({ id: "a", label: "Aye" }),
+    ]);
+    reconcileKeyed("id", parent, [], renderedData, createItemNode, updateItemNode);
+    reconcileKeyed("id", parent, renderedData, data, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["c", "b", "a"]);
+    expect(parent.textContent).toBe("SeaBeeAye");
+  });
+
   test("reuses and updates nodes with matching keys", () => {
     expect.assertions(4);
     const parent = document.createElement("div");
@@ -388,6 +428,30 @@ describe("non-keyed", () => {
     expect(itemOrder(parent)).toEqual(["d", "b", "e", "a"]);
   });
 
+  test("preserves both input arrays when reordering", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    const renderedData = ["b", "a", "c"] as const;
+    const data = ["c", "b", "a"] as const;
+    const originalRenderedData = [...renderedData] as const;
+    const originalData = [...data] as const;
+    reconcileNonKeyed(parent, [], renderedData, createStringItemNode, updateStringItemNode);
+    reconcileNonKeyed(parent, renderedData, data, createStringItemNode, updateStringItemNode);
+    expect(renderedData).toEqual(originalRenderedData);
+    expect(data).toEqual(originalData);
+  });
+
+  test("reorders frozen input arrays", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    const renderedData = Object.freeze(["b", "a", "c"]);
+    const data = Object.freeze(["c", "b", "a"]);
+    reconcileNonKeyed(parent, [], renderedData, createStringItemNode, updateStringItemNode);
+    reconcileNonKeyed(parent, renderedData, data, createStringItemNode, updateStringItemNode);
+    expect(itemOrder(parent)).toEqual(["c", "b", "a"]);
+    expect(parent.textContent).toBe("cba");
+  });
+
   test("reuses nodes for equal data", () => {
     expect.assertions(3);
     const parent = document.createElement("div");
@@ -616,6 +680,44 @@ describe("reuse-nodes", () => {
     const [firstNode, secondNode] = [...parent.children];
     expect(firstNode).toBe(nodes[0]);
     expect(secondNode).toBe(nodes[1]);
+  });
+
+  test("preserves both input arrays when shrinking", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    const renderedData = [
+      { id: "c", label: "C" },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+    ] as const;
+    const data = [
+      { id: "b", label: "B" },
+      { id: "a", label: "A" },
+    ] as const;
+    const originalRenderedData = [...renderedData] as const;
+    const originalData = [...data] as const;
+    reconcileReuseNodes(parent, [], renderedData, createItemNode, updateItemNode);
+    reconcileReuseNodes(parent, renderedData, data, createItemNode, updateItemNode);
+    expect(renderedData).toEqual(originalRenderedData);
+    expect(data).toEqual(originalData);
+  });
+
+  test("shrinks frozen arrays of frozen items", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    const renderedData = Object.freeze([
+      Object.freeze({ id: "c", label: "C" }),
+      Object.freeze({ id: "a", label: "A" }),
+      Object.freeze({ id: "b", label: "B" }),
+    ]);
+    const data = Object.freeze([
+      Object.freeze({ id: "b", label: "Bee" }),
+      Object.freeze({ id: "a", label: "Aye" }),
+    ]);
+    reconcileReuseNodes(parent, [], renderedData, createItemNode, updateItemNode);
+    reconcileReuseNodes(parent, renderedData, data, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["b", "a"]);
+    expect(parent.textContent).toBe("BeeAye");
   });
 
   test("removes surplus nodes", () => {

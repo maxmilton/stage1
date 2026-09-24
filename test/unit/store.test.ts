@@ -311,4 +311,14 @@ describe("store", () => {
     state.b = 2;
     expect(state.b).toBe(2);
   });
+
+  test("updates state created from a frozen input without changing the input", () => {
+    expect.assertions(2);
+    const initialState = { count: 0 };
+    Object.freeze(initialState);
+    const state = store(initialState);
+    state.count = 1;
+    expect(state.count).toBe(1);
+    expect(initialState.count).toBe(0);
+  });
 });

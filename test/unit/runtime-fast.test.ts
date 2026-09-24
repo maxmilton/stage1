@@ -233,6 +233,18 @@ describe("collect", () => {
     expect(collect).toHaveParameters(2, 0);
   });
 
+  test("resolves refs with a frozen distance array", () => {
+    expect.assertions(2);
+    const root = document.createElement("div");
+    const first = document.createElement("span");
+    const second = document.createElement("span");
+    root.append(first, second);
+    const distances = Object.freeze([1, 1]);
+    const refs = collect<{ first: HTMLSpanElement; second: HTMLSpanElement }>(root, distances);
+    expect(refs[0]).toBe(first);
+    expect(refs[1]).toBe(second);
+  });
+
   // A deep mixed tree exercising every node kind the walk has to step over.
   // Each ref is its own test so a wrong distance names the ref it landed on
   // instead of stopping at the first of twenty assertions. `nodeName` is the
