@@ -1,6 +1,4 @@
-/**
- * @file Validate the test environment is setup correctly.
- */
+/** @file Validate the test environment is setup correctly. */
 
 import { describe, expect, test } from "bun:test";
 

@@ -16,6 +16,7 @@ export interface CompileOptions {
   /**
    * Whether to keep spaces adjacent to tags in output HTML. When keepSpaces
    * is false, `<div> x </div>` becomes `<div>x</div>`.
+   *
    * @default false
    */
   keepSpaces?: boolean;
@@ -36,6 +37,7 @@ export interface CompileResult<R> {
 /**
  * Bun macro to compile a template string at build-time into a format that can
  * be used by the runtime.
+ *
  * @param template - HTML template string.
  * @param options - Compile options.
  */

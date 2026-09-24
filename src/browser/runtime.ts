@@ -45,6 +45,7 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
 
 /**
  * Creates a DOM node from a template and collects ref node metadata.
+ *
  * @param template - HTML template string.
  */
 export const h = <T extends Node = Element>(template: string): View & T => {
@@ -82,11 +83,12 @@ export const html = <T extends Node = Element>(
 
 /**
  * Collects node refs from a compiled template view.
+ *
  * @param root - Root node.
  * @param view - Compiled template view.
  * @returns An object mapping ref nodes keyed by their ref name. Note that
- * browsers lowercase rendered HTML element attribute names so we lowercase
- * the typed key names to prevent surprises.
+ *   browsers lowercase rendered HTML element attribute names so we lowercase
+ *   the typed key names to prevent surprises.
  */
 export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R> = Refs>(
   root: Node,

@@ -14,8 +14,9 @@ export const handleClick = (event: Event): false | undefined => {
 
 /**
  * NOTE: To save bytes when certain no other code will override it, instead use:
- * ```js
- * import { handleClick } from "stage1"
+ *
+ * ```ts
+ * import { handleClick } from "stage1";
  * document.onclick = handleClick;
  * ```
  */

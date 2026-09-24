@@ -4,7 +4,8 @@ type Store<T, K extends keyof T> = T & {
     key: K,
     callback: Handler<T, K>,
   ) => /**
-   * off
+   * Off
+   *
    * @returns Returns true if the handler was removed, or false if it was already removed.
    */ () => boolean;
 };
@@ -13,10 +14,9 @@ type Store<T, K extends keyof T> = T & {
  * Create a reactive data store.
  *
  * @param initialState - An initial store state object. It must not have an `on`
- * property because that is used to register callback functions.
- *
+ *   property because that is used to register callback functions.
  * @returns A proxied state object that triggers registered callback handler
- * functions when its properties are set.
+ *   functions when its properties are set.
  */
 export const store = <
   T extends Record<string | symbol, unknown>,
