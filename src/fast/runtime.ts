@@ -16,9 +16,9 @@ export const h = <T extends Node = Element>(html: string): ChildNode & T => {
  * Collects node refs from a compiled template.
  * @param root - Root node.
  * @param d - Distances from previous ref node or root.
- * @returns An object mapping ref nodes keyed by their ref name. Note that some
- * browsers lowercase rendered HTML element attribute names so we lowercase the
- * typed key names to bring awareness to this fact.
+ * @returns An object mapping ref nodes keyed by their ref name. Note that
+ * browsers lowercase rendered HTML element attribute names so we lowercase
+ * the typed key names to prevent surprises.
  */
 export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R>>(
   root: Node,

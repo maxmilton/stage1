@@ -10,7 +10,7 @@ interface RefMeta {
   readonly d: number;
 }
 
-interface View extends Node, ChildNode {
+interface View extends ChildNode {
   /** @internal */
   [REFS]: readonly RefMeta[];
 }
@@ -84,9 +84,9 @@ export const html = <T extends Node = Element>(
  * Collects node refs from a compiled template view.
  * @param root - Root node.
  * @param view - Compiled template view.
- * @returns An object mapping ref nodes keyed by their ref name. Note that some
- * browsers lowercase rendered HTML element attribute names so we lowercase the
- * typed key names to bring awareness to this.
+ * @returns An object mapping ref nodes keyed by their ref name. Note that
+ * browsers lowercase rendered HTML element attribute names so we lowercase
+ * the typed key names to prevent surprises.
  */
 export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R> = Refs>(
   root: Node,

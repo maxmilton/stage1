@@ -21,7 +21,7 @@ type UnionToTuple<T> =
     ? [...UnionToTuple<Exclude<T, R>>, R]
     : [];
 
-export type TupleOfKeys<T> = Readonly<UnionToTuple<keyof T>>;
+export type TupleOfKeys<T> = UnionToTuple<keyof T>;
 
 export type IndicesOf<T> = {
   readonly [K in keyof T as T[K] extends string ? T[K] : never]: K extends `${number}` ? K : never;
