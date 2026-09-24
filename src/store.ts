@@ -22,7 +22,7 @@ export const store = <
   T extends Record<string | symbol, unknown>,
   K extends Exclude<keyof T, number>,
 >(
-  initialState: T & { on?: never },
+  initialState: Readonly<T> & { on?: never },
 ): Store<T, K> => {
   const handlers = new Map<K, Set<Handler<T, K>>>();
 

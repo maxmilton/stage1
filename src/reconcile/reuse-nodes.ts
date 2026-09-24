@@ -4,8 +4,8 @@ import { noop } from "../utils.ts";
 
 export const reconcile = <T, N extends Node>(
   parent: Element,
-  renderedData: T[],
-  data: T[],
+  renderedData: readonly T[],
+  data: readonly T[],
   createFn: (itemData: T) => N,
   updateFn: (node: N, itemData: T) => void = noop,
   beforeNode?: Node,

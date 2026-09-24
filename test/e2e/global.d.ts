@@ -2,7 +2,7 @@ import type * as Stage1 from "../../src/browser/index.ts";
 
 declare global {
   interface Window {
-    stage1: typeof Stage1;
+    readonly stage1: typeof Stage1;
   }
 
   /**

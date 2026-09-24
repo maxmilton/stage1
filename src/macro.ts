@@ -7,10 +7,10 @@ import type { IndicesOf, InferRefs, TupleOfKeys } from "./types.ts";
 const REF_NAME_RE = /^[a-z][a-z0-9_-]*$/u;
 
 /** Elements whose text content must be preserved verbatim. */
-const VERBATIM_TAGS = new Set(["pre", "code", "textarea", "script", "style"]);
+const VERBATIM_TAGS: ReadonlySet<string> = new Set(["pre", "code", "textarea", "script", "style"]);
 
 /** Subset of `VERBATIM_TAGS` whose text must never be read as a ref. */
-const RAW_TAGS = new Set(["script", "style"]);
+const RAW_TAGS: ReadonlySet<string> = new Set(["script", "style"]);
 
 export interface CompileOptions {
   /**

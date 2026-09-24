@@ -10,21 +10,21 @@ export type LowercaseKeys<T> = {
   [K in keyof T as Lowercase<string & K>]: T[K];
 };
 
-type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (
-  k: infer I,
+type UnionToIntersection<T> = (T extends unknown ? (k: T) => void : never) extends (
+  k: infer P,
 ) => void
-  ? I
+  ? P
   : never;
 
 type UnionToTuple<T> =
-  UnionToIntersection<T extends unknown ? () => T : never> extends () => infer W
-    ? [...UnionToTuple<Exclude<T, W>>, W]
+  UnionToIntersection<T extends unknown ? () => T : never> extends () => infer R
+    ? [...UnionToTuple<Exclude<T, R>>, R]
     : [];
 
 export type TupleOfKeys<T> = Readonly<UnionToTuple<keyof T>>;
 
 export type IndicesOf<T> = {
-  [K in keyof T as T[K] extends string ? T[K] : never]: K extends `${number}` ? K : never;
+  readonly [K in keyof T as T[K] extends string ? T[K] : never]: K extends `${number}` ? K : never;
 };
 
 /**

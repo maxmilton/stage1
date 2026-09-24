@@ -4,7 +4,7 @@
 import { noop } from "../utils.ts";
 
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L396C10-L396C30
-const findGreatestIndexLEQ = (seq: number[], n: number) => {
+const findGreatestIndexLEQ = (seq: readonly number[], n: number) => {
   // Invariant: lo is guaranteed to be index of a value <= n, hi to be >
   // therefore, they actually start out of range: (-1, last + 1)
   let lo = -1;
@@ -27,7 +27,7 @@ const findGreatestIndexLEQ = (seq: number[], n: number) => {
 
 // Return an array of the indices of ns that comprise the longest increasing subsequence within ns
 // https://github.com/adamhaile/surplus/blob/master/src/runtime/content.ts#L368C10-L368C46
-const longestPositiveIncreasingSubsequence = (ns: number[], newStart: number) => {
+const longestPositiveIncreasingSubsequence = (ns: readonly number[], newStart: number) => {
   const seq: number[] = [];
   const is: number[] = [];
   const pre = new Array<number>(ns.length);
@@ -69,8 +69,8 @@ const longestPositiveIncreasingSubsequence = (ns: number[], newStart: number) =>
 export const reconcile = <T, N extends Node>(
   key: keyof T,
   parent: Element,
-  renderedData: T[],
-  data: T[],
+  renderedData: readonly T[],
+  data: readonly T[],
   createFn: (itemData: T) => N,
   updateFn: (node: N, itemData: T) => void = noop,
   beforeNode?: Node,

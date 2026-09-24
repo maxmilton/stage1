@@ -4,43 +4,33 @@ import { reconcile as reconcileNonKeyed } from "../../src/reconcile/non-keyed.ts
 import { reconcile as reconcileReuseNodes } from "../../src/reconcile/reuse-nodes.ts";
 
 interface Item {
-  id: string;
-  label: string;
+  readonly id: string;
+  readonly label: string;
 }
 
-const ITEMS: Item[] = [
+const ITEMS: readonly Item[] = [
   { id: "a", label: "A" },
   { id: "b", label: "B" },
   { id: "c", label: "C" },
   { id: "d", label: "D" },
 ];
-const REORDERED_ITEMS: Item[] = [
+const REORDERED_ITEMS: readonly Item[] = [
   { id: "d", label: "Delta" },
   { id: "b", label: "Beta" },
   { id: "e", label: "Epsilon" },
   { id: "a", label: "Alpha" },
 ];
-const REPLACEMENT_ITEMS: Item[] = [
+const REPLACEMENT_ITEMS: readonly Item[] = [
   { id: "x", label: "X" },
   { id: "y", label: "Y" },
 ];
-/**
- * A shuffle the prefix/suffix/swap fast paths cannot consume, so reconciling
- * SHUFFLE_FROM to SHUFFLE_TO reaches the general path with every node reusable
- * (`P` has no `-1` entries) — the only input which actually runs the longest
- * increasing subsequence algorithm.
- *
- * The LIS only decides HOW MANY nodes move, never the resulting order, so the
- * tests below assert the move count. A correct LIS keeps the longest increasing
- * run in place and moves just 2 nodes; a broken one renders the same order with
- * more DOM operations, which order assertions alone cannot detect.
- */
-const SHUFFLE_FROM_IDS = ["a", "b", "c", "d", "e", "f"];
-const SHUFFLE_TO_IDS = ["c", "a", "b", "f", "d", "e"];
-const SHUFFLE_FROM: Item[] = SHUFFLE_FROM_IDS.map((id) => ({ id, label: id.toUpperCase() }));
-const SHUFFLE_TO: Item[] = SHUFFLE_TO_IDS.map((id) => ({ id, label: id.toUpperCase() }));
-const IDS = ["a", "b", "c", "d"];
-const REORDERED_IDS = ["d", "b", "e", "a"];
+const SHUFFLE_FROM_IDS = ["a", "b", "c", "d", "e", "f"] as const;
+const SHUFFLE_TO_IDS = ["c", "a", "b", "f", "d", "e"] as const;
+// oxfmt-ignore
+const SHUFFLE_FROM: readonly Item[] = SHUFFLE_FROM_IDS.map((id) => ({ id, label: id.toUpperCase() }));
+const SHUFFLE_TO: readonly Item[] = SHUFFLE_TO_IDS.map((id) => ({ id, label: id.toUpperCase() }));
+const IDS = ["a", "b", "c", "d"] as const;
+const REORDERED_IDS = ["d", "b", "e", "a"] as const;
 
 const createItemNode = (item: Item): HTMLSpanElement => {
   const node = document.createElement("span");
@@ -59,7 +49,7 @@ const updateStringItemNode = (node: HTMLSpanElement, id: string): void => {
   updateItemNode(node, { id, label: id });
 };
 
-const itemOrder = (parent: Element): string[] =>
+const itemOrder = (parent: Element): readonly string[] =>
   [...parent.children].map((node) => (node as HTMLElement).dataset["id"] ?? "");
 
 /** Create a parent element with boundary nodes the reconcilers must not touch. */
@@ -87,8 +77,8 @@ describe("keyed", () => {
       [
         key: never,
         parent: Element,
-        renderedData: unknown[],
-        data: unknown[],
+        renderedData: readonly unknown[],
+        data: readonly unknown[],
         createFn: (itemData: unknown) => Node,
         updateFn?: ((node: Node, itemData: unknown) => void) | undefined,
         beforeNode?: Node | undefined,
@@ -100,8 +90,8 @@ describe("keyed", () => {
       [
         key: keyof Item,
         parent: Element,
-        renderedData: Item[],
-        data: Item[],
+        renderedData: readonly Item[],
+        data: readonly Item[],
         createFn: (itemData: Item) => HTMLSpanElement,
         updateFn?: ((node: HTMLSpanElement, itemData: Item) => void) | undefined,
         beforeNode?: Node | undefined,
@@ -264,7 +254,7 @@ describe("keyed", () => {
     reconcileKeyed("id", parent, first, ITEMS, createItemNode, updateItemNode, before, after);
     expect(parent.firstChild).toBe(before);
     expect(parent.lastChild).toBe(after);
-    expect(itemOrder(parent).slice(1, -1)).toEqual(IDS);
+    expect(itemOrder(parent).slice(1, -1) as readonly string[]).toEqual(IDS);
     expect([...parent.children].slice(1, 3)).toEqual(nodes);
     expect(parent.textContent).toBe("ABCD");
   });
@@ -338,8 +328,8 @@ describe("non-keyed", () => {
     expectTypeOf(reconcileNonKeyed).parameters.toEqualTypeOf<
       [
         parent: Element,
-        renderedData: unknown[],
-        data: unknown[],
+        renderedData: readonly unknown[],
+        data: readonly unknown[],
         createFn: (itemData: unknown) => Node,
         updateFn?: ((node: Node, itemData: unknown) => void) | undefined,
         beforeNode?: Node | undefined,
@@ -352,8 +342,8 @@ describe("non-keyed", () => {
     expectTypeOf<Parameters<typeof reconcileNonKeyed<Item, HTMLSpanElement>>>().toEqualTypeOf<
       [
         parent: Element,
-        renderedData: Item[],
-        data: Item[],
+        renderedData: readonly Item[],
+        data: readonly Item[],
         createFn: (itemData: Item) => HTMLSpanElement,
         updateFn?: ((node: HTMLSpanElement, itemData: Item) => void) | undefined,
         beforeNode?: Node | undefined,
@@ -564,8 +554,8 @@ describe("reuse-nodes", () => {
     expectTypeOf(reconcileReuseNodes).parameters.toEqualTypeOf<
       [
         parent: Element,
-        renderedData: unknown[],
-        data: unknown[],
+        renderedData: readonly unknown[],
+        data: readonly unknown[],
         createFn: (itemData: unknown) => Node,
         updateFn?: ((node: Node, itemData: unknown) => void) | undefined,
         beforeNode?: Node | undefined,
@@ -578,8 +568,8 @@ describe("reuse-nodes", () => {
     expectTypeOf<Parameters<typeof reconcileReuseNodes<Item, HTMLSpanElement>>>().toEqualTypeOf<
       [
         parent: Element,
-        renderedData: Item[],
-        data: Item[],
+        renderedData: readonly Item[],
+        data: readonly Item[],
         createFn: (itemData: Item) => HTMLSpanElement,
         updateFn?: ((node: HTMLSpanElement, itemData: Item) => void) | undefined,
         beforeNode?: Node | undefined,
