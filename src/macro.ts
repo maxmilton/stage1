@@ -169,7 +169,8 @@ export function compile<R extends InferRefs<R> = object>(
         if (refAttrs.length > 1) {
           fail("Multiple ref markers on one element");
         }
-        if (refAttrs.length > 0) addRef(refAttrs[0].slice(1));
+        const lastRefAttr = refAttrs.at(-1);
+        if (lastRefAttr) addRef(lastRefAttr.slice(1));
         distance++;
       },
     })
