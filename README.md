@@ -101,6 +101,8 @@ If using the browser runtime mode or synthetic click events:
 - Safari 9
 - Opera 25
 
+Some syntax require higher browser versions but can be transpiled e.g., arrow function expressions; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions#browser_compatibility)
+
 Some optional features require a higher browser version:
 
 - `html` tagged template literal function uses `String.raw`; [requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw#browser_compatibility)
