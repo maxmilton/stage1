@@ -20,7 +20,7 @@
     "restriction": "error",
     "nursery": "warn",
   },
-  // https://github.com/oxc-project/javascript-globals/blob/main/src/lib.rs
+  // https://github.com/oxc-project/javascript-globals/blob/main/src/generated/mod.rs#L213
   "env": {
     "builtin": true,
     "es2026": true, // TODO: es2027 once in oxc.
@@ -36,7 +36,7 @@
     "typescript/prefer-string-starts-ends-with": "off", // faster
     "typescript/strict-boolean-expressions": "off", // too pedantic
     "unicorn/prefer-global-this": "off", // prefer clear distinction between Bun and DOM
-    "unicorn/prefer-modern-dom-apis": "off",
+    "unicorn/prefer-modern-dom-apis": "off", // faster
 
     // TODO: Remove when we can fix all the issues.
     "typescript/no-unsafe-type-assertion": "off",

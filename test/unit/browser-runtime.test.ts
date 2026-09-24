@@ -305,9 +305,7 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
-  // Accepted tradeoff (B1): collector() scans attributes in reverse to save
-  // bytes, so the LAST marker wins here while compile() keeps the FIRST and
-  // errors. Live mode does no validation, so the unused marker stays in the output.
+  // Live mode does no validation, so the unused marker stays in the output.
   test("uses the last ref marker when an element has several", () => {
     expect.assertions(3);
     const view = h(/* html */ "<div @a @b></div>");

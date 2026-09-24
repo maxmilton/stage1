@@ -6,10 +6,8 @@ export default defineConfig({
   testDir: "test/e2e",
   failOnFlakyTests: Boolean(process.env["CI"]),
   forbidOnly: Boolean(process.env["CI"]),
-  // Every test is independent: each gets a fresh page, and the document-level
-  // click listener in browser-events.spec.ts belongs to that page, not the
-  // process. Parallel execution also enforces that (CLAUDE.md R5).
   fullyParallel: true,
+  // repeatEach: 3, // uncomment to detect flaky tests
   retries: process.env["CI"] ? 1 : 0,
   use: {
     acceptDownloads: false,

@@ -121,11 +121,6 @@ describe("setupSyntheticClick", () => {
     expect(setupSyntheticClick).toHaveParameters(0, 0);
   });
 
-  // An API-shape test still runs the function, so it inherits the side effect —
-  // this one leaves a live `click` listener on `document`, process-wide state
-  // that used to outlive the test and could leak into a sibling under
-  // `--randomize` (SPEC.md §X X8). Measured bun 1.4.0-canary.1: onTestFinished
-  // runs even when the test fails, which cleanup at the end of the body does not.
   test("returns undefined", () => {
     expect.assertions(1);
     onTestFinished(removeSyntheticClick);
@@ -201,8 +196,6 @@ describe("setupSyntheticClick", () => {
       expect(handler).toHaveBeenCalledTimes(3);
     });
 
-    // The one test which writes to `document.body` — the other piece of
-    // process-wide state in this file, so it undoes that here too.
     test("propagates up to document body", () => {
       expect.assertions(1);
       const button = document.createElement("button");
