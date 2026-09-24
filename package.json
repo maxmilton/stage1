@@ -19,7 +19,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "bun": "./src/index.ts",
-      "default": "./dist/index.js"
+      "default": "./dist/index.js",
+      "macro": "./dist/macro.js"
     },
     "./macro": {
       "types": "./dist/index.d.ts",
