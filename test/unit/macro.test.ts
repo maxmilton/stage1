@@ -107,9 +107,101 @@ describe("compile", () => {
     expect(meta.ref).toBeEmptyObject();
   });
 
+  test("has empty k, d, and ref properties when no text refs", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div>a</div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toBeEmpty();
+    expect(meta.d).toBeEmpty();
+    expect(meta.ref).toBeEmptyObject();
+  });
+
+  test("has empty k, d, and ref properties when no comment refs", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div><!-- a --></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toBeEmpty();
+    expect(meta.d).toBeEmpty();
+    expect(meta.ref).toBeEmptyObject();
+  });
+
+  test("has 1 k, d, and ref properties when 1 node ref", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div @a></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(1);
+    expect(meta.d).toHaveLength(1);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
+  });
+
+  test("has 1 k, d, and ref properties when 1 text ref", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div>@a</div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(1);
+    expect(meta.d).toHaveLength(1);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
+  });
+
+  test("has 1 k, d, and ref properties when 1 comment ref", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div><!-- @a --></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(1);
+    expect(meta.d).toHaveLength(1);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
+  });
+
+  // TODO: Add documentation about this since it differs from browser runtime h() behaviour.
+  test("has 1 k, d, and ref properties when 1 text ref with whitespace", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div> @a</div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(1);
+    expect(meta.d).toHaveLength(1);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
+  });
+
+  // TODO: Add documentation about this since it differs from browser runtime h() behaviour.
+  test("has 1 k, d, and ref properties when 1 comment ref with whitespace", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div><!--  @a --></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(1);
+    expect(meta.d).toHaveLength(1);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
+  });
+
   test("has 3 k, d, and ref properties when 3 node refs", () => {
     expect.assertions(4);
     const meta = compile(/* html */ "<div @a><div @b></div><div @c></div></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(3);
+    expect(meta.d).toHaveLength(3);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has 3 k, d, and ref properties when 3 text refs", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div>@a<div>@b</div><div>@c</div></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(3);
+    expect(meta.d).toHaveLength(3);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has 3 k, d, and ref properties when 3 comment refs", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div><!-- @a --><!-- @b --><!-- @c --></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(3);
+    expect(meta.d).toHaveLength(3);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has 3 k, d, and ref properties when node + text + comment refs", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ "<div @a><div>@b</div><!-- @c --></div>");
     expect(meta.success).toBeTrue();
     expect(meta.k).toHaveLength(3);
     expect(meta.d).toHaveLength(3);
@@ -131,6 +223,40 @@ describe("compile", () => {
     expect(Object.keys(meta.ref)).toHaveLength(3);
   });
 
+  test("has 3 k, d, and ref properties when 3 text refs with whitespace", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ `
+      <div>
+        <div> @a</div>
+        <div>@b </div>
+        <div>
+          @c
+        </div>
+      </div>
+    `);
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(3);
+    expect(meta.d).toHaveLength(3);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has 3 k, d, and ref properties when 3 comment refs with whitespace", () => {
+    expect.assertions(4);
+    const meta = compile(/* html */ `
+      <div>
+        <div><!--  @a --></div>
+        <div><!-- @b  --></div>
+        <div><!--
+          @c
+        --></div>
+      </div>
+    `);
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toHaveLength(3);
+    expect(meta.d).toHaveLength(3);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
   test("has 3 k, d, and ref properties when 3 node refs with messy whitespace", () => {
     expect.assertions(4);
     const meta = compile(
@@ -140,25 +266,6 @@ describe("compile", () => {
     expect(meta.k).toHaveLength(3);
     expect(meta.d).toHaveLength(3);
     expect(Object.keys(meta.ref)).toHaveLength(3);
-  });
-
-  test("has 1 k, d, and ref properties when 1 text ref", () => {
-    expect.assertions(4);
-    const meta = compile(/* html */ "<div>@a</div>");
-    expect(meta.success).toBeTrue();
-    expect(meta.k).toHaveLength(1);
-    expect(meta.d).toHaveLength(1);
-    expect(Object.keys(meta.ref)).toHaveLength(1);
-  });
-
-  // TODO: Add documentation about this since it differs from the default compile.ts h() behaviour
-  test("has 1 k, d, and ref properties when 1 text ref with whitespace", () => {
-    expect.assertions(4);
-    const meta = compile(/* html */ "<div> @a</div>");
-    expect(meta.success).toBeTrue();
-    expect(meta.k).toHaveLength(1);
-    expect(meta.d).toHaveLength(1);
-    expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
   // Escaping is emergent, not implemented. A ref marker is only recognised
@@ -186,43 +293,178 @@ describe("compile", () => {
     expect(meta.html).toBe(/* html */ "<div>\\@a</div>");
   });
 
+  test("has empty k, d, and ref properties when escaped comment ref", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ "<div><!-- \\@a --></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toBeEmpty();
+    expect(meta.d).toBeEmpty();
+    expect(meta.ref).toBeEmptyObject();
+    expect(meta.html).toBe(/* html */ "<div></div>");
+  });
+
   test("has empty k, d, and ref properties when escaped node ref with value", () => {
-    expect.assertions(3);
+    expect.assertions(5);
     const meta = compile(/* html */ '<div \\@a="x"></div>');
     expect(meta.success).toBeTrue();
     expect(meta.k).toBeEmpty();
+    expect(meta.d).toBeEmpty();
+    expect(meta.ref).toBeEmptyObject();
     expect(meta.html).toBe(/* html */ '<div \\@a="x"></div>');
   });
 
-  test("has empty k, d, and ref properties when marker is not the first character", () => {
-    expect.assertions(3);
-    const meta = compile(/* html */ "<div a\\@b></div>");
+  test("has empty k, d, and ref properties when html escaped @ text", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ "<div>&#64;</div>");
     expect(meta.success).toBeTrue();
     expect(meta.k).toBeEmpty();
-    expect(meta.html).toBe(/* html */ "<div a\\@b></div>");
+    expect(meta.d).toBeEmpty();
+    expect(meta.ref).toBeEmptyObject();
+    expect(meta.html).toBe(/* html */ "<div>&#64;</div>");
   });
 
-  // Several markers on one element is an error, but the first is still
-  // used as the ref and every marker is stripped so none leaks into the output.
-  test("uses the first ref marker when an element has several", () => {
+  test("has empty k, d, and ref properties when node marker is not the first character", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ "<div a@b></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toBeEmpty();
+    expect(meta.d).toBeEmpty();
+    expect(meta.ref).toBeEmptyObject();
+    expect(meta.html).toBe(/* html */ "<div a@b></div>");
+  });
+
+  test("has empty k, d, and ref properties when text marker is not the first character", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ "<div>a@b</div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toBeEmpty();
+    expect(meta.d).toBeEmpty();
+    expect(meta.ref).toBeEmptyObject();
+    expect(meta.html).toBe(/* html */ "<div>a@b</div>");
+  });
+
+  test("has empty k, d, and ref properties when comment marker is not the first character", () => {
+    expect.assertions(3);
+    const meta = compile(/* html */ "<div><!-- a@b --></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.k).toBeEmpty();
+    expect(meta.html).toBe(/* html */ "<div></div>");
+  });
+
+  test("uses the last node ref when an element has several", () => {
     expect.assertions(3);
     const meta = compile(/* html */ "<div @a @b></div>");
+    expect(meta.k).toEqual(["b"]);
+    expect(meta.ref).toHaveProperty("b", 0);
+    expect(meta.html).toBe(/* html */ "<div></div>");
+  });
+
+  // These tests pass but they are all error cases
+  // oxlint-disable-next-line vitest/prefer-each
+  for (const invalidRef of ["", "1", "_", "-", "@", "🙂"]) {
+    test(`creates ref "${invalidRef}" when node ref is "@${invalidRef}"`, () => {
+      expect.assertions(3);
+      const meta = compileNoMacro(/* html */ `<div @${invalidRef}></div>`);
+      expect(meta.k).toEqual([invalidRef]);
+      expect(meta.ref).toHaveProperty(invalidRef, 0);
+      expect(meta.html).toBe(/* html */ "<div></div>");
+    });
+
+    test(`creates ref "${invalidRef}" when text ref is "@${invalidRef}"`, () => {
+      expect.assertions(3);
+      const meta = compileNoMacro(/* html */ `<div>@${invalidRef}</div>`);
+      expect(meta.k).toEqual([invalidRef]);
+      expect(meta.ref).toHaveProperty(invalidRef, 0);
+      expect(meta.html).toBe(/* html */ "<div> </div>");
+    });
+
+    test(`creates ref "${invalidRef}" when comment ref is "@${invalidRef}"`, () => {
+      expect.assertions(3);
+      const meta = compileNoMacro(/* html */ `<div><!-- @${invalidRef} --></div>`);
+      expect(meta.k).toEqual([invalidRef]);
+      expect(meta.ref).toHaveProperty(invalidRef, 0);
+      expect(meta.html).toBe(/* html */ "<div><!></div>");
+    });
+  }
+
+  // ref name edge cases
+  // oxlint-disable-next-line vitest/prefer-each
+  for (const validRef of ["a1", "a_", "a-", "a1_-"]) {
+    test(`creates ref "${validRef}" when node ref is "@${validRef}"`, () => {
+      expect.assertions(3);
+      const meta = compileNoMacro(/* html */ `<div @${validRef}></div>`);
+      expect(meta.k).toEqual([validRef]);
+      expect(meta.ref).toHaveProperty(validRef, 0);
+      expect(meta.html).toBe(/* html */ "<div></div>");
+    });
+
+    test(`creates ref "${validRef}" when text ref is "@${validRef}"`, () => {
+      expect.assertions(3);
+      const meta = compileNoMacro(/* html */ `<div>@${validRef}</div>`);
+      expect(meta.k).toEqual([validRef]);
+      expect(meta.ref).toHaveProperty(validRef, 0);
+      expect(meta.html).toBe(/* html */ "<div> </div>");
+    });
+
+    test(`creates ref "${validRef}" when comment ref is "@${validRef}"`, () => {
+      expect.assertions(3);
+      const meta = compileNoMacro(/* html */ `<div><!-- @${validRef} --></div>`);
+      expect(meta.k).toEqual([validRef]);
+      expect(meta.ref).toHaveProperty(validRef, 0);
+      expect(meta.html).toBe(/* html */ "<div><!></div>");
+    });
+  }
+
+  test("creates ref when node ref with value", () => {
+    expect.assertions(3);
+    const meta = compileNoMacro(/* html */ '<div @a="x"></div>');
     expect(meta.k).toEqual(["a"]);
     expect(meta.ref).toHaveProperty("a", 0);
     expect(meta.html).toBe(/* html */ "<div></div>");
   });
 
   test("has correct meta ref properties when 3 node refs", () => {
-    expect.assertions(4);
+    expect.assertions(5);
     const meta = compile(/* html */ "<div @a><div @b></div><div @c></div></div>");
     expect(meta.success).toBeTrue();
     expect(meta.ref).toHaveProperty("a", 0);
     expect(meta.ref).toHaveProperty("b", 1);
     expect(meta.ref).toHaveProperty("c", 2);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has correct meta ref properties when 3 text refs", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ "<div>@a<div>@b</div><div>@c</div></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.ref).toHaveProperty("a", 0);
+    expect(meta.ref).toHaveProperty("b", 1);
+    expect(meta.ref).toHaveProperty("c", 2);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has correct meta ref properties when 3 comment refs", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ "<div><!-- @a --><!-- @b --><!-- @c --></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.ref).toHaveProperty("a", 0);
+    expect(meta.ref).toHaveProperty("b", 1);
+    expect(meta.ref).toHaveProperty("c", 2);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has correct meta ref properties when node + test + comment refs", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ "<div @a><div>@b</div><!-- @c --></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.ref).toHaveProperty("a", 0);
+    expect(meta.ref).toHaveProperty("b", 1);
+    expect(meta.ref).toHaveProperty("c", 2);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
   });
 
   test("has correct meta ref properties when 3 node refs with whitespace", () => {
-    expect.assertions(4);
+    expect.assertions(5);
     const meta = compile(/* html */ `
       <div>
         <div @a></div>
@@ -234,10 +476,47 @@ describe("compile", () => {
     expect(meta.ref).toHaveProperty("a", 0);
     expect(meta.ref).toHaveProperty("b", 1);
     expect(meta.ref).toHaveProperty("c", 2);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has correct meta ref properties when 3 text refs with whitespace", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ `
+      <div>
+        <div> @a</div>
+        <div>@b </div>
+        <div>
+          @c
+        </div>
+      </div>
+    `);
+    expect(meta.success).toBeTrue();
+    expect(meta.ref).toHaveProperty("a", 0);
+    expect(meta.ref).toHaveProperty("b", 1);
+    expect(meta.ref).toHaveProperty("c", 2);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
+  });
+
+  test("has correct meta ref properties when 3 comment refs with whitespace", () => {
+    expect.assertions(5);
+    const meta = compile(/* html */ `
+      <div>
+        <div><!--  @a --></div>
+        <div><!-- @b  --></div>
+        <div><!--
+          @c
+        --></div>
+      </div>
+    `);
+    expect(meta.success).toBeTrue();
+    expect(meta.ref).toHaveProperty("a", 0);
+    expect(meta.ref).toHaveProperty("b", 1);
+    expect(meta.ref).toHaveProperty("c", 2);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
   });
 
   test("has correct meta ref properties when 3 node refs with messy whitespace", () => {
-    expect.assertions(4);
+    expect.assertions(5);
     const meta = compile(
       /* html */ "\n\n\t<div><div     @a  ></div> \t\t\n\n\n<div \f\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF @b></  div> <div @c></\n\tdiv>\n\n</div>\n",
     );
@@ -245,47 +524,184 @@ describe("compile", () => {
     expect(meta.ref).toHaveProperty("a", 0);
     expect(meta.ref).toHaveProperty("b", 1);
     expect(meta.ref).toHaveProperty("c", 2);
+    expect(Object.keys(meta.ref)).toHaveLength(3);
   });
 
-  test("has correct meta ref properties when 1 text ref", () => {
-    expect.assertions(2);
-    const meta = compile(/* html */ "<div>@a</div>");
+  // A SINGLE backslash here is a JS useless-escape, so the string literal is
+  // just "@a"; the escape never reaches compile(). Escaping must be written
+  // as "\\@" in source to survive into the template.
+  test("has correct meta ref properties when wrong escaped node ref", () => {
+    expect.assertions(3);
+    // oxlint-disable-next-line no-useless-escape
+    const meta = compile(/* html */ "<div \@a></div>");
     expect(meta.success).toBeTrue();
     expect(meta.ref).toHaveProperty("a", 0);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
-  test("has correct meta ref properties when 1 text ref with whitespace", () => {
-    expect.assertions(2);
-    const meta = compile(/* html */ "<div> @a</div>");
-    expect(meta.success).toBeTrue();
-    expect(meta.ref).toHaveProperty("a", 0);
-  });
-
-  // A SINGLE backslash here is a JS useless-escape, so the string literal
-  // is just "<div>@a</div>" — the escape never reaches compile(). This documents
-  // that escaping must be written "\\@" in source to survive into the template;
-  // the escape that does reach compile() is covered above. That is why this
-  // otherwise reads as a duplicate of "…when 1 text ref".
-  test("has correct meta ref properties when escaped node ref", () => {
-    expect.assertions(2);
+  test("has correct meta ref properties when wrong escaped text ref", () => {
+    expect.assertions(3);
     // oxlint-disable-next-line no-useless-escape
     const meta = compile(/* html */ "<div>\@a</div>");
     expect(meta.success).toBeTrue();
     expect(meta.ref).toHaveProperty("a", 0);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
-  test("has no meta ref properties when escaped text ref", () => {
-    expect.assertions(2);
-    const meta = compile(/* html */ "<div>\\@a</div>");
+  test("has correct meta ref properties when wrong escaped comment ref", () => {
+    expect.assertions(3);
+    // oxlint-disable-next-line no-useless-escape
+    const meta = compile(/* html */ "<div><!-- \@a --></div>");
     expect(meta.success).toBeTrue();
-    expect(meta.ref).toBeEmptyObject();
+    expect(meta.ref).toHaveProperty("a", 0);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
-  test("has no meta ref properties when html escaped @ text", () => {
-    expect.assertions(2);
-    const meta = compile(/* html */ "<div>&#64;</div>");
-    expect(meta.success).toBeTrue();
-    expect(meta.ref).toBeEmptyObject();
+  describe("comments", () => {
+    test("removes comments", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<div><!-- comment --></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div></div>");
+    });
+
+    test("removes multiple comments", () => {
+      expect.assertions(2);
+      const meta = compile(
+        /* html */ "<div><!-- comment --><!-- comment --><!-- comment --></div>",
+      );
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div></div>");
+    });
+
+    test("removes comment when template is only comment", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<!-- comment -->");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "");
+    });
+
+    test.each([
+      /* html */ "<div><!-- comment --></div>",
+      /* html */ "<div><!-- --></div>",
+      /* html */ "<div><!--  --></div>",
+      /* html */ "<div><!--   --></div>",
+      /* html */ "<div><!-----></div>",
+      /* html */ "<div><!----></div>",
+      /* html */ "<div><!---></div>",
+      /* html */ "<div><!--></div>",
+      /* html */ "<div><!-></div>",
+      /* html */ "<div><!></div>",
+      /* html */ "<div><!-- <!-- --></div>",
+      /* html */ "<div><!--  \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF --></div>",
+      /* html */ "<div><!-- comment --!></div>",
+      /* html */ "<div><!--   --!></div>",
+      /* html */ "<div><!--  --!></div>",
+      /* html */ "<div><!-- --!></div>",
+      /* html */ "<div><!-----!></div>",
+      /* html */ "<div><!----!></div>",
+      // /* html */ "<div><!---!></div>", // TODO: Broken; bug in lol-html.
+      // /* html */ "<div><!--!></div>", // TODO: Broken; bug in lol-html.
+      /* html */ "<div><!-!></div>",
+      /* html */ "<div><!!></div>",
+      /* html */ "<div><!-- !-----></div>",
+      /* html */ "<div><!-- !----></div>",
+      /* html */ "<div><!-- !---></div>",
+      /* html */ "<div><!-- !--></div>",
+      /* html */ "<div><!-- <div> --></div>",
+      /* html */ "<div><!-- </div> --></div>",
+      /* html */ "<div><!-- <div></div> --></div>",
+      /* html */ "<div><!--<div>--></div>",
+      /* html */ "<div><!--</div>--></div>",
+      /* html */ "<div><!--<div></div>--></div>",
+      /* html */ "<div><!bogus></div>", // https://html.spec.whatwg.org/#bogus-comment-state
+    ])("removes comment for %j", (template) => {
+      expect.assertions(2);
+      const meta = compileNoMacro(template);
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div></div>");
+    });
+
+    test("removes comments for complex mixed template", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ `
+        <div>
+          <span>
+            </span>
+          <!-- comment -->
+          <!-- -->
+          <!--  -->
+          <!--   -->
+          <!----->
+          <!---->
+          <!--->
+          <!-->
+          <!->
+          <!>
+          <!-- <!-- -->
+          <!--  \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF -->
+          <!-- comment --!>
+          <!--   --!>
+          <!--  --!>
+          <!-- --!>
+          <!-----!>
+          <!----!>
+          <!---!>
+          <!--!>
+          <!-- !----->
+          <!-- !---->
+          <!-- !--->
+          <!-- !-->
+          <!-- <div> -->
+          <!-- </div> -->
+          <!-- <div></div> -->
+          <!--<div>-->
+          <!--</div>-->
+          <!--<div></div>-->
+          <span></span>
+        </div>
+      `);
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><span></span><span></span></div>");
+    });
+
+    test("returns expected html for template with comment ref", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<div><!-- @a --></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><!></div>");
+    });
+
+    test("returns expected html for template with multiline comment ref", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<div><!--\n@a\n--></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><!></div>");
+    });
+
+    test("returns expected html for template with no whitespace comment ref", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<div><!--@a--></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><!></div>");
+    });
+
+    test("returns expected html for template with only comment ref", () => {
+      expect.assertions(2);
+      const meta = compile(/* html */ "<!-- @a -->");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<!>");
+    });
+
+    // Regression: a comment ref never closed the root it stands in for, so a
+    // second top-level comment ref was silently accepted as a second root.
+    test("returns success false for two top-level comment refs", () => {
+      expect.assertions(1);
+      // oxlint-disable-next-line no-underscore-dangle
+      using _consoleSpy = spyOn(console, "error").mockImplementation(() => {});
+      const meta = compile(/* html */ "<!-- @a --><!-- @b -->");
+      expect(meta.success).toBeFalse();
+    });
   });
 
   test("does not minify in whitespace-sensitive blocks", () => {
@@ -324,6 +740,13 @@ describe("compile", () => {
     expect(meta.html).toBe(/* html */ "<div><pre>a  b<code>c  d</code>  e  f</pre></div>");
   });
 
+  test("does not minify in a textarea", () => {
+    expect.assertions(2);
+    const meta = compile(/* html */ "<div><textarea>  a   b</textarea></div>");
+    expect(meta.success).toBeTrue();
+    expect(meta.html).toBe(/* html */ "<div><textarea>  a   b</textarea></div>");
+  });
+
   // Whitespace-only text is kept inside pre/code, so unlike elsewhere it
   // is a real node at runtime and must count towards the walk distance.
   test("counts kept whitespace-only text in a whitespace-sensitive block", () => {
@@ -334,21 +757,50 @@ describe("compile", () => {
     expect(meta.d).toEqual([3]);
   });
 
-  test("does not minify in a textarea", () => {
-    expect.assertions(2);
-    const meta = compile(/* html */ "<div><textarea>  a   b</textarea></div>");
-    expect(meta.success).toBeTrue();
-    expect(meta.html).toBe(/* html */ "<div><textarea>  a   b</textarea></div>");
-  });
-
-  // Whitespace-sensitive blocks keep their text verbatim but are still
-  // scanned for ref markers; only the raw text elements below opt out of refs.
+  // Whitespace-sensitive blocks keep their text verbatim but are still scanned
+  // for ref markers; only the raw text elements below opt out of refs.
   describe("refs in whitespace-sensitive blocks", () => {
+    test("collects a node ref on a script", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<div><script @a></script></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><script></script></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([1]);
+    });
+
+    test("collects a node ref on a style", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<div><style @a></style></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><style></style></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([1]);
+    });
+
     test("collects a text ref in a pre", () => {
       expect.assertions(4);
       const meta = compile(/* html */ "<div><pre>@a</pre></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><pre> </pre></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([2]);
+    });
+
+    test("collects a comment ref in a pre", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<div><pre><!-- @a --></pre></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><pre><!></pre></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([2]);
+    });
+
+    test("collects a node ref in a nested whitespace-sensitive block", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<div><pre><code @a></code></pre></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><pre><code></code></pre></div>");
       expect(meta.k).toEqual(["a"]);
       expect(meta.d).toEqual([2]);
     });
@@ -362,20 +814,94 @@ describe("compile", () => {
       expect(meta.d).toEqual([3]);
     });
 
+    test("collects a comment ref in a nested whitespace-sensitive block", () => {
+      expect.assertions(4);
+      const meta = compile(/* html */ "<div><pre><code><!-- @a --></code></pre></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><pre><code><!></code></pre></div>");
+      expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([3]);
+    });
+
     test("collects a text ref in a textarea", () => {
-      expect.assertions(3);
+      expect.assertions(4);
       const meta = compile(/* html */ "<div><textarea>@a</textarea></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><textarea> </textarea></div>");
       expect(meta.k).toEqual(["a"]);
+      expect(meta.d).toEqual([2]);
     });
 
-    test("collects a comment ref in a pre", () => {
-      expect.assertions(3);
-      const meta = compile(/* html */ "<div><pre><!-- @a --></pre></div>");
+    test("does not collect a comment ref in a textarea", () => {
+      expect.assertions(5);
+      const meta = compile(/* html */ "<div><textarea><!-- @a --></textarea></div>");
       expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div><pre><!></pre></div>");
-      expect(meta.k).toEqual(["a"]);
+      expect(meta.html).toBe(/* html */ "<div><textarea><!-- @a --></textarea></div>");
+      expect(meta.k).toBeEmptyObject();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
+    });
+
+    test("does not collect a comment ref in a script", () => {
+      expect.assertions(5);
+      const meta = compile(/* html */ "<div><script>// <div @a></div></script></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><script>// <div @a></div></script></div>");
+      expect(meta.k).toBeEmptyObject();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
+    });
+
+    // invalid HTML, but a tested invariant
+    test("does not collect a text ref in a script", () => {
+      expect.assertions(5);
+      const meta = compile(/* html */ "<div><script>@a</script></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><script>@a</script></div>");
+      expect(meta.k).toBeEmptyObject();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
+    });
+
+    test("does not collect a comment ref in a script", () => {
+      expect.assertions(5);
+      const meta = compile(/* html */ "<div><script>// <!-- @a --></script></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><script>// <!-- @a --></script></div>");
+      expect(meta.k).toBeEmptyObject();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
+    });
+
+    test("does not collect a comment ref in a style", () => {
+      expect.assertions(5);
+      const meta = compile(/* html */ "<div><style>// <div @a></div></style></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><style>// <div @a></div></style></div>");
+      expect(meta.k).toBeEmptyObject();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
+    });
+
+    // invalid HTML, but a tested invariant
+    test("does not collect a text ref in a style", () => {
+      expect.assertions(5);
+      const meta = compile(/* html */ "<div><style>@a</style></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><style>@a</style></div>");
+      expect(meta.k).toBeEmptyObject();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
+    });
+
+    test("does not collect a comment ref in a style", () => {
+      expect.assertions(5);
+      const meta = compile(/* html */ "<div><style>/* <!-- @a --> */</style></div>");
+      expect(meta.success).toBeTrue();
+      expect(meta.html).toBe(/* html */ "<div><style>/* <!-- @a --> */</style></div>");
+      expect(meta.k).toBeEmptyObject();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
     });
   });
 
@@ -383,43 +909,53 @@ describe("compile", () => {
   // leading "@" is a CSS at-rule or a JS decorator, never a ref marker.
   describe("raw text elements", () => {
     test("does not treat style text as a ref", () => {
-      expect.assertions(3);
+      expect.assertions(5);
       const meta = compile(/* html */ "<div><style>@a</style></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><style>@a</style></div>");
       expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
     });
 
     test("does not treat script text as a ref", () => {
-      expect.assertions(3);
+      expect.assertions(5);
       const meta = compile(/* html */ "<div><script>@a</script></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><script>@a</script></div>");
       expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
     });
 
     test("keeps style content verbatim", () => {
-      expect.assertions(3);
+      expect.assertions(5);
       const meta = compile(/* html */ "<div><style>@media print{a{color:red}}</style></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><style>@media print{a{color:red}}</style></div>");
       expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
     });
 
     test("keeps script content verbatim", () => {
-      expect.assertions(3);
+      expect.assertions(5);
       const meta = compile(/* html */ "<div><script>const a = 1;  const b = 2;</script></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><script>const a = 1;  const b = 2;</script></div>");
       expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
     });
 
     test("does not treat a script comment as a ref", () => {
-      expect.assertions(3);
+      expect.assertions(5);
       const meta = compile(/* html */ "<div><script><!-- @a --></script></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><script><!-- @a --></script></div>");
       expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
     });
   });
 
@@ -428,25 +964,29 @@ describe("compile", () => {
   // and must be handled — and counted — exactly once.
   describe("text split across chunks", () => {
     test("keeps text either side of a bare less-than", () => {
-      expect.assertions(2);
+      expect.assertions(4);
       const meta = compile(/* html */ "<div>a < b</div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div>a < b</div>");
+      expect(meta.d).toBeEmptyObject();
+      expect(meta.ref).toBeEmptyObject();
     });
 
     test("counts split text as one node", () => {
-      expect.assertions(3);
+      expect.assertions(4);
       const meta = compile(/* html */ "<div>a < b<!-- @x --></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div>a < b<!></div>");
+      expect(meta.k).toEqual(["x"]);
       expect(meta.d).toEqual([2]);
     });
 
     test("counts split text in a nested element as one node", () => {
-      expect.assertions(3);
+      expect.assertions(4);
       const meta = compile(/* html */ "<div><b>i < 10</b><!-- @x --></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><b>i < 10</b><!></div>");
+      expect(meta.k).toEqual(["x"]);
       expect(meta.d).toEqual([3]);
     });
   });
@@ -562,17 +1102,13 @@ describe("compile", () => {
     });
   });
 
-  // FIXME: Uncomment once bun string handling in macros bug is fixed.
-  // ↳ Currently blocked by bun bug; https://github.com/oven-sh/bun/issues/3832
-
-  // oxlint-disable-next-line vitest/no-commented-out-tests
-  // test("does not escape HTML entities", () => {
-  //   expect.assertions(2);
-  //   const template = /* html */ "<div>&lt;span&gt;Foo&lt;/span&gt;</div>";
-  //   const meta = compile(template);
-  //   expect(meta.html).toBe(template);
-  //   expect(meta.success).toBeTrue();
-  // });
+  test("does not escape HTML entities", () => {
+    expect.assertions(2);
+    const template = /* html */ "<div>&lt;span&gt;Foo&lt;/span&gt;</div>";
+    const meta = compileNoMacro(template); // TODO: use compile() once bun supports passing UTF8 into macros.
+    expect(meta.html).toBe(template);
+    expect(meta.success).toBeTrue();
+  });
 
   describe("errors", () => {
     test("throws when input template is not a string", () => {
@@ -734,19 +1270,119 @@ describe("compile", () => {
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
-    // Ref names must be lowercase because browsers normalise element
-    // attribute names when rendering HTML (README:72). Attribute names reach
-    // the macro already lowercased by HTMLRewriter, so a non-lowercase name can
-    // only be caught in text and comment position.
     const invalidRefNames: [template: string, name: string][] = [
       /* eslint-disable array-bracket-spacing */
+      // spaces
+      [/* html */ "<div>@a and more</div>", "a and more"],
+      [/* html */ "<div><!-- @a and more --></div>", "a and more"],
+
+      // no name
       [/* html */ "<div @></div>", ""],
       [/* html */ "<div>@</div>", ""],
+      [/* html */ "@", ""],
+      [/* html */ "<div><!-- @ --></div>", ""],
       [/* html */ "<!-- @ -->", ""],
-      [/* html */ "<div>@a and more</div>", "a and more"],
-      [/* html */ "<div><!-- @a extra --></div>", "a extra"],
+
+      // double @
+      [/* html */ "<div @@></div>", "@"],
+      [/* html */ "<div>@@</div>", "@"],
+      [/* html */ "@@", "@"],
+      [/* html */ "<div><!-- @@ --></div>", "@"],
+      [/* html */ "<!-- @@ -->", "@"],
+
+      [/* html */ "<div @@a></div>", "@a"],
+      [/* html */ "<div>@@a</div>", "@a"],
+      [/* html */ "@@a", "@a"],
+      [/* html */ "<div><!-- @@a --></div>", "@a"],
+      [/* html */ "<!-- @@a -->", "@a"],
+
+      // Ref names must be lowercase because browsers normalise element
+      // attribute names when rendering HTML. Attribute names reach the
+      // macro already lowercased by HTMLRewriter, so a non-lowercase name
+      // can only be caught in text and comment position.
+
+      // capital character
+      // ["<div @Foo></div>", "Foo"], // not error; HTMLRewriter lowercases
       [/* html */ "<div>@Foo</div>", "Foo"],
+      [/* html */ "@Foo", "Foo"],
+      [/* html */ "<div><!-- @Foo --></div>", "Foo"],
+      [/* html */ "<!-- @Foo -->", "Foo"],
+
+      // ["<div @fOo></div>", "fOo"], // not error; HTMLRewriter lowercases
+      [/* html */ "<div>@fOo</div>", "fOo"],
+      [/* html */ "@fOo", "fOo"],
+      [/* html */ "<div><!-- @fOo --></div>", "fOo"],
+      [/* html */ "<!-- @fOo -->", "fOo"],
+
+      // number as first character
+      [/* html */ "<div @1></div>", "1"],
+      [/* html */ "<div>@1</div>", "1"],
+      [/* html */ "@1", "1"],
+      [/* html */ "<div><!-- @1 --></div>", "1"],
+      [/* html */ "<!-- @1 -->", "1"],
+
+      [/* html */ "<div @1a></div>", "1a"],
       [/* html */ "<div>@1a</div>", "1a"],
+      [/* html */ "@1a", "1a"],
+      [/* html */ "<div><!-- @1a --></div>", "1a"],
+      [/* html */ "<!-- @1a -->", "1a"],
+
+      // underscore as first character
+      [/* html */ "<div @_></div>", "_"],
+      [/* html */ "<div>@_</div>", "_"],
+      [/* html */ "@_", "_"],
+      [/* html */ "<div><!-- @_ --></div>", "_"],
+      [/* html */ "<!-- @_ -->", "_"],
+
+      [/* html */ "<div @_a></div>", "_a"],
+      [/* html */ "<div>@_a</div>", "_a"],
+      [/* html */ "@_a", "_a"],
+      [/* html */ "<div><!-- @_a --></div>", "_a"],
+      [/* html */ "<!-- @_a -->", "_a"],
+
+      // dash as first character
+      [/* html */ "<div @-></div>", "-"],
+      [/* html */ "<div>@-</div>", "-"],
+      [/* html */ "@-", "-"],
+      [/* html */ "<div><!-- @- --></div>", "-"],
+      [/* html */ "<!-- @- -->", "-"],
+
+      [/* html */ "<div @-a></div>", "-a"],
+      [/* html */ "<div>@-a</div>", "-a"],
+      [/* html */ "@-a", "-a"],
+      [/* html */ "<div><!-- @-a --></div>", "-a"],
+      [/* html */ "<!-- @-a -->", "-a"],
+
+      // non-alphanumeric/dash/underscore character
+      [/* html */ "<div @.></div>", "."],
+      [/* html */ "<div>@.</div>", "."],
+      [/* html */ "@.", "."],
+      [/* html */ "<div><!-- @. --></div>", "."],
+      [/* html */ "<!-- @. -->", "."],
+
+      [/* html */ "<div @!></div>", "!"],
+      [/* html */ "<div>@!</div>", "!"],
+      [/* html */ "@!", "!"],
+      [/* html */ "<div><!-- @! --></div>", "!"],
+      [/* html */ "<!-- @! -->", "!"],
+
+      [/* html */ "<div @$></div>", "$"],
+      [/* html */ "<div>@$</div>", "$"],
+      [/* html */ "@$", "$"],
+      [/* html */ "<div><!-- @$ --></div>", "$"],
+      [/* html */ "<!-- @$ -->", "$"],
+
+      [/* html */ "<div @=></div>", ""], // parsed as empty ref key + empty "" attribute
+      [/* html */ "<div>@=</div>", "="],
+      [/* html */ "@=", "="],
+      [/* html */ "<div><!-- @= --></div>", "="],
+      [/* html */ "<!-- @= -->", "="],
+
+      [/* html */ "<div @🙂></div>", "🙂"],
+      [/* html */ "<div>@🙂</div>", "🙂"],
+      [/* html */ "@🙂", "🙂"],
+      [/* html */ "<div><!-- @🙂 --></div>", "🙂"],
+      [/* html */ "<!-- @🙂 -->", "🙂"],
       /* eslint-enable array-bracket-spacing */
     ];
 
@@ -830,21 +1466,27 @@ describe("compile", () => {
     expect(meta.html).toBe(/* html */ "<ul><li>A</li><li>B</li><li>C</li></ul>");
   });
 
-  // TODO: Test once lol-html (which powers bun's HTMLRewriter) fix their whitespace handling.
-  test.skip("returns expected html for basic template with messy whitespace", () => {
+  test("returns expected html for basic template with messy whitespace", () => {
     expect.assertions(2);
     const meta = compile(/* html */ `
-      <ul>
-        <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
+      <ul  >
+        <li\f\n\r\t\u0020
+          data-whitespace="\f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF"
+            >A</li>
         <li
           >
             B</li>
-        <li>C
+        <li data-value = "test"   >C
           </li>
       </ul>
     `);
     expect(meta.success).toBeTrue();
-    expect(meta.html).toBe(/* html */ "<ul><li>A</li><li>B</li><li>C</li></ul>");
+    expect(meta.html).toBe(
+      `<ul  ><li\f\n\r\t\u0020
+          data-whitespace="\f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF"
+            >A</li><li
+          >B</li><li data-value = "test"   >C</li></ul>`,
+    );
   });
 
   test("returns expected html for SVG template", () => {
@@ -856,180 +1498,6 @@ describe("compile", () => {
     `);
     expect(meta.success).toBeTrue();
     expect(meta.html).toBe(/* html */ "<svg><circle cx=10 cy='10' r=\"10\" /></svg>");
-  });
-
-  describe("comments", () => {
-    test("removes comments", () => {
-      expect.assertions(2);
-      const meta = compile(/* html */ "<div><!-- comment --></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div></div>");
-    });
-
-    test("removes multiple comments", () => {
-      expect.assertions(2);
-      const meta = compile(
-        /* html */ "<div><!-- comment --><!-- comment --><!-- comment --></div>",
-      );
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div></div>");
-    });
-
-    test("removes comment when template is only comment", () => {
-      expect.assertions(2);
-      const meta = compile(/* html */ "<!-- comment -->");
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "");
-    });
-
-    test.each([
-      /* html */ "<div><!-- comment --></div>",
-      /* html */ "<div><!-- --></div>",
-      /* html */ "<div><!--  --></div>",
-      /* html */ "<div><!--   --></div>",
-      /* html */ "<div><!-----></div>",
-      /* html */ "<div><!----></div>",
-      /* html */ "<div><!---></div>",
-      /* html */ "<div><!--></div>",
-      /* html */ "<div><!-></div>",
-      /* html */ "<div><!></div>",
-      /* html */ "<div><!-- <!-- --></div>",
-      /* html */ "<div><!--  \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF --></div>",
-      /* html */ "<div><!-- comment --!></div>",
-      /* html */ "<div><!--   --!></div>",
-      /* html */ "<div><!--  --!></div>",
-      /* html */ "<div><!-- --!></div>",
-      /* html */ "<div><!-----!></div>",
-      /* html */ "<div><!----!></div>",
-      // /* html */ "<div><!---!></div>", // TODO: Broken; bug in lol-html.
-      // /* html */ "<div><!--!></div>", // TODO: Broken; bug in lol-html.
-      /* html */ "<div><!-!></div>",
-      /* html */ "<div><!!></div>",
-      /* html */ "<div><!-- !-----></div>",
-      /* html */ "<div><!-- !----></div>",
-      /* html */ "<div><!-- !---></div>",
-      /* html */ "<div><!-- !--></div>",
-      /* html */ "<div><!-- <div> --></div>",
-      /* html */ "<div><!-- </div> --></div>",
-      /* html */ "<div><!-- <div></div> --></div>",
-      /* html */ "<div><!--<div>--></div>",
-      /* html */ "<div><!--</div>--></div>",
-      /* html */ "<div><!--<div></div>--></div>",
-      /* html */ "<div><!bogus></div>", // https://html.spec.whatwg.org/#bogus-comment-state
-    ])("removes comment for %j", (template) => {
-      expect.assertions(2);
-      const meta = compileNoMacro(template);
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div></div>");
-    });
-
-    test("removes comments for complex mixed template", () => {
-      expect.assertions(2);
-      const meta = compile(/* html */ `
-        <div>
-          <span>
-            </span>
-          <!-- comment -->
-          <!-- -->
-          <!--  -->
-          <!--   -->
-          <!----->
-          <!---->
-          <!--->
-          <!-->
-          <!->
-          <!>
-          <!-- <!-- -->
-          <!--  \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF -->
-          <!-- comment --!>
-          <!--   --!>
-          <!--  --!>
-          <!-- --!>
-          <!-----!>
-          <!----!>
-          <!---!>
-          <!--!>
-          <!-- !----->
-          <!-- !---->
-          <!-- !--->
-          <!-- !-->
-          <!-- <div> -->
-          <!-- </div> -->
-          <!-- <div></div> -->
-          <!--<div>-->
-          <!--</div>-->
-          <!--<div></div>-->
-          <span></span>
-        </div>
-      `);
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div><span></span><span></span></div>");
-    });
-
-    test("has 1 k, d, and ref properties when 1 comment ref", () => {
-      expect.assertions(4);
-      const meta = compile(/* html */ "<div><!-- @a --></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.k).toHaveLength(1);
-      expect(meta.d).toHaveLength(1);
-      expect(Object.keys(meta.ref)).toHaveLength(1);
-    });
-
-    test("has 3 k, d, and ref properties when 3 comment refs", () => {
-      expect.assertions(4);
-      const meta = compile(/* html */ "<div><!-- @a --><!-- @b --><!-- @c --></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.k).toHaveLength(3);
-      expect(meta.d).toHaveLength(3);
-      expect(Object.keys(meta.ref)).toHaveLength(3);
-    });
-
-    test("has correct meta ref properties when 3 comment refs", () => {
-      expect.assertions(4);
-      const meta = compile(/* html */ "<div><!-- @a --><!-- @b --><!-- @c --></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.ref).toHaveProperty("a", 0);
-      expect(meta.ref).toHaveProperty("b", 1);
-      expect(meta.ref).toHaveProperty("c", 2);
-    });
-
-    test("returns expected html for template with comment ref", () => {
-      expect.assertions(2);
-      const meta = compile(/* html */ "<div><!-- @a --></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div><!></div>");
-    });
-
-    test("returns expected html for template with multiline comment ref", () => {
-      expect.assertions(2);
-      const meta = compile(/* html */ "<div><!--\n@a\n--></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div><!></div>");
-    });
-
-    test("returns expected html for template with no whitespace comment ref", () => {
-      expect.assertions(2);
-      const meta = compile(/* html */ "<div><!--@a--></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div><!></div>");
-    });
-
-    test("returns expected html for template with only comment ref", () => {
-      expect.assertions(2);
-      const meta = compile(/* html */ "<!-- @a -->");
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<!>");
-    });
-
-    // Regression: a comment ref never closed the root it stands in for, so a
-    // second top-level comment ref was silently accepted as a second root.
-    test("returns success false for two top-level comment refs", () => {
-      expect.assertions(1);
-      // oxlint-disable-next-line no-underscore-dangle
-      using _consoleSpy = spyOn(console, "error").mockImplementation(() => {});
-      const meta = compile(/* html */ "<!-- @a --><!-- @b -->");
-      expect(meta.success).toBeFalse();
-    });
   });
 
   describe("keepSpaces option", () => {
@@ -1064,14 +1532,9 @@ describe("compile", () => {
   });
 });
 
-// Measured bun 1.4.0-canary.1: these tests do not exercise compile(); they pin
-// the bun/lol-html HTMLRewriter behaviours src/macro.ts is built around. None
-// of them are documented by bun, so each test names the code which depends on
-// it — when one fails after a bun upgrade it points straight at what needs
-// revisiting.
+// These tests pin the HTMLRewriter behaviours src/macro.ts is built around.
 describe("HTMLRewriter", () => {
   describe("text chunking", () => {
-    // ↳ macro.ts buffers text chunks because of this; see SPEC V6b.
     test("splits a text node on a bare less-than", () => {
       expect.assertions(1);
       const chunks: [text: string, lastInTextNode: boolean][] = [];
@@ -1090,9 +1553,7 @@ describe("HTMLRewriter", () => {
       ]);
     });
 
-    // Splitting is tokenizer driven, not size or stream driven, so a big
-    // template does not make it more likely — and buffering cannot be skipped
-    // for small ones.
+    // Splitting is tokenizer driven, not size or stream driven.
     test("does not split on size", () => {
       expect.assertions(1);
       let chunks = 0;
@@ -1129,8 +1590,6 @@ describe("HTMLRewriter", () => {
       expect(chunks).toBe(1);
     });
 
-    // ↳ macro.ts flushes its buffer on the last chunk, so there must be exactly
-    // one per text node.
     test("terminates every text node with one empty last chunk", () => {
       expect.assertions(1);
       const flags: boolean[] = [];
@@ -1144,7 +1603,6 @@ describe("HTMLRewriter", () => {
       expect(flags).toEqual([false, true, false, true, false, true]);
     });
 
-    // ↳ macro.ts uses a single shared buffer; interleaving would corrupt it.
     test("flushes all chunks of a text node before the next element", () => {
       expect.assertions(1);
       const sequence: string[] = [];
@@ -1164,8 +1622,6 @@ describe("HTMLRewriter", () => {
       expect(sequence).toEqual(["el:div", "t:a ", "t:<", "t: b", "END", "el:span", "t:c", "END"]);
     });
 
-    // ↳ macro.ts removes every non-last chunk then writes the whole node to the
-    // last one, which is empty; the replacement must land in the right place.
     test("reinserts at the right position when replacing the last chunk", () => {
       expect.assertions(1);
       let buffer = "";
@@ -1189,8 +1645,6 @@ describe("HTMLRewriter", () => {
   });
 
   describe("end tag handlers", () => {
-    // ↳ macro.ts unwinds the root, verbatim and raw state in ONE shared handler
-    // because of this.
     test("replaces a previously registered handler", () => {
       expect.assertions(1);
       const fired: string[] = [];
@@ -1209,8 +1663,6 @@ describe("HTMLRewriter", () => {
       expect(fired).toEqual(["second"]);
     });
 
-    // ↳ ...and it clobbers across separate .on() calls too, which is why the
-    // per-concern handler split is not possible.
     test("replaces a handler registered by another on() handler", () => {
       expect.assertions(1);
       const fired: string[] = [];
@@ -1233,7 +1685,7 @@ describe("HTMLRewriter", () => {
       expect(fired).toEqual(["pre"]);
     });
 
-    // ↳ macro.ts guards onEndTag with `canHaveContent`; without it a void root
+    // compile() guards onEndTag with `canHaveContent`; without it a void root
     // element throws "No end tag." and fails the build. Throwing correlates
     // with `canHaveContent` ALONE — `selfClosing` plays no part, as the last
     // two rows show — which is why the guard must not consult it.
@@ -1268,11 +1720,11 @@ describe("HTMLRewriter", () => {
       },
     );
 
-    // An element written with a self-closing slash accepts an end tag
-    // handler but never fires it, since no end tag follows. That leaves
-    // macro.ts's insideRoot set for the rest of the template — which is
-    // CORRECT, because the HTML parser ignores "/>" here and keeps the element
-    // open too, making everything after it a child rather than a second root.
+    // An element written with a self-closing slash accepts an end tag handler
+    // but never fires it, since no end tag follows. That leaves  macro.ts's
+    // insideRoot set for the rest of the template — which is CORRECT, because
+    // the HTML parser ignores "/>" here and keeps the element open too, making
+    // everything after it a child rather than a second root.
     test("never fires for an element written with a self-closing slash", () => {
       expect.assertions(3);
       let wasFired = false;
@@ -1290,8 +1742,6 @@ describe("HTMLRewriter", () => {
       expect(wasFired).toBeFalse();
     });
 
-    // ↳ macro.ts decrements verbatimDepth in an end tag handler, so an unclosed
-    // <pre> must not leak the state to the rest of the template.
     test("fires for implied end tags", () => {
       expect.assertions(1);
       const fired: string[] = [];
@@ -1313,8 +1763,7 @@ describe("HTMLRewriter", () => {
   });
 
   describe("attributes", () => {
-    // ↳ macro.ts collects ref markers into an array BEFORE removing any,
-    // because removing one aborts the iteration.
+    // Removing an attribute aborts the iteration
     test("truncates iteration when an attribute is removed", () => {
       expect.assertions(2);
       const iterated: string[] = [];
@@ -1333,8 +1782,6 @@ describe("HTMLRewriter", () => {
       expect(html).toBe(/* html */ "<div x=1 @b y=2 @c></div>");
     });
 
-    // This is why REF_NAME_RE's lowercase rule can only be violated in
-    // text or comment position; see SPEC V19.
     test("lowercases attribute names", () => {
       expect.assertions(1);
       let names: string[] = [];
@@ -1350,7 +1797,6 @@ describe("HTMLRewriter", () => {
   });
 
   describe("comments and doctype", () => {
-    // ↳ macro.ts turns a comment ref into <!> this way.
     test("allows after() on a removed comment", () => {
       expect.assertions(1);
       const html = new HTMLRewriter()
@@ -1364,8 +1810,7 @@ describe("HTMLRewriter", () => {
       expect(html).toBe(/* html */ "<div><!></div>");
     });
 
-    // ↳ A doctype is reported wherever it appears, so macro.ts cannot swap the
-    // handler for a regex anchored to the start of the template.
+    // A doctype is reported wherever it appears
     test.each([
       /* eslint-disable array-bracket-spacing */
       [/* html */ "<!DOCTYPE html><div></div>"],
