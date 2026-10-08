@@ -65,21 +65,21 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@maxmilton/eslint-config": "0.3.5",
-    "@maxmilton/oxlint-config": "0.0.19",
+    "@maxmilton/oxlint-config": "0.0.20",
     "@maxmilton/test-utils": "0.0.18",
     "@playwright/test": "1.63.0",
     "@types/bun": "1.4.2",
     "dts-buddy": "0.8.3",
-    "eslint": "10.10.0",
-    "eslint-plugin-oxlint": "1.83.0",
-    "eslint-plugin-unicorn": "75.0.0",
+    "eslint": "10.11.0",
+    "eslint-plugin-oxlint": "1.86.0",
+    "eslint-plugin-unicorn": "76.0.0",
     "happy-dom": "20.14.5",
-    "oxfmt": "0.68.0",
-    "oxlint": "1.83.0",
-    "oxlint-tsgolint": "7.0.2001",
-    "rollup": "4.63.3",
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
+    "oxlint-tsgolint": "7.0.2003",
+    "rollup": "4.63.6",
     "terser": "5.51.2",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.70.0"
+    "typescript-eslint": "8.71.0"
   }
 }
