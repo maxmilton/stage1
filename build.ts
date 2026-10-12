@@ -14,6 +14,7 @@ const { outputs } = await Bun.build({
   outdir: "dist",
   naming: "[dir]/browser.js",
   target: "browser",
+  allowUnresolved: [],
   define: {
     "Node.ELEMENT_NODE": "1",
   },
@@ -59,6 +60,7 @@ await Bun.build({
   outdir: "dist",
   naming: "[dir]/browser.mjs",
   target: "browser",
+  allowUnresolved: [],
   define: {
     "Node.ELEMENT_NODE": "1",
   },
@@ -70,6 +72,7 @@ await Bun.build({
   entrypoints: ["src/index.ts"],
   outdir: "dist",
   target: "browser",
+  allowUnresolved: [],
   minify: true,
   sourcemap: "linked",
 });
@@ -78,6 +81,7 @@ await Bun.build({
   entrypoints: ["src/macro.ts"],
   outdir: "dist",
   target: "bun",
+  allowUnresolved: [],
   minify: true,
   sourcemap: "linked",
 });
@@ -90,6 +94,7 @@ await Bun.build({
   ],
   outdir: "dist/reconcile",
   target: "browser",
+  allowUnresolved: [],
   minify: true,
   sourcemap: "linked",
 });
