@@ -1,4 +1,4 @@
-// oxlint-disable eslint/no-duplicate-imports import/no-duplicates
+/* eslint-disable unicorn/prefer-literal-ascii */
 
 import { describe, expect, expectTypeOf, onTestFinished, spyOn, test } from "bun:test";
 import { compile } from "../../src/macro.ts" with { type: "macro" };

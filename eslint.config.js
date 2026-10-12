@@ -5,6 +5,7 @@ import unicorn from "eslint-plugin-unicorn";
 import { defineConfig } from "eslint/config";
 import ts from "typescript-eslint";
 
+// eslint-disable-next-line unicorn/no-top-level-side-effects
 export default defineConfig(
   js.configs.recommended,
   ts.configs.strictTypeChecked,

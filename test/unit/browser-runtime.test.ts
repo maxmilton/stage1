@@ -106,6 +106,7 @@ describe("h", () => {
 
     test("renders basic template with messy whitespace", () => {
       expect.assertions(1);
+      // eslint-disable-next-line unicorn/prefer-literal-ascii
       const view = h(/* html */ `
         <ul>
           <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>

@@ -2,6 +2,7 @@
 
 import { defineConfig, devices } from "@playwright/test";
 
+// eslint-disable-next-line unicorn/no-top-level-side-effects
 export default defineConfig({
   testDir: "test/e2e",
   failOnFlakyTests: Boolean(process.env["CI"]),
