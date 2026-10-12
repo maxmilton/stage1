@@ -11,7 +11,13 @@ linker = "isolated"
 hoistPattern = ["@typescript-eslint/parser"] # TODO: Remove once we remove eslint from the project.
 peer = false
 minimumReleaseAge = 604800 # 7 days
-minimumReleaseAgeExcludes = ["@maxmilton/*"]
+minimumReleaseAgeExcludes = [
+  "@maxmilton/*",
+  # TODO: Remove these once bun support wildcards.
+  "@maxmilton/eslint-config",
+  "@maxmilton/oxlint-config",
+  "@maxmilton/test-utils",
+]
 
 [test]
 preload = ["./test/setup.ts"]
