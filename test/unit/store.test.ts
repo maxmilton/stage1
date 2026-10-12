@@ -15,7 +15,7 @@ describe("store", () => {
         on: (
           key: string | symbol,
           callback: (value: unknown, prev: unknown) => void,
-        ) => /** Off */ () => boolean;
+        ) => /** off */ () => boolean;
       }
     >();
     expectTypeOf<ReturnType<typeof store<{ count: number }>>["count"]>().toBeNumber();

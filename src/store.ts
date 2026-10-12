@@ -5,7 +5,7 @@ type Store<T> = T & {
     key: K,
     callback: Handler<T[K]>,
   ) => /**
-   * Off
+   * off
    *
    * @returns Returns true if the handler was removed, or false if it was already removed.
    */ () => boolean;

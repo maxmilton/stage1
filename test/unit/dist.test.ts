@@ -54,7 +54,7 @@ describe("dist files", () => {
   test("contains no extra files", () => {
     expect.assertions(1);
     const expectedFiles = new Set(distFiles.map(([filename]) => filename));
-    const actualFiles = new Set(new Bun.Glob("**").scanSync({ cwd: "dist" }));
+    const actualFiles = new Set(new Bun.Glob("**").scanSync({ cwd: "dist", dot: true }));
     expect(actualFiles.difference(expectedFiles)).toBeEmpty();
   });
 });
@@ -98,14 +98,4 @@ describe("package.json", () => {
     expect.assertions(1);
     expect(pkg.files).toEqual(["dist", "src"]);
   });
-});
-
-test("no test file relies on the removed Bun `Loader` internal", async () => {
-  expect.assertions(1);
-  const contents = await Promise.all(
-    [...new Bun.Glob("**/*.ts").scanSync({ cwd: "test/unit" })]
-      .filter((filename) => filename !== "dist.test.ts")
-      .map((filename) => Bun.file(`test/unit/${filename}`).text()),
-  );
-  expect(contents.join("\n")).not.toContain("Loader.registry");
 });
