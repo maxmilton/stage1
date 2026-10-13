@@ -29,5 +29,4 @@ jobs:
           persist-credentials: false
       - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0
         with:
-          annotations: true
           persona: auditor
