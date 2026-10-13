@@ -5,6 +5,10 @@ on:
     - cron: "22 14 */3 * *"
   workflow_dispatch:
 
+concurrency:
+  group: bun-canary
+  cancel-in-progress: true
+
 permissions: {}
 
 jobs:
@@ -20,6 +24,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: canary
+          no-cache: true
       - run: bun install --frozen-lockfile
       - run: bun add -d bun-types@canary
       - run: bun run build
