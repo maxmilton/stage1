@@ -49,6 +49,7 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
  * @param template - HTML template string.
  */
 export const h = <T extends Node = Element>(template: string): View & T => {
+  // nosemgrep: insecure-document-method
   compilerTemplate.innerHTML = template
     // Reduce any whitespace to a single space
     .replace(/\s+/g, " ")

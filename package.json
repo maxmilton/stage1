@@ -5,7 +5,10 @@
   "bugs": "https://github.com/maxmilton/stage1/issues",
   "license": "MIT",
   "author": "Max Milton <max@2okki.com>",
-  "repository": "github:maxmilton/stage1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxmilton/stage1.git"
+  },
   "files": [
     "dist",
     "src"

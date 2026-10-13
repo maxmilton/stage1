@@ -5,23 +5,69 @@ on:
     tags:
       - "v*.*.*"
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
+
+permissions: {}
+
 jobs:
-  release:
-    if: ${{ github.repository_owner == 'maxmilton' }}
+  validate:
+    if: ${{ github.repository == 'maxmilton/stage1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Validate release
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-next\.(0|[1-9][0-9]*))?$ ]] || exit 1
+          [[ "$GITHUB_REF_NAME" == "v$(jq -er '.version' package.json)" ]] || exit 1
+          [[ "$(jq -er '.name' package.json)" == "stage1" ]] || exit 1
+
+          branch=master
+          if [[ "$GITHUB_REF_NAME" == *"-next."* ]]; then
+            branch=next
+          fi
+
+          git merge-base --is-ancestor HEAD "origin/$branch" || {
+            echo "Release commit is not reachable from $branch" >&2
+            exit 1
+          }
+        shell: bash
+
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
+
       - run: bun install --frozen-lockfile
       - run: bun run build
       - run: bun run lint
       - run: bun run test
-      - run: gh release create "$GITHUB_REF_NAME" --draft --generate-notes
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Create draft release
+        run: |
+          args=(--draft --verify-tag --generate-notes)
+
+          if [[ "$GITHUB_REF_NAME" == *"-next."* ]]; then
+            args+=(--prerelease --latest=false)
+          fi
+
+          gh release create "$GITHUB_REF_NAME" "${args[@]}" \
+            --repo "$GITHUB_REPOSITORY"
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -9,6 +9,7 @@ const template = create("template");
  * @param html - HTML string.
  */
 export const h = <T extends Node = Element>(html: string): ChildNode & T => {
+  // nosemgrep: insecure-document-method
   template.innerHTML = html;
   return template.content.firstChild as ChildNode & T;
 };
