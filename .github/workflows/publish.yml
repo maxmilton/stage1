@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -33,7 +33,7 @@ jobs:
           [[ "$(jq -r '.name' package.json)" == "stage1" ]] || exit 1
         shell: bash
 
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
           no-cache: true
@@ -43,26 +43,58 @@ jobs:
       - run: bun run lint
       - run: bun run test
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version: 26
           package-manager-cache: false
 
       - name: Pack and verify
+        # FIXME: Make this a script and run it to verify early; run in `ci.yml`.
         # TODO: Use `bun pm pack` when it supports `--json`; https://github.com/oven-sh/bun/issues/38191
         run: |
           npm pack --ignore-scripts --json > /tmp/pack.json
+          jq -e '.[keys[0]].name == "stage1"' /tmp/pack.json
           jq -e '
-            .[0].files | map(.path) |
-            index("dist/index.js") != null and
-            index("dist/index.d.ts") != null and
+            .[keys[0]].files | map(.path) |
+            index("LICENSE") != null and
+            index("README.md") != null and
             index("dist/browser.js") != null and
-            index("dist/browser.mjs") != null
+            index("dist/browser.js.map") != null and
+            index("dist/browser.mjs") != null and
+            index("dist/browser.mjs.map") != null and
+            index("dist/index.d.ts") != null and
+            index("dist/index.d.ts.map") != null and
+            index("dist/index.js") != null and
+            index("dist/index.js.map") != null and
+            index("dist/macro.js") != null and
+            index("dist/macro.js.map") != null and
+            index("dist/reconcile/keyed.js") != null and
+            index("dist/reconcile/keyed.js.map") != null and
+            index("dist/reconcile/non-keyed.js") != null and
+            index("dist/reconcile/non-keyed.js.map") != null and
+            index("dist/reconcile/reuse-nodes.js") != null and
+            index("dist/reconcile/reuse-nodes.js.map") != null and
+            index("package.json") != null and
+            index("src/browser/index.ts") != null and
+            index("src/browser/runtime.ts") != null and
+            index("src/events.ts") != null and
+            index("src/fast/index.ts") != null and
+            index("src/fast/runtime.ts") != null and
+            index("src/reconcile/keyed.ts") != null and
+            index("src/reconcile/non-keyed.ts") != null and
+            index("src/reconcile/reuse-nodes.ts") != null and
+            index("src/index.ts") != null and
+            index("src/macro.ts") != null and
+            index("src/runtime.ts") != null and
+            index("src/store.ts") != null and
+            index("src/types.ts") != null and
+            index("src/utils.ts") != null
           ' /tmp/pack.json
-          mv -- "$(jq -er '.[0].filename' /tmp/pack.json)" publish.tgz
+          jq -e '.[keys[0]].entryCount == 33' /tmp/pack.json
+          mv -- "$(jq -er '.[keys[0]].filename' /tmp/pack.json)" publish.tgz
         shell: bash
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: publish.tgz
           path: publish.tgz
@@ -80,13 +112,13 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: publish.tgz
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version: 26
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
