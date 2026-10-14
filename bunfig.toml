@@ -7,6 +7,7 @@ noOrphans = true
 [install]
 auto = "disable"
 peer = false
+ignoreScripts = true
 linker = "isolated"
 minimumReleaseAge = 604800 # 7 days
 minimumReleaseAgeExcludes = [
