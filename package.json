@@ -70,7 +70,7 @@
     "@maxmilton/eslint-config": "0.3.7",
     "@maxmilton/oxlint-config": "0.0.22",
     "@maxmilton/test-utils": "0.0.18",
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.0",
     "@types/bun": "1.4.2",
     "dts-buddy": "0.8.3",
     "eslint": "10.12.0",
@@ -80,7 +80,7 @@
     "oxfmt": "0.72.0",
     "oxlint": "1.87.0",
     "oxlint-tsgolint": "7.0.2003",
-    "rollup": "4.64.0",
+    "rollup": "4.64.2",
     "terser": "5.51.2",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.1"
