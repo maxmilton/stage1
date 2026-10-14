@@ -22,6 +22,9 @@
   "[css]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
+  "[github-actions-workflow]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
   "[html]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
