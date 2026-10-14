@@ -121,7 +121,7 @@ The regular mode browser bundle does not have any specific build requirements.
 
 ## Bugs
 
-Please report any bugs you encounter on the [GitHub issue tracker](https://github.com/maxmilton/stage1/issues).
+Report any bugs you encounter on the [GitHub issue tracker](https://github.com/maxmilton/stage1/issues).
 
 ## Changelog
 
