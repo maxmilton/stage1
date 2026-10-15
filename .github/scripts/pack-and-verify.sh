@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# TODO: Use bun pm pack when it supports --json; https://github.com/oven-sh/bun/issues/38191
+fail() {
+  local status=$?
+  printf '::error::%s\n' "$1"
+  exit "$status"
+}
+
 PACK_JSON="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/pack.json"
-npm pack --ignore-scripts --json > "$PACK_JSON"
-jq -e '.[keys[0]].name == "stage1"' "$PACK_JSON"
+
+echo "::group::npm pack output (pack.json)"
+# TODO: Use bun pm pack when it supports --json; https://github.com/oven-sh/bun/issues/38191
+npm pack --ignore-scripts --json | tee "$PACK_JSON" \
+  || fail "Package creation failed"
+echo "::endgroup::"
+
+jq -e '.[keys[0]].name == "stage1"' "$PACK_JSON" \
+  || fail "Unexpected package name"
 jq -e '
   .[keys[0]].files | map(.path) |
   index("LICENSE") != null and
@@ -40,6 +52,11 @@ jq -e '
   index("src/store.ts") != null and
   index("src/types.ts") != null and
   index("src/utils.ts") != null
-' "$PACK_JSON"
-jq -e '.[keys[0]].entryCount == 33' "$PACK_JSON"
-mv -- "$(jq -er '.[keys[0]].filename' "$PACK_JSON")" publish.tgz
+' "$PACK_JSON" \
+  || fail "Required package files missing"
+jq -e '.[keys[0]].entryCount == 33' "$PACK_JSON" \
+  || fail "Expected 33 packed files"
+filename="$(jq -er '.[keys[0]].filename' "$PACK_JSON")" \
+  || fail "Package filename missing"
+mv -- "$filename" publish.tgz \
+  || fail "Could not rename package"
