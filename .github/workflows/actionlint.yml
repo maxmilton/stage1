@@ -27,6 +27,22 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Install ShellCheck
+        env:
+          # renovate: depName=koalaman/shellcheck
+          SHELLCHECK_VERSION: v0.11.0
+          SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
+        run: |
+          tool_dir="$RUNNER_TEMP/shellcheck"
+          mkdir -p "$tool_dir"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/koalaman/shellcheck/releases/download/$SHELLCHECK_VERSION/shellcheck-$SHELLCHECK_VERSION.linux.x86_64.tar.xz" \
+            --output "$tool_dir/archive.tar.xz"
+          printf '%s  %s\n' "$SHELLCHECK_SHA256" "$tool_dir/archive.tar.xz" | sha256sum --check --strict
+          tar -xJf "$tool_dir/archive.tar.xz" -C "$tool_dir" --strip-components=1 \
+            "shellcheck-$SHELLCHECK_VERSION/shellcheck"
+          echo "$tool_dir" >> "$GITHUB_PATH"
+          "$tool_dir/shellcheck" --version
       - name: Install actionlint
         env:
           # renovate: depName=rhysd/actionlint
@@ -57,3 +73,4 @@ jobs:
         run: |
           echo "::add-matcher::$RUNNER_TEMP/actionlint-matcher.json"
           actionlint -color -verbose -shellcheck shellcheck -pyflakes 'ruff check --isolated --select F,B,UP,SIM,PERF,RUF --output-format concise --stdin-filename "<stdin>" -'
+      - run: shellcheck --norc -a .github/scripts/*.sh
