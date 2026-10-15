@@ -58,6 +58,7 @@ jobs:
           node-version-file: .github/.node-version
       - name: Pack and verify
         run: .github/scripts/pack-and-verify.sh
+      - run: test -f publish.tgz
 
   e2e:
     runs-on: ubuntu-latest

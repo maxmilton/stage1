@@ -2,6 +2,7 @@
 *-lock.yaml
 *.bak
 *.lock
+*.tgz
 !/bun.lock
 /coverage/
 /dist/
