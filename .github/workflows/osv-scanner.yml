@@ -44,6 +44,8 @@ jobs:
             -v "$GITHUB_WORKSPACE:/github/workspace:ro" -w "/github/workspace" \
             -v "$out:/out" \
             --entrypoint /root/osv-scanner "$OSV_IMAGE" \
+            --include-git-root \
+            --x-flag-deprecated-packages \
             --format=sarif --output=/out/results.sarif -r . || rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           [ "$rc" -le 1 ] || { echo "::error::osv-scanner exited $rc (127=error, 128=no packages, 129=OSV API failure, 130=invalid config; 125-127 may also be docker)"; exit "$rc"; }
