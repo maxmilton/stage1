@@ -12,8 +12,8 @@ on:
     - cron: "25 14 * * 3"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
 
@@ -25,7 +25,6 @@ jobs:
         include:
           - language: actions
           - language: javascript-typescript
-            # https://github.com/GitHubSecurityLab/CodeQL-Community-Packs/blob/main/configs/synthetics.yml
             packs: githubsecuritylab/codeql-javascript-queries
     name: analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
@@ -44,6 +43,7 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: none
           queries: security-and-quality
+          # https://github.com/GitHubSecurityLab/CodeQL-Community-Packs/blob/main/configs/synthetics.yml
           packs: ${{ matrix.packs }}
           # https://docs.github.com/en/code-security/reference/code-scanning/workflow-configuration-options#extending-codeql-coverage-with-threat-models
           config: |
