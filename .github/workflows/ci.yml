@@ -39,7 +39,7 @@ jobs:
           oidc: true
           files: coverage/lcov.info
 
-  test-pack:
+  pack:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
