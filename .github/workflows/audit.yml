@@ -10,7 +10,6 @@ on:
       - "bun.lock"
       - "package.json"
   pull_request:
-  merge_group:
   workflow_dispatch:
   schedule:
     - cron: "23 21 * * 3"
