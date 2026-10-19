@@ -1,7 +1,7 @@
 paths:
   .github/workflows/publish.yml:
     ignore:
-      # actionlint 1.7.12 lacks concurrency.queue; workflow tests validate it.
+      # actionlint 1.7.12 lacks concurrency.queue
       - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'
   .github/workflows/release.yml:
     ignore:
