@@ -35,6 +35,7 @@ export default defineConfig(
       "@typescript-eslint/naming-convention": "off",
       "@typescript-eslint/prefer-optional-chain": "off",
       "consistent-return": "off",
+      "unicorn/consistent-boolean-name": "off",
       "unicorn/no-for-loop": "off",
       "unicorn/prefer-add-event-listener": "off",
       "unicorn/prefer-dom-node-append": "off",
