@@ -5,7 +5,7 @@ import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import { collect, h } from "../../src/runtime.ts";
-import type { LowercaseKeys, Refs } from "../../src/types.ts";
+import type { Refs } from "../../src/types.ts";
 import { Test } from "../fixtures/TestComponent.ts";
 
 describe("h", () => {
@@ -231,25 +231,27 @@ describe("collect", () => {
     expectTypeOf(collect).parameters.toEqualTypeOf<
       [root: Node, k: readonly string[], d: readonly number[]]
     >();
-    // Erased: `R` -> its constraint, never reaching `LowercaseKeys<R>`.
+    // Erased: `R` -> its constraint, never reaching `R`.
     expectTypeOf(collect).returns.not.toBeAny();
     expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Refs>();
-    expectTypeOf(collect).returns.toEqualTypeOf<LowercaseKeys<Refs>>();
-    // Ref keys are lowercased — browsers normalise attribute names.
-    expectTypeOf<ReturnType<typeof collect<{ Foo: HTMLDivElement; bar: Text }>>>().toEqualTypeOf<{
+    expectTypeOf(collect).returns.toEqualTypeOf<Refs>();
+    expectTypeOf<ReturnType<typeof collect<{ foo: HTMLDivElement; bar: Text }>>>().toEqualTypeOf<{
       foo: HTMLDivElement;
       bar: Text;
     }>();
 
     // Interfaces have no implicit index signature, so `R extends Refs` alone would reject them.
     interface FooRefs {
-      Foo: HTMLDivElement;
+      foo: HTMLDivElement;
     }
-    expectTypeOf<ReturnType<typeof collect<FooRefs>>>().toEqualTypeOf<{ foo: HTMLDivElement }>();
+    expectTypeOf<ReturnType<typeof collect<FooRefs>>>().toEqualTypeOf<FooRefs>();
     // @ts-expect-error - ref values must be Nodes
     expectTypeOf<ReturnType<typeof collect<{ foo: string }>>>();
+    // @ts-expect-error - ref names must be lowercase; browsers normalise attribute names
+    expectTypeOf<ReturnType<typeof collect<{ Foo: HTMLDivElement }>>>();
     expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf<Refs<{ Foo: Text }>>().toEqualTypeOf<{ foo: Node }>();
     expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
   });
 
@@ -339,8 +341,7 @@ describe("collect", () => {
     expect.assertions(2);
     expect(DEEP_TREE.success).toBeTrue();
     const view = h(DEEP_TREE.html);
-    // `LowercaseKeys<Refs>` drops the index signature, so re-widen to index it.
-    const refs = collect<Refs>(view, DEEP_TREE.k, DEEP_TREE.d) as Refs;
+    const refs = collect<Refs>(view, DEEP_TREE.k, DEEP_TREE.d);
     expect(refs[name].nodeName).toBe(nodeName);
   });
 

@@ -46,7 +46,10 @@ describe("compile", () => {
     >().toEqualTypeOf<"@foo">();
     // @ts-expect-error - ref values must be Nodes
     expectTypeOf<ReturnType<typeof compileNoMacro<{ foo: string }>>>();
+    // @ts-expect-error - ref names must be lowercase; browsers normalise attribute names
+    expectTypeOf<ReturnType<typeof compileNoMacro<{ Foo: HTMLDivElement }>>>();
     expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf<Refs<{ Foo: Text }>>().toEqualTypeOf<{ foo: Node }>();
     expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
   });
 

@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { collect, h, html } from "../../src/browser/runtime.ts";
-import type { LowercaseKeys, Refs } from "../../src/types.ts";
+import type { Refs } from "../../src/types.ts";
 import { Test } from "../fixtures/TestComponent_browser.ts";
 
 // A deep mixed tree exercising every node kind the TreeWalker has to step
@@ -226,25 +226,27 @@ describe("collect", () => {
     expectTypeOf(collect).toBeFunction();
     // `view` is the unexported `View` ∴ `toExtend`, not `toEqualTypeOf`.
     expectTypeOf(collect).parameters.toExtend<[root: Node, view: Node]>();
-    // Erased: `R` -> its `= Refs` default, never reaching `LowercaseKeys<R>`.
+    // Erased: `R` -> its `= Refs` default, never reaching `R`.
     expectTypeOf(collect).returns.not.toBeAny();
     expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Refs>();
-    expectTypeOf(collect).returns.toEqualTypeOf<LowercaseKeys<Refs>>();
-    // Ref keys are lowercased — browsers normalise attribute names.
-    expectTypeOf<ReturnType<typeof collect<{ Foo: HTMLDivElement; bar: Text }>>>().toEqualTypeOf<{
+    expectTypeOf(collect).returns.toEqualTypeOf<Refs>();
+    expectTypeOf<ReturnType<typeof collect<{ foo: HTMLDivElement; bar: Text }>>>().toEqualTypeOf<{
       foo: HTMLDivElement;
       bar: Text;
     }>();
 
     // Interfaces have no implicit index signature, so `R extends Refs` alone would reject them.
     interface FooRefs {
-      Foo: HTMLDivElement;
+      foo: HTMLDivElement;
     }
-    expectTypeOf<ReturnType<typeof collect<FooRefs>>>().toEqualTypeOf<{ foo: HTMLDivElement }>();
+    expectTypeOf<ReturnType<typeof collect<FooRefs>>>().toEqualTypeOf<FooRefs>();
     // @ts-expect-error - ref values must be Nodes
     expectTypeOf<ReturnType<typeof collect<{ foo: string }>>>();
+    // @ts-expect-error - ref names must be lowercase; browsers normalise attribute names
+    expectTypeOf<ReturnType<typeof collect<{ Foo: HTMLDivElement }>>>();
     expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf<Refs<{ Foo: Text }>>().toEqualTypeOf<{ foo: Node }>();
     expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
   });
 
@@ -401,8 +403,8 @@ describe("collect", () => {
   });
 
   // Characterization (T11): text refs are read from nodeValue, which the
-  // parser does not normalise, so the runtime key keeps its case while
-  // LowercaseKeys<T> claims lowercase. compile() rejects the name instead (V19).
+  // parser does not normalise, so the runtime key keeps its case — a name
+  // `Refs<R>` rejects, so it can't be typed. compile() rejects it too (V19).
   test("keeps the case of a text ref name", () => {
     expect.assertions(1);
     const view = h(/* html */ "<div>@Foo</div>");

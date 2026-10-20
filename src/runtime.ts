@@ -1,4 +1,4 @@
-import type { LowercaseKeys, Refs } from "./types.ts";
+import type { Refs } from "./types.ts";
 import { create } from "./utils.ts";
 
 const template = create("template");
@@ -20,15 +20,13 @@ export const h = <T extends Node = Element>(html: string): ChildNode & T => {
  * @param root - Root node.
  * @param k - Ref key names.
  * @param d - Distances from previous ref node or root.
- * @returns An object mapping ref nodes keyed by their ref name. Note that
- *   browsers lowercase rendered HTML element attribute names so we lowercase
- *   the typed key names to prevent surprises.
+ * @returns An object mapping ref nodes keyed by their ref name.
  */
 export const collect = /*@__NOINLINE__*/ <R extends Refs<R>>(
   root: Node,
   k: readonly string[],
   d: readonly number[],
-): LowercaseKeys<R> => {
+): R => {
   const refs: Refs = {};
   const len = k.length;
   let index = 0;
@@ -52,5 +50,5 @@ export const collect = /*@__NOINLINE__*/ <R extends Refs<R>>(
     refs[k[index]] = node;
   }
 
-  return refs as LowercaseKeys<R>;
+  return refs as R;
 };

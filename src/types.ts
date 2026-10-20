@@ -1,7 +1,6 @@
-export type Refs<T = Record<string, Node>> = { [K in keyof T]: Node };
-
-export type LowercaseKeys<T> = {
-  [K in keyof T as Lowercase<string & K>]: T[K];
+/** Ref names must be lowercase; browsers lowercase element attribute names. */
+export type Refs<T = Record<string, Node>> = {
+  [K in keyof T as string extends K ? K : Lowercase<K & string>]: Node;
 };
 
 /**
