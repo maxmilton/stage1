@@ -29,12 +29,13 @@ describe("compile", () => {
       d: readonly number[];
       success: boolean;
     }>();
-    expectTypeOf<Result["ref"]>().toExtend<Record<string, `${number}`>>();
-    // Erased above; instantiated to pin ref name -> ordinal. Keys and values are
-    // pinned apart — `toEqualTypeOf` cannot equate the deferred mapped type.
+    expectTypeOf<Result["ref"]>().toExtend<Record<string, `@${string}`>>();
+    // Erased above; instantiated to pin ref name -> name-keyed (not ordinal)
+    // RefKey, so `Refs` key order cannot leak into the type.
     type Ref = CompileResult<{ foo: HTMLDivElement; bar: Text }>["ref"];
     expectTypeOf<keyof Ref>().toEqualTypeOf<"foo" | "bar">();
-    expectTypeOf<Ref>().toExtend<{ foo: "0"; bar: "1" }>();
+    expectTypeOf<Ref["foo"]>().toEqualTypeOf<"@foo">();
+    expectTypeOf<Ref["bar"]>().toEqualTypeOf<"@bar">();
     expectTypeOf<InferRefs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
   });
 

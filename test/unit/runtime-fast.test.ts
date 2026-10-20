@@ -5,6 +5,7 @@ import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { collect, h } from "../../src/fast/runtime.ts";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
+import type { CompileResult } from "../../src/macro.ts";
 import type { InferRefs, Refs } from "../../src/types.ts";
 import { Test } from "../fixtures/TestComponent_fast.ts";
 
@@ -176,7 +177,8 @@ describe("h", () => {
 });
 
 // TODO: Once bun supports macros used as template literals tag functions, we
-// should consider adding a html function similar to the browser runtime.
+// should consider adding a html function similar to the browser runtime. See:
+// https://github.com/oven-sh/bun/pull/30545
 
 // oxlint-disable vitest/no-commented-out-tests
 
@@ -234,11 +236,29 @@ describe("collect", () => {
     expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Node[]>();
     expectTypeOf(collect).returns.items.toExtend<Node>();
-    // Refs are positional, in key declaration order.
-    expectTypeOf<ReturnType<typeof collect<{ foo: HTMLDivElement; bar: Text }>>>().toEqualTypeOf<
-      [HTMLDivElement, Text]
-    >();
     expectTypeOf<InferRefs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+
+    // `keyof R` doesn't preserve declaration order (TS 6: type ID; TS 7
+    // with `--stableTypeOrdering`: alphabetical). Refs are keyed by name
+    // via `compile()`'s `ref`, since positions cannot identify ref types.
+    interface FooBar {
+      foo: HTMLDivElement;
+      bar: Text;
+    }
+    type FooBarRefs = ReturnType<typeof collect<FooBar>>;
+    type FooBarRef = CompileResult<FooBar>["ref"];
+    expectTypeOf<FooBarRefs>().toExtend<Node[]>();
+    expectTypeOf<FooBarRefs[FooBarRef["foo"]]>().toEqualTypeOf<HTMLDivElement>();
+    expectTypeOf<FooBarRefs[FooBarRef["bar"]]>().toEqualTypeOf<Text>();
+    expectTypeOf<FooBarRefs[0]>().toEqualTypeOf<Node>();
+    // Regression: the positional (UnionToTuple) types failed with TS2589 at 50 refs.
+    type Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+    interface ManyRefs extends Record<`k${Digit}${Digit}`, Text> {
+      last: HTMLDivElement;
+    }
+    expectTypeOf<
+      ReturnType<typeof collect<ManyRefs>>[CompileResult<ManyRefs>["ref"]["last"]]
+    >().toEqualTypeOf<HTMLDivElement>();
   });
 
   test("is a function", () => {
@@ -480,6 +500,30 @@ describe("collect", () => {
     expect(refs).toHaveLength(6);
     expect(Object.keys(meta.ref)).toHaveLength(6);
     expect(meta.d).toHaveLength(6);
+  });
+
+  test("resolves refs by name when template order differs from Refs key order", () => {
+    expect.assertions(4);
+    interface TemplateRefs {
+      b: Comment;
+      c: HTMLDivElement;
+      a: Text;
+    }
+    const meta = compile<TemplateRefs>(/* html */ `
+      <div @c>
+        @a
+        <!-- @b -->
+      </div>
+    `);
+    expect(meta.success).toBeTrue();
+    const view = h(meta.html);
+    const refs = collect<TemplateRefs>(view, meta.d);
+    expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
+    expect(refs[meta.ref.b]).toBeInstanceOf(window.Comment);
+    expect(refs[meta.ref.c]).toBeInstanceOf(window.HTMLDivElement);
+    expectTypeOf(refs[meta.ref.a]).toEqualTypeOf<Text>();
+    expectTypeOf(refs[meta.ref.b]).toEqualTypeOf<Comment>();
+    expectTypeOf(refs[meta.ref.c]).toEqualTypeOf<HTMLDivElement>();
   });
 
   describe("keepSpaces option", () => {
