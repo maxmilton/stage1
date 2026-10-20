@@ -1,4 +1,4 @@
-import type { IndicesOf, InferRefs, TupleOfKeys } from "./types.ts";
+import type { InferRefs, RefKeys } from "./types.ts";
 
 /**
  * Valid ref name; lowercase because browsers normalise element attribute names
@@ -29,7 +29,7 @@ export interface CompileResult<R> {
   /** Array of distances from previous ref node or template root. */
   d: readonly number[];
   /** Object mapping ref key names to their indices in the `k` array. */
-  ref: IndicesOf<TupleOfKeys<R>>;
+  ref: RefKeys<R>;
   /** Whether the template was successfully compiled without any errors. */
   success: boolean;
 }
