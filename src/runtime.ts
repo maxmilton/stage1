@@ -1,4 +1,4 @@
-import type { InferRefs, LowercaseKeys, Refs } from "./types.ts";
+import type { LowercaseKeys, Refs } from "./types.ts";
 import { create } from "./utils.ts";
 
 const template = create("template");
@@ -24,7 +24,7 @@ export const h = <T extends Node = Element>(html: string): ChildNode & T => {
  *   browsers lowercase rendered HTML element attribute names so we lowercase
  *   the typed key names to prevent surprises.
  */
-export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R>>(
+export const collect = /*@__NOINLINE__*/ <R extends Refs<R>>(
   root: Node,
   k: readonly string[],
   d: readonly number[],

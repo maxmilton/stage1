@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { compile, type CompileResult } from "../../src/macro.ts";
-import type { InferRefs, LowercaseKeys, Refs } from "../../src/types.ts";
+import type { LowercaseKeys, Refs } from "../../src/types.ts";
 
 // These precompiled runtime tests are only available when running in Bun.
 test.skip(!("bun" in process.versions), "Requires Bun");
@@ -16,7 +16,7 @@ if (!("bun" in process.versions)) {
 
 const jsSrc = await Bun.file(new URL("../../dist/index.js", import.meta.url)).text();
 
-function render<R extends InferRefs<R>>(
+function render<R extends Refs<R>>(
   page: Page,
   meta: CompileResult<R>,
 ): Promise<{ refs: Record<keyof LowercaseKeys<R>, string>; html: string }> {
