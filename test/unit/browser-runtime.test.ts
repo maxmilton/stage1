@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { collect, h, html } from "../../src/browser/runtime.ts";
-import type { InferRefs, Refs } from "../../src/types.ts";
+import type { LowercaseKeys, Refs } from "../../src/types.ts";
 import { Test } from "../fixtures/TestComponent_browser.ts";
 
 // A deep mixed tree exercising every node kind the TreeWalker has to step
@@ -230,12 +230,22 @@ describe("collect", () => {
     expectTypeOf(collect).returns.not.toBeAny();
     expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Refs>();
+    expectTypeOf(collect).returns.toEqualTypeOf<LowercaseKeys<Refs>>();
     // Ref keys are lowercased — browsers normalise attribute names.
     expectTypeOf<ReturnType<typeof collect<{ Foo: HTMLDivElement; bar: Text }>>>().toEqualTypeOf<{
       foo: HTMLDivElement;
       bar: Text;
     }>();
-    expectTypeOf<InferRefs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+
+    // Interfaces have no implicit index signature, so `R extends Refs` alone would reject them.
+    interface FooRefs {
+      Foo: HTMLDivElement;
+    }
+    expectTypeOf<ReturnType<typeof collect<FooRefs>>>().toEqualTypeOf<{ foo: HTMLDivElement }>();
+    // @ts-expect-error - ref values must be Nodes
+    expectTypeOf<ReturnType<typeof collect<{ foo: string }>>>();
+    expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
   });
 
   test("is a function", () => {

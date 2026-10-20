@@ -6,7 +6,7 @@ import { cleanup, render } from "@maxmilton/test-utils/dom";
 import { collect, h } from "../../src/fast/runtime.ts";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import type { CompileResult } from "../../src/macro.ts";
-import type { InferRefs, Refs } from "../../src/types.ts";
+import type { FlatRefs, Refs } from "../../src/types.ts";
 import { Test } from "../fixtures/TestComponent_fast.ts";
 
 describe("h", () => {
@@ -236,7 +236,11 @@ describe("collect", () => {
     expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Node[]>();
     expectTypeOf(collect).returns.items.toExtend<Node>();
-    expectTypeOf<InferRefs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf(collect).returns.toEqualTypeOf<FlatRefs<Refs>>();
+    // @ts-expect-error - ref values must be Nodes
+    expectTypeOf<ReturnType<typeof collect<{ foo: string }>>>();
+    expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
 
     // `keyof R` doesn't preserve declaration order (TS 6: type ID; TS 7
     // with `--stableTypeOrdering`: alphabetical). Refs are keyed by name

@@ -7,7 +7,7 @@ import {
   type CompileOptions,
   type CompileResult,
 } from "../../src/macro.ts";
-import type { InferRefs } from "../../src/types.ts";
+import type { Refs } from "../../src/types.ts";
 
 describe("compile", () => {
   test("types", () => {
@@ -36,7 +36,18 @@ describe("compile", () => {
     expectTypeOf<keyof Ref>().toEqualTypeOf<"foo" | "bar">();
     expectTypeOf<Ref["foo"]>().toEqualTypeOf<"@foo">();
     expectTypeOf<Ref["bar"]>().toEqualTypeOf<"@bar">();
-    expectTypeOf<InferRefs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+
+    // Interfaces have no implicit index signature, so `R extends Refs` alone would reject them.
+    interface FooRefs {
+      foo: HTMLDivElement;
+    }
+    expectTypeOf<
+      ReturnType<typeof compileNoMacro<FooRefs>>["ref"]["foo"]
+    >().toEqualTypeOf<"@foo">();
+    // @ts-expect-error - ref values must be Nodes
+    expectTypeOf<ReturnType<typeof compileNoMacro<{ foo: string }>>>();
+    expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
   });
 
   test("is a function", () => {

@@ -1,4 +1,4 @@
-import type { InferRefs, RefKeys } from "./types.ts";
+import type { RefKeys, Refs } from "./types.ts";
 
 /**
  * Valid ref name; lowercase because browsers normalise element attribute names
@@ -41,7 +41,7 @@ export interface CompileResult<R> {
  * @param template - HTML template string.
  * @param options - Compile options.
  */
-export function compile<R extends InferRefs<R> = object>(
+export function compile<R extends Refs<R> = object>(
   template: string,
   { keepSpaces }: CompileOptions = {},
 ): CompileResult<R> {
