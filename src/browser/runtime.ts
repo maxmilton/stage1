@@ -1,4 +1,4 @@
-import type { LowercaseKeys, Refs } from "../types.ts";
+import type { Refs } from "../types.ts";
 import { create } from "../utils.ts";
 
 const REFS = Symbol();
@@ -87,14 +87,9 @@ export const html = <T extends Node = Element>(
  *
  * @param root - Root node.
  * @param view - Compiled template view.
- * @returns An object mapping ref nodes keyed by their ref name. Note that
- *   browsers lowercase rendered HTML element attribute names so we lowercase
- *   the typed key names to prevent surprises.
+ * @returns An object mapping ref nodes keyed by their ref name.
  */
-export const collect = /*@__NOINLINE__*/ <R extends Refs<R> = Refs>(
-  root: Node,
-  view: View,
-): LowercaseKeys<R> => {
+export const collect = /*@__NOINLINE__*/ <R extends Refs<R> = Refs>(root: Node, view: View): R => {
   const refs: Refs = {};
   const len = view[REFS].length;
   let index = 0;
@@ -109,5 +104,5 @@ export const collect = /*@__NOINLINE__*/ <R extends Refs<R> = Refs>(
     refs[metadata.k] = treeWalker.currentNode;
   }
 
-  return refs as LowercaseKeys<R>;
+  return refs as R;
 };

@@ -122,7 +122,7 @@ test.describe("collect", () => {
     {
       name: "lowercases element attribute ref names",
       // V8: no runtime .toLowerCase() anywhere — the browser does it while
-      // parsing, which is what LowercaseKeys<T> rests on.
+      // parsing, which is why `Refs<R>` requires lowercase names.
       template: /* html */ "<div @Foo></div>",
       field: "keys",
       expected: ["foo"],
@@ -130,8 +130,8 @@ test.describe("collect", () => {
     {
       name: "keeps the case of text ref names",
       // Open issue T11: nodeValue is not normalised, so the key keeps its case
-      // while LowercaseKeys<T> claims lowercase. compile() rejects it (V19);
-      // live mode does no validation by design.
+      // — a name `Refs<R>` rejects, so it can't be typed. compile() rejects it
+      // (V19); live mode does no validation by design.
       template: /* html */ "<div>@Foo</div>",
       field: "keys",
       expected: ["Foo"],
