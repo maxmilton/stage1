@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, expectTypeOf, test } from "bun:test";
 import * as browserExports from "../../src/browser/index.ts";
 import * as fastExports from "../../src/fast/index.ts";
 import * as indexExports from "../../src/index.ts";
