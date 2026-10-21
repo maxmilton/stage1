@@ -108,6 +108,7 @@ describe("setupSyntheticClick", () => {
     expectTypeOf(setupSyntheticClick).parameters.toEqualTypeOf<[]>();
     expectTypeOf(setupSyntheticClick).returns.not.toBeAny();
     expectTypeOf(setupSyntheticClick).returns.toBeVoid();
+    expectTypeOf(setupSyntheticClick).returns.not.toBeUndefined();
   });
 
   test("is a function", () => {
@@ -279,6 +280,7 @@ describe("removeSyntheticClick", () => {
     expectTypeOf(removeSyntheticClick).parameters.toEqualTypeOf<[]>();
     expectTypeOf(removeSyntheticClick).returns.not.toBeAny();
     expectTypeOf(removeSyntheticClick).returns.toBeVoid();
+    expectTypeOf(removeSyntheticClick).returns.not.toBeUndefined();
   });
 
   test("is a function", () => {

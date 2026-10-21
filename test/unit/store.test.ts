@@ -12,15 +12,19 @@ describe("store", () => {
     >();
     expectTypeOf(store).returns.not.toBeAny();
     expectTypeOf(store).returns.not.toBeNever();
-    expectTypeOf(store).returns.toExtend<
-      object & {
-        on: (
-          key: string | symbol,
-          callback: (value: unknown, prev: unknown) => void,
+    // Erased: `T` -> its constraint; `T[K]` stays deferred inside the generic `on`.
+    expectTypeOf(store).returns.toEqualTypeOf<
+      Record<string | symbol, unknown> & {
+        readonly on: <K extends string | symbol>(
+          key: K,
+          callback: (
+            value: Record<string | symbol, unknown>[K],
+            prev: Readonly<Record<string | symbol, unknown>[K]>,
+          ) => void,
         ) => /** off */ () => boolean;
       }
     >();
-    expectTypeOf<ReturnType<typeof store<{ count: number }>>["count"]>().toBeNumber();
+    expectTypeOf(store<{ count: number }>).returns.toMatchObjectType<{ count: number }>();
     const key = Symbol();
     const state = store({ count: 0, label: "", [key]: true });
     state.on("count", (value, prev) => {

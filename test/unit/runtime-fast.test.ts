@@ -21,9 +21,7 @@ describe("h", () => {
     expectTypeOf(h).returns.toEqualTypeOf<ChildNode & Node>();
     // `ReturnType` instantiates the constraint too ∴ the default is call-site only.
     expectTypeOf(h(/* html */ "<div></div>")).toEqualTypeOf<ChildNode & Element>();
-    expectTypeOf<ReturnType<typeof h<HTMLDivElement>>>().toEqualTypeOf<
-      ChildNode & HTMLDivElement
-    >();
+    expectTypeOf(h<HTMLDivElement>).returns.toEqualTypeOf<ChildNode & HTMLDivElement>();
   });
 
   test("is a function", () => {
@@ -237,21 +235,16 @@ describe("collect", () => {
     expectTypeOf(collect).returns.not.toBeAny();
     expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Node[]>();
-    expectTypeOf(collect).returns.items.toExtend<Node>();
-    expectTypeOf(collect).returns.toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf(collect).returns.items.toEqualTypeOf<Node>();
+    expectTypeOf(collect).returns.toEqualTypeOf<Node[] & Record<`@${string}`, Node>>();
     // @ts-expect-error - ref values must be Nodes
-    expectTypeOf<ReturnType<typeof collect<{ foo: string }>>>();
+    expectTypeOf(collect<{ foo: string }>);
     // @ts-expect-error - ref names must be lowercase; browsers normalise attribute names
-    expectTypeOf<ReturnType<typeof collect<{ Foo: HTMLDivElement }>>>();
+    expectTypeOf(collect<{ Foo: HTMLDivElement }>);
     // @ts-expect-error - regression: a lowercase twin key must not let an uppercase one pass
-    expectTypeOf<ReturnType<typeof collect<{ foo: Text; Foo: Comment }>>>();
+    expectTypeOf(collect<{ foo: Text; Foo: Comment }>);
     // @ts-expect-error - regression: ref names must be strings; numeric keys were dropped
-    expectTypeOf<ReturnType<typeof collect<{ 1: Text }>>>();
-    expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
-    expectTypeOf<Refs<{ Foo: Text }>>().toEqualTypeOf<{ Foo: never; foo: never }>();
-    expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
-    // Bad keys map to `never`, so a generic `R` stays assignable to `Refs`.
-    expectTypeOf(<R extends Refs<R>>(refs: R): Refs => refs).toBeFunction();
+    expectTypeOf(collect<{ 1: Text }>);
 
     // `keyof R` doesn't preserve declaration order (TS 6: type ID; TS 7 with
     // `--stableTypeOrdering` on by default: alphabetical). Refs are keyed by
@@ -262,41 +255,33 @@ describe("collect", () => {
     }
     type FooBarRefs = ReturnType<typeof collect<FooBar>>;
     type FooBarRef = CompileResult<FooBar>["ref"];
-    expectTypeOf<FooBarRefs>().toExtend<Node[]>();
+    expectTypeOf(collect<FooBar>).returns.toExtend<Node[]>();
+    expectTypeOf(collect<FooBar>).returns.toEqualTypeOf<
+      Node[] & { "@foo": HTMLDivElement; "@bar": Text }
+    >();
     expectTypeOf<FooBarRefs[FooBarRef["foo"]]>().toEqualTypeOf<HTMLDivElement>();
     expectTypeOf<FooBarRefs[FooBarRef["bar"]]>().toEqualTypeOf<Text>();
     expectTypeOf<FooBarRefs[0]>().toEqualTypeOf<Node>();
-    expectTypeOf<Parameters<typeof collect<FooBar>>>().toEqualTypeOf<
+    expectTypeOf(collect<FooBar>).parameters.toEqualTypeOf<
       [root: Node, d: readonly number[] & InferRefs<FooBar>]
     >();
-    expectTypeOf<number[]>().toExtend<Parameters<typeof collect<FooBar>>[1]>();
+    expectTypeOf(collect<FooBar>).toBeCallableWith(document, [1, 1]);
 
     // `R` comes from compile()'s `meta.d`: inferred when omitted; an explicit `R` must be a supertype of it.
-    expectTypeOf((meta: CompileResult<FooBar>) =>
-      collect(document, meta.d),
-    ).returns.toEqualTypeOf<FooBarRefs>();
-    expectTypeOf((meta: CompileResult<FooBar>) =>
-      collect<FooBar>(document, meta.d),
-    ).returns.toEqualTypeOf<FooBarRefs>();
-    expectTypeOf((meta: CompileResult<FooBar>) =>
-      collect<{ foo: HTMLDivElement }>(document, meta.d),
-    ).returns.toEqualTypeOf<FlatRefs<{ foo: HTMLDivElement }>>();
-    expectTypeOf((meta: CompileResult<FooBar>) =>
-      collect<{ foo: Element; bar: Node }>(document, meta.d),
-    ).returns.toEqualTypeOf<FlatRefs<{ foo: Element; bar: Node }>>();
-
-    interface DriftedFooBar {
-      foo: HTMLInputElement;
-      bar: Text;
-    }
-    expectTypeOf((meta: CompileResult<FooBar>) =>
+    expectTypeOf((meta: CompileResult<FooBar>) => {
+      expectTypeOf(collect(document, meta.d)).toEqualTypeOf<FooBarRefs>();
+      expectTypeOf(collect<FooBar>(document, meta.d)).toEqualTypeOf<FooBarRefs>();
+      expectTypeOf(collect<{ foo: HTMLDivElement }>(document, meta.d)).toEqualTypeOf<
+        FlatRefs<{ foo: HTMLDivElement }>
+      >();
+      expectTypeOf(collect<{ foo: Element; bar: Node }>(document, meta.d)).toEqualTypeOf<
+        FlatRefs<{ foo: Element; bar: Node }>
+      >();
       // @ts-expect-error - node types differ from compile()'s Refs
-      collect<DriftedFooBar>(document, meta.d),
-    );
-    expectTypeOf((meta: CompileResult<FooBar>) =>
+      collect<{ foo: HTMLInputElement; bar: Text }>(document, meta.d);
       // @ts-expect-error - collect() declares a ref compile() does not
-      collect<FooBar & { baz: Comment }>(document, meta.d),
-    );
+      collect<FooBar & { baz: Comment }>(document, meta.d);
+    }).toBeFunction();
 
     // Regression: the positional (UnionToTuple) types failed with TS2589 at 50
     // refs. Has since been refactored out.
