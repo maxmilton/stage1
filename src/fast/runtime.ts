@@ -1,4 +1,4 @@
-import type { FlatRefs, Refs } from "../types.ts";
+import type { FlatRefs, InferRefs, Refs } from "../types.ts";
 import { create } from "../utils.ts";
 
 const template = create("template");
@@ -23,7 +23,7 @@ export const h = <T extends Node = Element>(html: string): ChildNode & T => {
  */
 export const collect = /*@__NOINLINE__*/ <R extends Refs<R>>(
   root: Node,
-  d: readonly number[],
+  d: readonly number[] & InferRefs<R>,
 ): FlatRefs<R> => {
   const len = d.length;
   const refs = new Array<Node>(len);
