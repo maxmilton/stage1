@@ -2,7 +2,7 @@ import js from "@eslint/js";
 import mm from "@maxmilton/eslint-config";
 import oxlint from "eslint-plugin-oxlint";
 import unicorn from "eslint-plugin-unicorn";
-import { defineConfig } from "eslint/config";
+import { defineConfig, includeIgnoreFile } from "eslint/config";
 import ts from "typescript-eslint";
 
 // eslint-disable-next-line unicorn/no-top-level-side-effects
@@ -58,5 +58,7 @@ export default defineConfig(
       "unicorn/isolated-functions": "off", // page.evaluate callbacks run in the browser
     },
   },
-  { ignores: ["dist"] },
+  includeIgnoreFile(new URL(".gitignore", import.meta.url).pathname, {
+    gitignoreResolution: true,
+  }),
 );
