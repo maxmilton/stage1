@@ -28,7 +28,7 @@ function render<R extends Refs<R>>(
       // oxlint-disable-next-line typescript/consistent-type-imports
       const runtime = (await import(url)) as typeof import("../../src/index.ts");
       const root = runtime.h(html);
-      const refs = runtime.collect<Refs>(root, k, d);
+      const refs = runtime.collect<Refs>(root, k, d as typeof meta.d);
 
       return {
         refs: Object.fromEntries(Object.entries(refs).map(([name, node]) => [name, node.nodeName])),

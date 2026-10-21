@@ -7,7 +7,7 @@ import {
   type CompileOptions,
   type CompileResult,
 } from "../../src/macro.ts";
-import type { Refs } from "../../src/types.ts";
+import type { InferRefs, Refs } from "../../src/types.ts";
 
 describe("compile", () => {
   test("types", () => {
@@ -21,36 +21,45 @@ describe("compile", () => {
     expectTypeOf(compileNoMacro).returns.not.toBeAny();
     expectTypeOf(compileNoMacro).returns.not.toBeNever();
     // Type operators, not `.omit`/`.toHaveProperty`: the extractor *methods*
-    // return `undefined` at runtime and throw when chained (SPEC.md R18).
+    // return `undefined` at runtime and throw when chained.
     type Result = ReturnType<typeof compileNoMacro>;
-    expectTypeOf<Omit<Result, "ref">>().toEqualTypeOf<{
+    // Erased: `R` resolves to its `Refs<R>` constraint.
+    expectTypeOf<Result>().toEqualTypeOf<{
       html: string;
       k: readonly string[];
-      d: readonly number[];
+      d: readonly number[] & InferRefs<Refs>;
+      ref: Readonly<Record<string, `@${string}`>>;
       success: boolean;
     }>();
-    expectTypeOf<Result["ref"]>().toExtend<Record<string, `@${string}`>>();
     // Erased above; instantiated to pin ref name -> name-keyed (not ordinal)
     // RefKey, so `Refs` key order cannot leak into the type.
-    type Ref = CompileResult<{ foo: HTMLDivElement; bar: Text }>["ref"];
-    expectTypeOf<keyof Ref>().toEqualTypeOf<"foo" | "bar">();
-    expectTypeOf<Ref["foo"]>().toEqualTypeOf<"@foo">();
-    expectTypeOf<Ref["bar"]>().toEqualTypeOf<"@bar">();
+    expectTypeOf<CompileResult<{ foo: HTMLDivElement; bar: Text }>["ref"]>().toEqualTypeOf<{
+      readonly foo: "@foo";
+      readonly bar: "@bar";
+    }>();
 
     // Interfaces have no implicit index signature, so `R extends Refs` alone would reject them.
     interface FooRefs {
       foo: HTMLDivElement;
     }
-    expectTypeOf<
-      ReturnType<typeof compileNoMacro<FooRefs>>["ref"]["foo"]
-    >().toEqualTypeOf<"@foo">();
+    // `d` carries `R` so `collect()` can infer it.
+    expectTypeOf<Pick<ReturnType<typeof compileNoMacro<FooRefs>>, "d" | "ref">>().toEqualTypeOf<{
+      d: readonly number[] & InferRefs<FooRefs>;
+      ref: { readonly foo: "@foo" };
+    }>();
     // @ts-expect-error - ref values must be Nodes
     expectTypeOf<ReturnType<typeof compileNoMacro<{ foo: string }>>>();
     // @ts-expect-error - ref names must be lowercase; browsers normalise attribute names
     expectTypeOf<ReturnType<typeof compileNoMacro<{ Foo: HTMLDivElement }>>>();
+    // @ts-expect-error - regression: a lowercase twin key must not let an uppercase one pass
+    expectTypeOf<ReturnType<typeof compileNoMacro<{ foo: Text; Foo: Comment }>>>();
+    // @ts-expect-error - regression: ref names must be strings; numeric keys were dropped
+    expectTypeOf<ReturnType<typeof compileNoMacro<{ 1: Text }>>>();
     expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
-    expectTypeOf<Refs<{ Foo: Text }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf<Refs<{ Foo: Text }>>().toEqualTypeOf<{ Foo: never; foo: never }>();
     expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
+    // Bad keys map to `never`, so a generic `R` stays assignable to `Refs`.
+    expectTypeOf(<R extends Refs<R>>(refs: R): Refs => refs).toBeFunction();
   });
 
   test("is a function", () => {

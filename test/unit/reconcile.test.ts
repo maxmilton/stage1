@@ -70,9 +70,7 @@ describe("keyed", () => {
     expect.assertions(0);
     expectTypeOf(reconcileKeyed).not.toBeAny();
     expectTypeOf(reconcileKeyed).toBeFunction();
-    // Characterization of the tooling, not a defect in `src/` (SPEC.md R18):
-    // erasure resolves the unconstrained `T` to `unknown` ∴ `keyof T` -> `never`
-    // and the return -> `any`. Pinned positively so this reds if bun fixes it.
+    // Erased: the unconstrained `T` -> `unknown` ∴ `keyof T` -> `never`.
     expectTypeOf(reconcileKeyed).parameters.toEqualTypeOf<
       [
         key: never,
@@ -85,7 +83,9 @@ describe("keyed", () => {
         afterNode?: Node | null | undefined,
       ]
     >();
+    // Characterization: `ReturnType` (behind `.returns`) can't match a `never` parameter ∴ `any`.
     expectTypeOf(reconcileKeyed).returns.toBeAny();
+    // Erased above; instantiated to pin item and node types flowing through together.
     expectTypeOf<Parameters<typeof reconcileKeyed<Item, HTMLSpanElement>>>().toEqualTypeOf<
       [
         key: keyof Item,

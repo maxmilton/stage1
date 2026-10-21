@@ -44,17 +44,19 @@ const deepTree = () =>
 describe("h", () => {
   test("types", () => {
     expect.assertions(0);
+    // `View` is not exported; name it through `collect()`, the consumer `h()` must satisfy.
+    type View = Parameters<typeof collect>[1];
     expectTypeOf(h).not.toBeAny();
     expectTypeOf(h).toBeFunction();
     expectTypeOf(h).parameters.toEqualTypeOf<[html: string]>();
-    // Erased: `T` -> its `Node` constraint, not the `= Element` default. `View`
-    // is not exported ∴ the return is pinned relationally, not by name.
+    // Erased: `T` -> its `Node` constraint, not the `= Element` default.
     expectTypeOf(h).returns.not.toBeAny();
     expectTypeOf(h).returns.not.toBeNever();
     expectTypeOf(h).returns.toExtend<ChildNode>();
+    expectTypeOf(h).returns.toEqualTypeOf<View & Node>();
     // `ReturnType` instantiates the constraint too ∴ the default is call-site only.
-    expectTypeOf(h(/* html */ "<div></div>")).toEqualTypeOf<ReturnType<typeof h<Element>>>();
-    expectTypeOf<ReturnType<typeof h<HTMLDivElement>>>().toExtend<ChildNode & HTMLDivElement>();
+    expectTypeOf(h(/* html */ "<div></div>")).toEqualTypeOf<View & Element>();
+    expectTypeOf<ReturnType<typeof h<HTMLDivElement>>>().toEqualTypeOf<View & HTMLDivElement>();
   });
 
   test("is a function", () => {
@@ -226,7 +228,7 @@ describe("collect", () => {
     expectTypeOf(collect).toBeFunction();
     // `view` is the unexported `View` ∴ `toExtend`, not `toEqualTypeOf`.
     expectTypeOf(collect).parameters.toExtend<[root: Node, view: Node]>();
-    // Erased: `R` -> its `= Refs` default, never reaching `R`.
+    // Erased: `R` -> its constraint, never reaching `R`.
     expectTypeOf(collect).returns.not.toBeAny();
     expectTypeOf(collect).returns.not.toBeNever();
     expectTypeOf(collect).returns.toExtend<Refs>();
@@ -245,9 +247,15 @@ describe("collect", () => {
     expectTypeOf<ReturnType<typeof collect<{ foo: string }>>>();
     // @ts-expect-error - ref names must be lowercase; browsers normalise attribute names
     expectTypeOf<ReturnType<typeof collect<{ Foo: HTMLDivElement }>>>();
+    // @ts-expect-error - regression: a lowercase twin key must not let an uppercase one pass
+    expectTypeOf<ReturnType<typeof collect<{ foo: Text; Foo: Comment }>>>();
+    // @ts-expect-error - regression: ref names must be strings; numeric keys were dropped
+    expectTypeOf<ReturnType<typeof collect<{ 1: Text }>>>();
     expectTypeOf<Refs<{ foo: string }>>().toEqualTypeOf<{ foo: Node }>();
-    expectTypeOf<Refs<{ Foo: Text }>>().toEqualTypeOf<{ foo: Node }>();
+    expectTypeOf<Refs<{ Foo: Text }>>().toEqualTypeOf<{ Foo: never; foo: never }>();
     expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
+    // Bad keys map to `never`, so a generic `R` stays assignable to `Refs`.
+    expectTypeOf(<R extends Refs<R>>(refs: R): Refs => refs).toBeFunction();
   });
 
   test("is a function", () => {

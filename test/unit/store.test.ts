@@ -7,7 +7,9 @@ describe("store", () => {
     expect.assertions(0);
     expectTypeOf(store).not.toBeAny();
     expectTypeOf(store).toBeFunction();
-    expectTypeOf(store).parameters.branded.toEqualTypeOf<[object & { on?: never }]>();
+    expectTypeOf(store).parameters.toEqualTypeOf<
+      [initialState: Readonly<Record<string | symbol, unknown>> & { on?: never }]
+    >();
     expectTypeOf(store).returns.not.toBeAny();
     expectTypeOf(store).returns.not.toBeNever();
     expectTypeOf(store).returns.toExtend<
