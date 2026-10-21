@@ -69,6 +69,7 @@ describe("noop", () => {
     expectTypeOf(noop).parameters.toEqualTypeOf<[]>();
     expectTypeOf(noop).returns.not.toBeAny();
     expectTypeOf(noop).returns.toBeVoid();
+    expectTypeOf(noop).returns.not.toBeUndefined();
   });
 
   test("is a function", () => {
@@ -262,15 +263,14 @@ describe("create", () => {
 
 describe("clone", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(clone).not.toBeAny();
     expectTypeOf(clone).toBeFunction();
     expectTypeOf(clone).parameters.toEqualTypeOf<[Node]>();
     expectTypeOf(clone).returns.not.toBeAny();
     expectTypeOf(clone).returns.not.toBeNever();
     expectTypeOf(clone).returns.toEqualTypeOf<Node>();
-    expectTypeOf<typeof clone<HTMLLIElement>>().toEqualTypeOf<
-      (node: HTMLLIElement) => HTMLLIElement
-    >();
+    expectTypeOf(clone<HTMLLIElement>).toEqualTypeOf<(node: HTMLLIElement) => HTMLLIElement>();
   });
 
   test("is a function", () => {
@@ -342,7 +342,7 @@ describe("append", () => {
     expectTypeOf(append).returns.not.toBeAny();
     expectTypeOf(append).returns.not.toBeNever();
     expectTypeOf(append).returns.toEqualTypeOf<Node>();
-    expectTypeOf<typeof append<HTMLLIElement>>().toEqualTypeOf<
+    expectTypeOf(append<HTMLLIElement>).toEqualTypeOf<
       (node: HTMLLIElement, parent: Node) => HTMLLIElement
     >();
   });
@@ -423,7 +423,7 @@ describe("prepend", () => {
     expectTypeOf(prepend).returns.not.toBeAny();
     expectTypeOf(prepend).returns.not.toBeNever();
     expectTypeOf(prepend).returns.toEqualTypeOf<Node>();
-    expectTypeOf<typeof prepend<HTMLLIElement>>().toEqualTypeOf<
+    expectTypeOf(prepend<HTMLLIElement>).toEqualTypeOf<
       (node: HTMLLIElement, parent: Node) => HTMLLIElement
     >();
   });
@@ -508,7 +508,7 @@ describe("insert", () => {
     expectTypeOf(insert).returns.not.toBeAny();
     expectTypeOf(insert).returns.not.toBeNever();
     expectTypeOf(insert).returns.toEqualTypeOf<Node>();
-    expectTypeOf<typeof insert<HTMLLIElement>>().toEqualTypeOf<
+    expectTypeOf(insert<HTMLLIElement>).toEqualTypeOf<
       (node: HTMLLIElement, target: Node) => HTMLLIElement
     >();
   });
@@ -601,7 +601,7 @@ describe("replace", () => {
     expectTypeOf(replace).returns.not.toBeAny();
     expectTypeOf(replace).returns.not.toBeNever();
     expectTypeOf(replace).returns.toEqualTypeOf<Node>();
-    expectTypeOf<typeof replace<HTMLLIElement>>().toEqualTypeOf<
+    expectTypeOf(replace<HTMLLIElement>).toEqualTypeOf<
       (node: HTMLLIElement, target: Node) => HTMLLIElement
     >();
   });

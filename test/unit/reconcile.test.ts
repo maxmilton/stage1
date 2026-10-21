@@ -70,9 +70,7 @@ describe("keyed", () => {
     expect.assertions(0);
     expectTypeOf(reconcileKeyed).not.toBeAny();
     expectTypeOf(reconcileKeyed).toBeFunction();
-    // Characterization of the tooling, not a defect in `src/` (SPEC.md R18):
-    // erasure resolves the unconstrained `T` to `unknown` ∴ `keyof T` -> `never`
-    // and the return -> `any`. Pinned positively so this reds if bun fixes it.
+    // Erased: the unconstrained `T` -> `unknown` ∴ `keyof T` -> `never`.
     expectTypeOf(reconcileKeyed).parameters.toEqualTypeOf<
       [
         key: never,
@@ -85,8 +83,10 @@ describe("keyed", () => {
         afterNode?: Node | null | undefined,
       ]
     >();
+    // Characterization: `ReturnType` (behind `.returns`) can't match a `never` parameter ∴ `any`.
     expectTypeOf(reconcileKeyed).returns.toBeAny();
-    expectTypeOf<Parameters<typeof reconcileKeyed<Item, HTMLSpanElement>>>().toEqualTypeOf<
+    // Erased above; instantiated to pin item and node types flowing through together.
+    expectTypeOf(reconcileKeyed<Item, HTMLSpanElement>).parameters.toEqualTypeOf<
       [
         key: keyof Item,
         parent: Element,
@@ -98,7 +98,8 @@ describe("keyed", () => {
         afterNode?: Node | null | undefined,
       ]
     >();
-    expectTypeOf<ReturnType<typeof reconcileKeyed<Item, HTMLSpanElement>>>().toBeVoid();
+    expectTypeOf(reconcileKeyed<Item, HTMLSpanElement>).returns.toBeVoid();
+    expectTypeOf(reconcileKeyed<Item, HTMLSpanElement>).returns.not.toBeUndefined();
   });
 
   test("is a function", () => {
@@ -378,8 +379,9 @@ describe("non-keyed", () => {
     >();
     expectTypeOf(reconcileNonKeyed).returns.not.toBeAny();
     expectTypeOf(reconcileNonKeyed).returns.toBeVoid();
+    expectTypeOf(reconcileNonKeyed).returns.not.toBeUndefined();
     // Erased above; instantiated to pin item and node types flowing through together.
-    expectTypeOf<Parameters<typeof reconcileNonKeyed<Item, HTMLSpanElement>>>().toEqualTypeOf<
+    expectTypeOf(reconcileNonKeyed<Item, HTMLSpanElement>).parameters.toEqualTypeOf<
       [
         parent: Element,
         renderedData: readonly Item[],
@@ -390,7 +392,8 @@ describe("non-keyed", () => {
         afterNode?: Node | null | undefined,
       ]
     >();
-    expectTypeOf<ReturnType<typeof reconcileNonKeyed<Item, HTMLSpanElement>>>().toBeVoid();
+    expectTypeOf(reconcileNonKeyed<Item, HTMLSpanElement>).returns.toBeVoid();
+    expectTypeOf(reconcileNonKeyed<Item, HTMLSpanElement>).returns.not.toBeUndefined();
   });
 
   test("is a function", () => {
@@ -628,8 +631,9 @@ describe("reuse-nodes", () => {
     >();
     expectTypeOf(reconcileReuseNodes).returns.not.toBeAny();
     expectTypeOf(reconcileReuseNodes).returns.toBeVoid();
+    expectTypeOf(reconcileReuseNodes).returns.not.toBeUndefined();
     // Erased above; instantiated to pin item and node types flowing through together.
-    expectTypeOf<Parameters<typeof reconcileReuseNodes<Item, HTMLSpanElement>>>().toEqualTypeOf<
+    expectTypeOf(reconcileReuseNodes<Item, HTMLSpanElement>).parameters.toEqualTypeOf<
       [
         parent: Element,
         renderedData: readonly Item[],
@@ -640,7 +644,8 @@ describe("reuse-nodes", () => {
         afterNode?: Node | null | undefined,
       ]
     >();
-    expectTypeOf<ReturnType<typeof reconcileReuseNodes<Item, HTMLSpanElement>>>().toBeVoid();
+    expectTypeOf(reconcileReuseNodes<Item, HTMLSpanElement>).returns.toBeVoid();
+    expectTypeOf(reconcileReuseNodes<Item, HTMLSpanElement>).returns.not.toBeUndefined();
   });
 
   test("is a function", () => {

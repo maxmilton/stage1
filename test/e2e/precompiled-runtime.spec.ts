@@ -28,7 +28,7 @@ function render<R extends Refs<R>>(
       // oxlint-disable-next-line typescript/consistent-type-imports
       const runtime = (await import(url)) as typeof import("../../src/index.ts");
       const root = runtime.h(html);
-      const refs = runtime.collect<Refs>(root, k, d);
+      const refs = runtime.collect<Refs>(root, k, d as typeof meta.d);
 
       return {
         refs: Object.fromEntries(Object.entries(refs).map(([name, node]) => [name, node.nodeName])),
@@ -122,7 +122,7 @@ test.describe("a compiled template", () => {
       /* html */ "<div @a><pre @b>  keep   me  </pre><span @c>after</span></div>",
     );
     const { refs } = await render(page, meta);
-    expect(refs.c).toBe("SPAN");
+    expect(refs).toHaveProperty("c", "SPAN");
   });
 });
 
@@ -137,7 +137,7 @@ test.describe("a table template", () => {
       /* html */ "<table><tr><td @a>x</td></tr></table>",
     );
     const { refs } = await render(page, meta);
-    expect(refs.a).toBe("TR");
+    expect(refs).toHaveProperty("a", "TR");
   });
 
   test("collects the cell when the template spells out tbody", async ({ page }) => {
@@ -147,6 +147,6 @@ test.describe("a table template", () => {
       /* html */ "<table><tbody><tr><td @a>x</td></tr></tbody></table>",
     );
     const { refs } = await render(page, meta);
-    expect(refs.a).toBe("TD");
+    expect(refs).toHaveProperty("a", "TD");
   });
 });

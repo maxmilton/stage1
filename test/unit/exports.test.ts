@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, expectTypeOf, test } from "bun:test";
 import * as browserExports from "../../src/browser/index.ts";
 import * as fastExports from "../../src/fast/index.ts";
 import * as indexExports from "../../src/index.ts";
@@ -6,8 +6,17 @@ import * as macroExports from "../../src/macro.ts";
 import * as keyedExports from "../../src/reconcile/keyed.ts";
 import * as nonKeyedExports from "../../src/reconcile/non-keyed.ts";
 import * as reuseNodesExports from "../../src/reconcile/reuse-nodes.ts";
+import type { FlatRefs, InferRefs, RefKeys, Refs } from "../../src/types.ts";
 
 describe("browser", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<browserExports.Refs>().toEqualTypeOf<Refs>();
+    expectTypeOf<browserExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
+    expectTypeOf<browserExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf<browserExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
+  });
+
   const publicExports = [
     ["h", "Function"],
     ["html", "Function"],
@@ -45,6 +54,14 @@ describe("browser", () => {
 });
 
 describe("index", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<indexExports.Refs>().toEqualTypeOf<Refs>();
+    expectTypeOf<indexExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
+    expectTypeOf<indexExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf<indexExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
+  });
+
   const publicExports = [
     ["h", "Function"],
     ["collect", "Function"],
@@ -88,6 +105,14 @@ describe("index", () => {
 });
 
 describe("fast", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<fastExports.Refs>().toEqualTypeOf<Refs>();
+    expectTypeOf<fastExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
+    expectTypeOf<fastExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf<fastExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
+  });
+
   const publicExports = [
     ["h", "Function"],
     ["collect", "Function"],

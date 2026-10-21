@@ -1,4 +1,4 @@
-import type { RefKeys, Refs } from "./types.ts";
+import type { InferRefs, RefKeys, Refs } from "./types.ts";
 
 /**
  * Valid ref name; lowercase because browsers normalise element attribute names
@@ -27,7 +27,7 @@ export interface CompileResult<R> {
   /** Array of ref key names. */
   k: readonly string[];
   /** Array of distances from previous ref node or template root. */
-  d: readonly number[];
+  d: readonly number[] & InferRefs<R>;
   /** Object mapping ref key names to their indices in the `k` array. */
   ref: RefKeys<R>;
   /** Whether the template was successfully compiled without any errors. */
@@ -186,8 +186,7 @@ export function compile<R extends Refs<R> = object>(
     html,
     k,
     d,
-    // @ts-expect-error - computed type
-    ref: Object.fromEntries(k.map((name, index) => [name, index])),
+    ref: Object.fromEntries(k.map((name, index) => [name, index])) as unknown as RefKeys<R>,
     success: !didFail,
   };
 }
