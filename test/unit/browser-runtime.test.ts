@@ -54,7 +54,7 @@ describe("h", () => {
     expectTypeOf(h).returns.not.toBeNever();
     expectTypeOf(h).returns.toExtend<ChildNode>();
     expectTypeOf(h).returns.toEqualTypeOf<View & Node>();
-    // `ReturnType` instantiates the constraint too ∴ the default is call-site only.
+    // The `= Element` default applies only at a call site.
     expectTypeOf(h(/* html */ "<div></div>")).toEqualTypeOf<View & Element>();
     expectTypeOf(h<HTMLDivElement>).returns.toEqualTypeOf<View & HTMLDivElement>();
   });
@@ -239,6 +239,8 @@ describe("collect", () => {
       foo: HTMLDivElement;
       bar: Text;
     }>();
+    // The `= Refs` default applies only at a call site.
+    expectTypeOf((view: View) => collect(document, view)).returns.toEqualTypeOf<Refs>();
 
     // Interfaces have no implicit index signature, so `R extends Refs` alone would reject them.
     interface FooRefs {

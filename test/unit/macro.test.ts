@@ -29,6 +29,8 @@ describe("compile", () => {
       ref: Readonly<Record<string, `@${string}`>>;
       success: boolean;
     }>();
+    // The `= object` default applies only at a call site.
+    expectTypeOf(() => compileNoMacro("")).returns.toEqualTypeOf<CompileResult<object>>();
 
     // Interfaces have no implicit index signature, so `R extends Refs` alone would reject them.
     interface FooBar {

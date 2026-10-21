@@ -19,7 +19,7 @@ describe("h", () => {
     expectTypeOf(h).returns.not.toBeAny();
     expectTypeOf(h).returns.not.toBeNever();
     expectTypeOf(h).returns.toEqualTypeOf<ChildNode & Node>();
-    // `ReturnType` instantiates the constraint too ∴ the default is call-site only.
+    // The `= Element` default applies only at a call site.
     expectTypeOf(h(/* html */ "<div></div>")).toEqualTypeOf<ChildNode & Element>();
     expectTypeOf(h<HTMLDivElement>).returns.toEqualTypeOf<ChildNode & HTMLDivElement>();
   });

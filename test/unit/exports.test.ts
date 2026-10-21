@@ -8,6 +8,14 @@ import * as nonKeyedExports from "../../src/reconcile/non-keyed.ts";
 import * as reuseNodesExports from "../../src/reconcile/reuse-nodes.ts";
 
 describe("browser", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<browserExports.Refs>().toEqualTypeOf<Refs>();
+    expectTypeOf<browserExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
+    expectTypeOf<browserExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf<browserExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
+  });
+
   const publicExports = [
     ["h", "Function"],
     ["html", "Function"],
@@ -45,6 +53,14 @@ describe("browser", () => {
 });
 
 describe("index", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<indexExports.Refs>().toEqualTypeOf<Refs>();
+    expectTypeOf<indexExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
+    expectTypeOf<indexExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf<indexExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
+  });
+
   const publicExports = [
     ["h", "Function"],
     ["collect", "Function"],
@@ -88,6 +104,14 @@ describe("index", () => {
 });
 
 describe("fast", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<fastExports.Refs>().toEqualTypeOf<Refs>();
+    expectTypeOf<fastExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
+    expectTypeOf<fastExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf<fastExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
+  });
+
   const publicExports = [
     ["h", "Function"],
     ["collect", "Function"],
