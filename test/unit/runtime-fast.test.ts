@@ -354,7 +354,7 @@ describe("collect", () => {
       expect.assertions(2);
       expect(DEEP_TREE.success).toBeTrue();
       const view = h(DEEP_TREE.html);
-      const refs = collect<Refs>(view, DEEP_TREE.d);
+      const refs = collect(view, DEEP_TREE.d);
       expect(refs[index].nodeName).toBe(nodeName);
     },
   );
@@ -363,7 +363,7 @@ describe("collect", () => {
     expect.assertions(2);
     expect(DEEP_TREE.success).toBeTrue();
     const view = h(DEEP_TREE.html);
-    expect(collect<Refs>(view, DEEP_TREE.d)).toHaveLength(20);
+    expect(collect(view, DEEP_TREE.d)).toHaveLength(20);
   });
 
   // The name→index `meta.ref` map is compile()'s output, not collect()'s,
@@ -378,7 +378,7 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<{ search: HTMLInputElement }>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
     expect(refs[meta.ref.search].id).toBe("search");
     expect(refs[meta.ref.search].name).toBe("q");
@@ -395,7 +395,7 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<{ search: HTMLInputElement }>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
     expect(refs[meta.ref.search].id).toBe("search");
     expect(refs[meta.ref.search].name).toBe("q");
@@ -412,7 +412,7 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<{ search: HTMLInputElement }>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
     expect(refs[meta.ref.search].id).toBe("search");
     expect(refs[meta.ref.search].name).toBe("q");
@@ -425,7 +425,7 @@ describe("collect", () => {
     const meta = compile<{ a: Text }>(/* html */ "@a");
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<{ a: Text }>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#text");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
   });
@@ -435,7 +435,7 @@ describe("collect", () => {
     const meta = compile<{ a: Comment }>(/* html */ "<!-- @a -->");
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<{ a: Comment }>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#comment");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
   });
@@ -447,7 +447,7 @@ describe("collect", () => {
     const meta = compile<{ a: Comment }>(/* html */ "<div><pre>   </pre><!-- @a --></div>");
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<{ a: Comment }>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#comment");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
   });
@@ -459,7 +459,7 @@ describe("collect", () => {
     const meta = compile<{ x: Comment }>(/* html */ "<div>a < b<!-- @x --></div>");
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<{ x: Comment }>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.x].nodeName).toBe("#comment");
     expect(refs[meta.ref.x]).toBeInstanceOf(window.Comment);
   });
@@ -491,7 +491,7 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<TemplateRefs>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.a].nodeName).toBe("#text");
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
     expect(refs[meta.ref.b].nodeName).toBe("#comment");
@@ -524,7 +524,7 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect<TemplateRefs>(view, meta.d);
+    const refs = collect(view, meta.d);
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
     expect(refs[meta.ref.b]).toBeInstanceOf(window.Comment);
     expect(refs[meta.ref.c]).toBeInstanceOf(window.HTMLDivElement);
@@ -553,7 +553,7 @@ describe("collect", () => {
       `);
       expect(meta.success).toBeTrue();
       const view = h(meta.html);
-      const refs = collect<TemplateRefs>(view, meta.d);
+      const refs = collect(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
       expect(refs[meta.ref.b].nodeName).toBe("DIV");
@@ -588,7 +588,7 @@ describe("collect", () => {
       );
       expect(meta.success).toBeTrue();
       const view = h(meta.html);
-      const refs = collect<TemplateRefs>(view, meta.d);
+      const refs = collect(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
       expect(refs[meta.ref.b].nodeName).toBe("DIV");
@@ -623,7 +623,7 @@ describe("collect", () => {
       );
       expect(meta.success).toBeTrue();
       const view = h(meta.html);
-      const refs = collect<TemplateRefs>(view, meta.d);
+      const refs = collect(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
       expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
       expect(refs[meta.ref.b].nodeName).toBe("DIV");

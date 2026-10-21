@@ -12,7 +12,7 @@ interface Refs {
   text: Text;
 }
 
-const meta = compile(/* html */ `
+const meta = compile<Refs>(/* html */ `
   <div id=test>
     @text
   </div>
@@ -21,7 +21,7 @@ const view = h<HTMLDivElement>(meta.html);
 
 export function Test(props: TestProps): TestComponent {
   const root = clone(view);
-  const refs = collect<Refs>(root, meta.k, meta.d);
+  const refs = collect(root, meta.k, meta.d);
 
   refs.text.nodeValue = props.text;
 
