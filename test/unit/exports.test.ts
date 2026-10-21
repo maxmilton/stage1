@@ -6,6 +6,7 @@ import * as macroExports from "../../src/macro.ts";
 import * as keyedExports from "../../src/reconcile/keyed.ts";
 import * as nonKeyedExports from "../../src/reconcile/non-keyed.ts";
 import * as reuseNodesExports from "../../src/reconcile/reuse-nodes.ts";
+import type { FlatRefs, InferRefs, RefKeys, Refs } from "../../src/types.ts";
 
 describe("browser", () => {
   test("types", () => {
