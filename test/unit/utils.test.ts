@@ -262,6 +262,7 @@ describe("create", () => {
 
 describe("clone", () => {
   test("types", () => {
+    expect.assertions(0);
     expectTypeOf(clone).not.toBeAny();
     expectTypeOf(clone).toBeFunction();
     expectTypeOf(clone).parameters.toEqualTypeOf<[Node]>();
