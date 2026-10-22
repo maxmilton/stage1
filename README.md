@@ -1,16 +1,18 @@
 [![CI status](https://badgen.net/github/checks/maxmilton/stage1?label=ci)](https://github.com/maxmilton/stage1/actions)
 [![Coverage %](https://qlty.sh/badges/71ce5b0f-6642-4ea1-9e5a-e558bc1f6169/test_coverage.svg)](https://qlty.sh/gh/maxmilton/projects/stage1)
 [![NPM version](https://badgen.net/npm/v/stage1)](https://www.npmjs.com/package/stage1)
-[![Licence](https://badgen.net/github/license/maxmilton/stage1)](./LICENSE)
+[![Licence](https://badgen.net/github/license/maxmilton/stage1)](LICENSE)
 
 [![Minified size](https://badgen.net/bundlephobia/minzip/stage1)](https://bundlephobia.com/package/stage1)
 ![Dependency count](https://badgen.net/bundlephobia/dependency-count/stage1)
+
+![Status](https://badgen.net/badge/status/beta/blue)
 
 # stage1
 
 High-performance JavaScript micro framework.
 
-> Warning: This is alpha software. Test thoroughly before using in production. Please report any bugs you find!
+- zero runtime dependencies
 
 Originally started as a fork of the excellent <https://github.com/Freak613/stage0> project.
 
@@ -129,8 +131,4 @@ See [releases on GitHub](https://github.com/maxmilton/stage1/releases).
 
 ## License
 
-MIT license. See [LICENSE](./LICENSE).
-
----
-
-© [Max Milton](https://maxmilton.com)
+[MIT License](LICENSE) · © [Max Milton](https://maxmilton.com)
