@@ -58,7 +58,5 @@ export default defineConfig(
       "unicorn/isolated-functions": "off", // page.evaluate callbacks run in the browser
     },
   },
-  includeIgnoreFile(new URL(".gitignore", import.meta.url).pathname, {
-    gitignoreResolution: true,
-  }),
+  includeIgnoreFile(`${import.meta.dirname}/.gitignore`),
 );
