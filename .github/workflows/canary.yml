@@ -26,7 +26,7 @@ jobs:
           bun-version: canary
           no-cache: true
       - run: bun install --frozen-lockfile
-      - run: bun add -d bun-types@canary
+      - run: bun add -d --minimum-release-age=0 @types/bun@npm:bun-types@canary
       - run: bun run build
       - run: bun run lint
       - run: bun run test
