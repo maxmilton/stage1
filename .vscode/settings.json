@@ -10,7 +10,7 @@
   "editor.tabSize": 2,
   "git.branchProtection": ["master", "next"],
   "git.detectWorktrees": true,
-  "git.worktreeIncludeFiles": ["node_modules/**"],
+  "git.worktreeIncludeFiles": [],
   "js/ts.experimental.useTsgo": true, // TODO: Remove once tsgo is stable
   "js/ts.tsdk.path": "node_modules/typescript",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,

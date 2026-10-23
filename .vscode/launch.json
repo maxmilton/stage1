@@ -14,30 +14,14 @@
       "request": "launch",
       "runtime": "bun",
       "runtimeArgs": [], // bun exec arguments
+      "cwd": "${workspaceFolder}",
       "program": "${file}",
       "args": [], // program arguments
-      "cwd": "${workspaceFolder}",
       "env": {},
-      "strictEnv": false,
+      "strictEnv": true,
       "watchMode": false,
       "stopOnEntry": false,
-      "noDebug": false // disable debugger (breakpoints will not be hit)
-    },
-    {
-      "name": "bun test <CURRENT_FILE>",
-      "type": "bun",
-      "request": "launch",
-      "runtimeArgs": ["test"],
-      "program": "${file}",
-      "internalConsoleOptions": "openOnSessionStart"
-    },
-    {
-      "name": "bun test (all)",
-      "type": "bun",
-      "request": "launch",
-      "runtimeArgs": ["run", "test"],
-      "program": "--", // HACK: Workaround for bun extension needing "program"
-      "cwd": "${workspaceFolder}",
+      "noDebug": false, // disable debugger (ignore breakpoints)
       "internalConsoleOptions": "openOnSessionStart"
     }
   ]
