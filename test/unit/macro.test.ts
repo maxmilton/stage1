@@ -287,10 +287,7 @@ describe("compile", () => {
     expect(Object.keys(meta.ref)).toHaveLength(3);
   });
 
-  // Escaping is emergent, not implemented. A ref marker is only recognised
-  // when "@" is the FIRST character, so a leading "\" is enough to opt out — but
-  // nothing strips it, and the backslash survives verbatim into the output HTML.
-  // The html assertions below pin that; see SPEC V4.
+  // Escaping is emergent: "@" is a marker only as the first character, and nothing strips the backslash.
 
   test("has empty k, d, and ref properties when escaped node ref", () => {
     expect.assertions(5);
@@ -380,14 +377,28 @@ describe("compile", () => {
     expect(meta.html).toBe(/* html */ "<div></div>");
   });
 
+  // HTMLRewriter lowercases attribute names, so a node ref name can't be non-lowercase.
+  // eslint-disable-next-line array-bracket-spacing
+  test.each([/* html */ "<div @Foo></div>", /* html */ "<div @fOo></div>"])(
+    "lowercases the node ref name in %j",
+    (template) => {
+      expect.assertions(2);
+      const meta = compileNoMacro(template);
+      expect(meta.success).toBeTrue();
+      expect(meta.k).toEqual(["foo"]);
+    },
+  );
+
   const invalidRefNames = ["", "1", "_", "-", "@", "🙂"];
   const validRefNames = ["a1", "a_", "a-", "a1_-"];
 
-  // With an invalid ref name compile() will report success=false, but we still
-  // want the compile to execute fully so that the developer can debug.
-  describe.each(invalidRefNames)('invalid ref name "%s"', (refName) => {
+  // Invalid names still compile fully, with success false, so the output can be debugged.
+  // Serial: spies on the global console.error.
+  describe.serial.each(invalidRefNames)('invalid ref name "%s"', (refName) => {
     test("collects node ref", () => {
       expect.assertions(5);
+      // oxlint-disable-next-line no-underscore-dangle
+      using _consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const meta = compileNoMacro(/* html */ `<div @${refName}></div>`);
       expect(meta.success).toBeFalse();
       expect(meta.k).toEqual([refName]);
@@ -398,6 +409,8 @@ describe("compile", () => {
 
     test("collects text ref", () => {
       expect.assertions(5);
+      // oxlint-disable-next-line no-underscore-dangle
+      using _consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const meta = compileNoMacro(/* html */ `<div>@${refName}</div>`);
       expect(meta.success).toBeFalse();
       expect(meta.k).toEqual([refName]);
@@ -408,6 +421,8 @@ describe("compile", () => {
 
     test("collects comment ref", () => {
       expect.assertions(5);
+      // oxlint-disable-next-line no-underscore-dangle
+      using _consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const meta = compileNoMacro(/* html */ `<div><!-- @${refName} --></div>`);
       expect(meta.success).toBeFalse();
       expect(meta.k).toEqual([refName]);
@@ -495,7 +510,7 @@ describe("compile", () => {
     expect(Object.keys(meta.ref)).toHaveLength(3);
   });
 
-  test("has correct meta properties when node + test + comment refs", () => {
+  test("has correct meta properties when node + text + comment refs", () => {
     expect.assertions(7);
     const meta = compile(/* html */ "<div @a><div>@b</div><!-- @c --></div>");
     expect(meta.success).toBeTrue();
@@ -579,9 +594,7 @@ describe("compile", () => {
     expect(Object.keys(meta.ref)).toHaveLength(3);
   });
 
-  // A SINGLE backslash here is a JS useless-escape, so the string literal is
-  // just "@a"; the escape never reaches compile(). Escaping must be written
-  // as "\\@" in source to survive into the template.
+  // A single backslash is a useless JS escape, so these templates contain a plain "@a".
   test("has correct meta properties when wrong escaped node ref", () => {
     expect.assertions(5);
     // oxlint-disable-next-line no-useless-escape
@@ -658,8 +671,6 @@ describe("compile", () => {
       /* html */ "<div><!-- --!></div>",
       /* html */ "<div><!-----!></div>",
       /* html */ "<div><!----!></div>",
-      // /* html */ "<div><!---!></div>", // TODO: Broken; bug in lol-html.
-      // /* html */ "<div><!--!></div>", // TODO: Broken; bug in lol-html.
       /* html */ "<div><!-!></div>",
       /* html */ "<div><!!></div>",
       /* html */ "<div><!-- !-----></div>",
@@ -679,6 +690,18 @@ describe("compile", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div></div>");
     });
+
+    // Characterization: per the WHATWG comment start states these never close, so the comment runs to the end.
+    // eslint-disable-next-line array-bracket-spacing
+    test.each([/* html */ "<div><!---!></div>", /* html */ "<div><!--!></div>"])(
+      "removes the rest of the template after the unclosed comment in %j",
+      (template) => {
+        expect.assertions(2);
+        const meta = compileNoMacro(template);
+        expect(meta.success).toBeTrue();
+        expect(meta.html).toBe(/* html */ "<div>");
+      },
+    );
 
     test("removes comments for complex mixed template", () => {
       expect.assertions(2);
@@ -751,12 +774,9 @@ describe("compile", () => {
       expect(meta.html).toBe(/* html */ "<!>");
     });
 
-    // Regression: a comment ref never closed the root it stands in for, so a
-    // second top-level comment ref was silently accepted as a second root.
+    // Regression: a second top-level comment ref was accepted as a second root.
     test("returns success false for two top-level comment refs", () => {
       expect.assertions(1);
-      // oxlint-disable-next-line no-underscore-dangle
-      using _consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const meta = compile(/* html */ "<!-- @a --><!-- @b -->");
       expect(meta.success).toBeFalse();
     });
@@ -791,6 +811,7 @@ describe("compile", () => {
     );
   });
 
+  // Regression: an inner </code> re-enabled minification for the rest of the <pre>.
   test("does not minify after a nested whitespace-sensitive block closes", () => {
     expect.assertions(2);
     const meta = compile(/* html */ "<div><pre>a  b<code>c  d</code>  e  f</pre></div>");
@@ -805,8 +826,7 @@ describe("compile", () => {
     expect(meta.html).toBe(/* html */ "<div><textarea>  a   b</textarea></div>");
   });
 
-  // Whitespace-only text is kept inside pre/code, so unlike elsewhere it
-  // is a real node at runtime and must count towards the walk distance.
+  // Regression: whitespace-only text kept in <pre> wasn't counted towards the walk distance.
   test("counts kept whitespace-only text in a whitespace-sensitive block", () => {
     expect.assertions(3);
     const meta = compile(/* html */ "<div><pre>   </pre><!-- @a --></div>");
@@ -815,8 +835,7 @@ describe("compile", () => {
     expect(meta.d).toEqual([3]);
   });
 
-  // Whitespace-sensitive blocks keep their text verbatim but are still scanned
-  // for ref markers; only the raw text elements below opt out of refs.
+  // Regression: text refs in pre/code/textarea stopped being collected; only script/style opt out.
   describe("refs in whitespace-sensitive blocks", () => {
     test("collects a node ref on a script", () => {
       expect.assertions(5);
@@ -903,29 +922,18 @@ describe("compile", () => {
       const meta = compile(/* html */ "<div><textarea><!-- @a --></textarea></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><textarea><!-- @a --></textarea></div>");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
-    test("does not collect a comment ref in a script", () => {
+    test("does not collect a node ref in a script", () => {
       expect.assertions(5);
       const meta = compile(/* html */ "<div><script>// <div @a></div></script></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><script>// <div @a></div></script></div>");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
-      expect(meta.ref).toBeEmptyObject();
-    });
-
-    // invalid HTML, but a tested invariant
-    test("does not collect a text ref in a script", () => {
-      expect.assertions(5);
-      const meta = compile(/* html */ "<div><script>@a</script></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div><script>@a</script></div>");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -934,29 +942,18 @@ describe("compile", () => {
       const meta = compile(/* html */ "<div><script>// <!-- @a --></script></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><script>// <!-- @a --></script></div>");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
-    test("does not collect a comment ref in a style", () => {
+    test("does not collect a node ref in a style", () => {
       expect.assertions(5);
       const meta = compile(/* html */ "<div><style>// <div @a></div></style></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><style>// <div @a></div></style></div>");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
-      expect(meta.ref).toBeEmptyObject();
-    });
-
-    // invalid HTML, but a tested invariant
-    test("does not collect a text ref in a style", () => {
-      expect.assertions(5);
-      const meta = compile(/* html */ "<div><style>@a</style></div>");
-      expect(meta.success).toBeTrue();
-      expect(meta.html).toBe(/* html */ "<div><style>@a</style></div>");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -965,14 +962,13 @@ describe("compile", () => {
       const meta = compile(/* html */ "<div><style>/* <!-- @a --> */</style></div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><style>/* <!-- @a --> */</style></div>");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
   });
 
-  // script/style content is raw text — it must never be minified, and a
-  // leading "@" is a CSS at-rule or a JS decorator, never a ref marker.
+  // Regression: script/style text was minified and read as refs, though "@" there is CSS or JS.
   describe("raw text elements", () => {
     test("does not treat style text as a ref", () => {
       expect.assertions(5);
@@ -980,7 +976,7 @@ describe("compile", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><style>@a</style></div>");
       expect(meta.k).toBeEmpty();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -990,7 +986,7 @@ describe("compile", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><script>@a</script></div>");
       expect(meta.k).toBeEmpty();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -1000,7 +996,7 @@ describe("compile", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><style>@media print{a{color:red}}</style></div>");
       expect(meta.k).toBeEmpty();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -1010,7 +1006,7 @@ describe("compile", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><script>const a = 1;  const b = 2;</script></div>");
       expect(meta.k).toBeEmpty();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -1020,21 +1016,19 @@ describe("compile", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div><script><!-- @a --></script></div>");
       expect(meta.k).toBeEmpty();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
   });
 
-  // A bare "<" which does not start a tag makes the tokenizer split one
-  // Text node into several chunks, so each of these is a single node at runtime
-  // and must be handled — and counted — exactly once.
+  // Regression: a bare "<" splits one Text node into chunks, which compile() counted as several nodes.
   describe("text split across chunks", () => {
     test("keeps text either side of a bare less-than", () => {
       expect.assertions(4);
       const meta = compile(/* html */ "<div>a < b</div>");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<div>a < b</div>");
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -1057,8 +1051,7 @@ describe("compile", () => {
     });
   });
 
-  // Void and self-closing elements have no end tag, so the root element
-  // check must not try to hook one — it used to throw "No end tag.".
+  // Regression: a root with no end tag threw "No end tag." while compiling.
   describe("void root element", () => {
     test("compiles a void root element with a ref", () => {
       expect.assertions(4);
@@ -1077,12 +1070,10 @@ describe("compile", () => {
     });
   });
 
-  // A DOM <template> keeps its children in .content, so the collect()
-  // walk cannot enter it and every distance past it would be wrong. Rejecting
-  // it here turns a runtime crash into a build error. Empty templates are not
-  // special-cased — they only happen to work.
+  // Regression: collect() can't walk into <template> content, so templates crashed at runtime; now rejected.
   describe("template element", () => {
-    test("logs error for a nested template element", () => {
+    // Serial: spies on the global console.error.
+    test.serial("logs error for a nested template element", () => {
       expect.assertions(2);
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<div><template><span @a></span></template><b @b></b></div>";
@@ -1105,6 +1096,7 @@ describe("compile", () => {
       expect(meta.success).toBeFalse();
     });
 
+    // Rejected too: an empty <template> only worked by accident.
     test("returns success false for an empty template element", () => {
       expect.assertions(1);
       const meta = compile(/* html */ "<div><template></template></div>");
@@ -1118,10 +1110,7 @@ describe("compile", () => {
     });
   });
 
-  // In HTML content the parser IGNORES a self-closing slash, so <div/> is
-  // an open <div> and whatever follows is its child, not a second root. Only
-  // foreign content (e.g. <svg/>) really self-closes. HTMLRewriter reports
-  // selfClosing true for both, so it must not be treated as "has no end tag".
+  // Regression: "/>" on an HTML element was taken as closing it, but the parser ignores it and keeps it open.
   describe("self-closing slash in HTML content", () => {
     test("does not treat a slashed element as a closed root", () => {
       expect.assertions(2);
@@ -1160,8 +1149,8 @@ describe("compile", () => {
       const meta = compile(/* html */ "<script/>@media a  b");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<script/>@media a  b");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -1170,8 +1159,8 @@ describe("compile", () => {
       const meta = compile(/* html */ "<style/>@media a  b");
       expect(meta.success).toBeTrue();
       expect(meta.html).toBe(/* html */ "<style/>@media a  b");
-      expect(meta.k).toBeEmptyObject();
-      expect(meta.d).toBeEmptyObject();
+      expect(meta.k).toBeEmpty();
+      expect(meta.d).toBeEmpty();
       expect(meta.ref).toBeEmptyObject();
     });
 
@@ -1191,29 +1180,30 @@ describe("compile", () => {
     expect(meta.success).toBeTrue();
   });
 
-  describe("errors", () => {
+  // Serial: spies on the global console.error and toggles Bun.enableANSIColors.
+  describe.serial("errors", () => {
     test("throws when input template is not a string", () => {
       expect.assertions(10);
       const expectedError = new TypeError("Template must be a string literal");
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro(123)).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro(123n)).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro(true)).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro()).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro(null)).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro(Symbol("test"))).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro(["<div></div>"])).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro(() => "<div></div>")).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro({ template: "<div></div>" })).toThrowError(expectedError);
-      // @ts-expect-error: test invalid input
+      // @ts-expect-error - template must be a string
       expect(() => compileNoMacro(String)).toThrowError(expectedError);
     });
 
@@ -1244,8 +1234,7 @@ describe("compile", () => {
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
-    // Only one end tag handler can be registered per element, so the root
-    // element check and the whitespace-sensitive block check have to share one.
+    // Regression: the pre's end tag handler replaced the root's, hiding the second root.
     test("logs error when more than one root element and the root is a pre", () => {
       expect.assertions(2);
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
@@ -1264,6 +1253,7 @@ describe("compile", () => {
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
+    // Regression: every element after the first root logged its own error.
     test("logs error once when a second root element has children", () => {
       expect.assertions(2);
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
@@ -1323,25 +1313,21 @@ describe("compile", () => {
       expect(meta.success).toBeFalse();
     });
 
-    // Guard: a non-ref comment after the root is discarded before render, so
-    // it cannot corrupt the walk and stays legal.
+    // Guard: a non-ref comment is removed before render, so it can't become a second root.
     test("returns success true for a plain comment after the root element", () => {
       expect.assertions(1);
       const meta = compile(/* html */ "<div></div><!-- hi -->");
       expect(meta.success).toBeTrue();
     });
 
-    // Guard: a bare text ref with no wrapping element is itself the (single)
-    // root — it must not be treated as a stray node before an absent one.
+    // Guard: a lone text ref is the root itself, not a stray node.
     test("returns success true for a template with only a text ref", () => {
       expect.assertions(1);
       const meta = compile(/* html */ "@a");
       expect(meta.success).toBeTrue();
     });
 
-    // Regression: text never closed the root it stands in for, so text
-    // followed by a real root element was accepted with the element as root,
-    // silently discarding the leading text instead of failing.
+    // Regression: leading text was silently dropped, with the element taken as root.
     test("returns success false for text before the root element", () => {
       expect.assertions(1);
       const meta = compile(/* html */ "lead text<div @a></div>");
@@ -1415,19 +1401,12 @@ describe("compile", () => {
       [/* html */ "<div><!-- @@a --></div>", "@a"],
       [/* html */ "<!-- @@a -->", "@a"],
 
-      // Ref names must be lowercase because browsers normalise element
-      // attribute names when rendering HTML. Attribute names reach the
-      // macro already lowercased by HTMLRewriter, so a non-lowercase name
-      // can only be caught in text and comment position.
-
-      // capital character
-      // ["<div @Foo></div>", "Foo"], // not error; HTMLRewriter lowercases
+      // capital character; attribute names arrive lowercased, so only text and comment refs can fail
       [/* html */ "<div>@Foo</div>", "Foo"],
       [/* html */ "@Foo", "Foo"],
       [/* html */ "<div><!-- @Foo --></div>", "Foo"],
       [/* html */ "<!-- @Foo -->", "Foo"],
 
-      // ["<div @fOo></div>", "fOo"], // not error; HTMLRewriter lowercases
       [/* html */ "<div>@fOo</div>", "fOo"],
       [/* html */ "@fOo", "fOo"],
       [/* html */ "<div><!-- @fOo --></div>", "fOo"],
@@ -1548,11 +1527,12 @@ describe("compile", () => {
 
     test("wraps the template in dim escape codes when colors are enabled", () => {
       expect.assertions(1);
+      const { enableANSIColors } = Bun;
       // @ts-expect-error - writable at runtime despite readonly type
       Bun.enableANSIColors = true;
       onTestFinished(() => {
         // @ts-expect-error - writable at runtime despite readonly type
-        Bun.enableANSIColors = false;
+        Bun.enableANSIColors = enableANSIColors;
       });
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<!DOCTYPE html><div></div>";
@@ -1562,9 +1542,15 @@ describe("compile", () => {
       );
     });
 
-    // Bun.enableANSIColors is forced false in test/unit/setup.ts.
     test("does not wrap the template when colors are disabled", () => {
       expect.assertions(1);
+      const { enableANSIColors } = Bun;
+      // @ts-expect-error - writable at runtime despite readonly type
+      Bun.enableANSIColors = false;
+      onTestFinished(() => {
+        // @ts-expect-error - writable at runtime despite readonly type
+        Bun.enableANSIColors = enableANSIColors;
+      });
       using consoleSpy = spyOn(console, "error").mockImplementation(() => {});
       const template = /* html */ "<!DOCTYPE html><div></div>";
       compileNoMacro(template);
@@ -1651,7 +1637,7 @@ describe("compile", () => {
   });
 });
 
-// These tests pin the HTMLRewriter behaviours src/macro.ts is built around.
+// Characterization: HTMLRewriter behaviour that compile() relies on.
 describe("HTMLRewriter", () => {
   describe("text chunking", () => {
     test("splits a text node on a bare less-than", () => {
@@ -1804,10 +1790,7 @@ describe("HTMLRewriter", () => {
       expect(fired).toEqual(["pre"]);
     });
 
-    // compile() guards onEndTag with `canHaveContent`; without it a void root
-    // element throws "No end tag." and fails the build. Throwing correlates
-    // with `canHaveContent` ALONE — `selfClosing` plays no part, as the last
-    // two rows show — which is why the guard must not consult it.
+    // compile() guards onEndTag on canHaveContent alone; the last two rows show selfClosing doesn't predict the throw.
     test.each([
       /* eslint-disable array-bracket-spacing */
       [/* html */ "<div></div>", true, false, false],
@@ -1818,7 +1801,7 @@ describe("HTMLRewriter", () => {
       [/* html */ "<p/>", true, true, false],
       /* eslint-enable array-bracket-spacing */
     ])(
-      "throws for %j when it has no end tag",
+      "%j: canHaveContent %p, selfClosing %p, onEndTag throws %p",
       (template, canHaveContent, selfClosing, shouldThrow) => {
         expect.assertions(3);
         let didThrow = false;
@@ -1839,11 +1822,7 @@ describe("HTMLRewriter", () => {
       },
     );
 
-    // An element written with a self-closing slash accepts an end tag handler
-    // but never fires it, since no end tag follows. That leaves  macro.ts's
-    // insideRoot set for the rest of the template — which is CORRECT, because
-    // the HTML parser ignores "/>" here and keeps the element open too, making
-    // everything after it a child rather than a second root.
+    // Correct for compile(): the parser also keeps <div/> open, so what follows is a child, not a second root.
     test("never fires for an element written with a self-closing slash", () => {
       expect.assertions(3);
       let wasFired = false;
@@ -1882,7 +1861,6 @@ describe("HTMLRewriter", () => {
   });
 
   describe("attributes", () => {
-    // Removing an attribute aborts the iteration
     test("truncates iteration when an attribute is removed", () => {
       expect.assertions(2);
       const iterated: string[] = [];
@@ -1929,7 +1907,6 @@ describe("HTMLRewriter", () => {
       expect(html).toBe(/* html */ "<div><!></div>");
     });
 
-    // A doctype is reported wherever it appears
     test.each([
       /* eslint-disable array-bracket-spacing */
       [/* html */ "<!DOCTYPE html><div></div>"],

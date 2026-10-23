@@ -36,24 +36,28 @@ describe("h", () => {
   });
 
   test("returns a DOM node for div", () => {
-    expect.assertions(1);
+    expect.assertions(2);
     const node = h(/* html */ "<div></div>");
     expect(node).toBeInstanceOf(Node);
+    expect(node.nodeName).toBe("DIV");
   });
 
   test("returns a DOM node for text", () => {
-    expect.assertions(1);
+    expect.assertions(2);
     const node = h(/* html */ "foo");
     expect(node).toBeInstanceOf(Node);
+    expect(node.nodeName).toBe("#text");
   });
 
+  // Characterization: h() has no empty-template guard, so the missing first child comes back as null.
   test("returns null for empty string", () => {
     expect.assertions(1);
     const node = h(/* html */ "");
     expect(node).toBeNull();
   });
 
-  describe("render", () => {
+  // Serial: renders into the shared document.body.
+  describe.serial("render", () => {
     afterEach(cleanup);
 
     test("renders basic template", () => {
@@ -246,9 +250,7 @@ describe("collect", () => {
     // @ts-expect-error - regression: ref names must be strings; numeric keys were dropped
     expectTypeOf(collect<{ 1: Text }>);
 
-    // `keyof R` doesn't preserve declaration order (TS 6: type ID; TS 7 with
-    // `--stableTypeOrdering` on by default: alphabetical). Refs are keyed by
-    // name via `compile()`'s `ref`, since positions cannot identify ref types.
+    // Refs are keyed by name via compile()'s `ref`: `keyof R` order is a type ID in TS 6, alphabetical in TS 7.
     interface FooBar {
       foo: HTMLDivElement;
       bar: Text;
@@ -283,8 +285,20 @@ describe("collect", () => {
       collect<FooBar & { baz: Comment }>(document, meta.d);
     }).toBeFunction();
 
-    // Regression: the positional (UnionToTuple) types failed with TS2589 at 50
-    // refs. Has since been refactored out.
+    // Interface key order differs from template order; ref types follow names, not positions.
+    interface OutOfOrder {
+      b: Comment;
+      c: HTMLDivElement;
+      a: Text;
+    }
+    expectTypeOf((meta: CompileResult<OutOfOrder>) => {
+      const refs = collect(document, meta.d);
+      expectTypeOf(refs[meta.ref.a]).toEqualTypeOf<Text>();
+      expectTypeOf(refs[meta.ref.b]).toEqualTypeOf<Comment>();
+      expectTypeOf(refs[meta.ref.c]).toEqualTypeOf<HTMLDivElement>();
+    }).toBeFunction();
+
+    // Regression: the former positional (UnionToTuple) types failed with TS2589 at 50 refs.
     type Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
     interface ManyRefs extends Record<`k${Digit}${Digit}`, Text> {
       last: HTMLDivElement;
@@ -317,14 +331,7 @@ describe("collect", () => {
     expect(refs[1]).toBe(second);
   });
 
-  // A deep mixed tree exercising every node kind the walk has to step over.
-  // Each ref is its own test so a wrong distance names the ref it landed on
-  // instead of stopping at the first of twenty assertions. `nodeName` is the
-  // discriminating assertion — `instanceof HTMLElement` passes for any element,
-  // so it would not catch the walk landing on the wrong one.
-  //
-  // Fast mode indexes positionally, so these assert `refs[<position>]` directly;
-  // the name→index map is a separate concern, pinned by its own test below.
+  // One test per ref so a wrong distance names its ref; nodeName, unlike instanceof HTMLElement, tells elements apart.
   const DEEP_TREE = compile<Refs>(/* html */ `
     <div @a>
       <header @b>
@@ -391,9 +398,6 @@ describe("collect", () => {
     const view = h(DEEP_TREE.html);
     expect(collect(view, DEEP_TREE.d)).toHaveLength(20);
   });
-
-  // The name→index `meta.ref` map is compile()'s output, not collect()'s,
-  // so it is pinned in macro.test.ts rather than duplicated here.
 
   test("collects ref at start of element attributes", () => {
     expect.assertions(6);
@@ -466,8 +470,7 @@ describe("collect", () => {
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
   });
 
-  // The whitespace-only Text node kept inside <pre> is a real node in the
-  // walk, so a template like this fails if compile() does not count it in `d`.
+  // Regression: compile() didn't count whitespace-only text kept in <pre>, so the walk stopped short.
   test("collects ref after a whitespace-sensitive block", () => {
     expect.assertions(3);
     const meta = compile<{ a: Comment }>(/* html */ "<div><pre>   </pre><!-- @a --></div>");
@@ -478,8 +481,7 @@ describe("collect", () => {
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
   });
 
-  // A bare "<" splits the Text node into several compile-time chunks but
-  // is still one node at runtime, so the walk distance must count it once.
+  // Regression: compile() counted each chunk of text split on a bare "<" as its own node.
   test("collects ref after text split across chunks", () => {
     expect.assertions(3);
     const meta = compile<{ x: Comment }>(/* html */ "<div>a < b<!-- @x --></div>");
@@ -554,14 +556,12 @@ describe("collect", () => {
     expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
     expect(refs[meta.ref.b]).toBeInstanceOf(window.Comment);
     expect(refs[meta.ref.c]).toBeInstanceOf(window.HTMLDivElement);
-    expectTypeOf(refs[meta.ref.a]).toEqualTypeOf<Text>();
-    expectTypeOf(refs[meta.ref.b]).toEqualTypeOf<Comment>();
-    expectTypeOf(refs[meta.ref.c]).toEqualTypeOf<HTMLDivElement>();
   });
 
+  // Spaced text beside tags is what keepSpaces changes; the html guard proves the option took effect.
   describe("keepSpaces option", () => {
     test("collects refs when option is default", () => {
-      expect.assertions(11);
+      expect.assertions(12);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
@@ -570,14 +570,17 @@ describe("collect", () => {
       }
       const meta = compile<TemplateRefs>(/* html */ `
         <div>
+          <span> x </span>
           @a
           <div @b>
+            <span> y </span>
             @c
             <div @d></div>
           </div>
         </div>
       `);
       expect(meta.success).toBeTrue();
+      expect(meta.html).toContain("<span>x</span>");
       const view = h(meta.html);
       const refs = collect(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
@@ -593,7 +596,7 @@ describe("collect", () => {
     });
 
     test("collects refs when option is true", () => {
-      expect.assertions(11);
+      expect.assertions(12);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
@@ -603,8 +606,10 @@ describe("collect", () => {
       const meta = compile<TemplateRefs>(
         /* html */ `
           <div>
+            <span> x </span>
             @a
             <div @b>
+              <span> y </span>
               @c
               <div @d></div>
             </div>
@@ -613,6 +618,7 @@ describe("collect", () => {
         { keepSpaces: true },
       );
       expect(meta.success).toBeTrue();
+      expect(meta.html).toContain("<span> x </span>");
       const view = h(meta.html);
       const refs = collect(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
@@ -628,7 +634,7 @@ describe("collect", () => {
     });
 
     test("collects refs when option is false", () => {
-      expect.assertions(11);
+      expect.assertions(12);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
@@ -638,8 +644,10 @@ describe("collect", () => {
       const meta = compile<TemplateRefs>(
         /* html */ `
           <div>
+            <span> x </span>
             @a
             <div @b>
+              <span> y </span>
               @c
               <div @d></div>
             </div>
@@ -648,6 +656,7 @@ describe("collect", () => {
         { keepSpaces: false },
       );
       expect(meta.success).toBeTrue();
+      expect(meta.html).toContain("<span>x</span>");
       const view = h(meta.html);
       const refs = collect(view, meta.d);
       expect(refs[meta.ref.a].nodeName).toBe("#text");
@@ -671,10 +680,12 @@ describe("Test component", () => {
     expectTypeOf(Test).toBeFunction();
     expectTypeOf(Test).parameters.toEqualTypeOf<[props: { text: string }]>();
     expectTypeOf(Test).returns.not.toBeAny();
+    expectTypeOf(Test).returns.not.toBeNever();
     expectTypeOf(Test).returns.toEqualTypeOf<HTMLDivElement>();
   });
 
-  describe("render", () => {
+  // Serial: renders into the shared document.body.
+  describe.serial("render", () => {
     afterEach(cleanup);
 
     test("renders basic template", () => {

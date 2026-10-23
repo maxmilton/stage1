@@ -20,4 +20,4 @@ hoistPattern = ["@typescript-eslint/parser"] # TODO: Remove once we get rid of e
 
 [test]
 preload = ["./test/setup.ts"]
-root = "./test/unit"
+pathIgnorePatterns = ["test/e2e/**", "**/*.bak/**"]

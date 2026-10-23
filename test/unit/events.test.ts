@@ -37,12 +37,13 @@ describe("handleClick", () => {
     expect(handleClick).toHaveParameters(1, 0);
   });
 
-  test("returns undefined", () => {
+  test("returns undefined when no handler is found", () => {
     expect.assertions(1);
     expect(handleClick({} as Event)).toBeUndefined();
   });
 
-  describe("in DOM", () => {
+  // Serial: renders into the shared document.body.
+  describe.serial("in DOM", () => {
     afterEach(cleanup);
 
     test("returns undefined when event handler is noop", () => {
@@ -71,19 +72,28 @@ describe("handleClick", () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    test("passes event to nearest synthetic event handler", () => {
-      expect.assertions(3);
-      const outer = document.createElement("div");
+    test("passes the event to the handler", () => {
+      expect.assertions(1);
       const button = document.createElement("button");
       const event = { target: button } as unknown as Event;
+      const handler = mock(() => {});
+      button[ONCLICK] = handler;
+      render(button);
+      handleClick(event);
+      expect(handler).toHaveBeenCalledWith(event);
+    });
+
+    test("calls only the nearest handler", () => {
+      expect.assertions(2);
+      const outer = document.createElement("div");
+      const button = document.createElement("button");
       const outerHandler = mock(() => {});
       const buttonHandler = mock(() => {});
       outer[ONCLICK] = outerHandler;
       button[ONCLICK] = buttonHandler;
       outer.appendChild(button);
       render(outer);
-      handleClick(event);
-      expect(buttonHandler).toHaveBeenCalledWith(event);
+      handleClick({ target: button } as unknown as Event);
       expect(buttonHandler).toHaveBeenCalledTimes(1);
       expect(outerHandler).not.toHaveBeenCalled();
     });
@@ -122,17 +132,19 @@ describe("setupSyntheticClick", () => {
     expect(setupSyntheticClick).toHaveParameters(0, 0);
   });
 
-  test("returns undefined", () => {
+  // Serial: adds a listener to the shared document.
+  test.serial("returns undefined", () => {
     expect.assertions(1);
     onTestFinished(removeSyntheticClick);
     // oxlint-disable-next-line typescript/no-confusing-void-expression
     expect(setupSyntheticClick()).toBeUndefined();
   });
 
-  describe("in DOM", () => {
+  // Serial: renders into the shared document.body and adds a document listener.
+  describe.serial("in DOM", () => {
     afterEach(cleanup);
 
-    test("calls synthetic click event handler on native click", () => {
+    test("calls synthetic click event handler on element.click()", () => {
       expect.assertions(1);
       const button = document.createElement("button");
       const handler = mock(() => {});
@@ -146,7 +158,7 @@ describe("setupSyntheticClick", () => {
       expect(handler).toHaveBeenCalledTimes(3);
     });
 
-    test("calls synthetic click event handler on synthetic click event", () => {
+    test("calls synthetic click event handler on a dispatched click event", () => {
       expect.assertions(1);
       const button = document.createElement("button");
       const handler = mock(() => {});
@@ -173,7 +185,8 @@ describe("setupSyntheticClick", () => {
       render(button);
       setupSyntheticClick();
       onTestFinished(removeSyntheticClick);
-      button.dispatchEvent(new window.Event("mouseover"));
+      // Bubbles so it reaches the document listener; a non-bubbling event would pass vacuously.
+      button.dispatchEvent(new window.Event("mouseover", { bubbles: true }));
       expect(handler).not.toHaveBeenCalled();
     });
 
@@ -294,19 +307,19 @@ describe("removeSyntheticClick", () => {
     expect(removeSyntheticClick).toHaveParameters(0, 0);
   });
 
-  test("returns undefined", () => {
+  // Serial: removes a listener from the shared document.
+  test.serial("returns undefined", () => {
     expect.assertions(1);
     // oxlint-disable-next-line typescript/no-confusing-void-expression
     expect(removeSyntheticClick()).toBeUndefined();
   });
 
-  describe("in DOM", () => {
+  // Serial: renders into the shared document.body and adds a document listener.
+  // Cleanup also calls removeSyntheticClick() so a failed assertion can't leak the listener.
+  describe.serial("in DOM", () => {
     afterEach(cleanup);
 
-    // Both tests here call removeSyntheticClick() as the behaviour under
-    // test, but an assertion failing before that point would leak the listener,
-    // so they register it as cleanup too — it is idempotent.
-    test("does not call synthetic click handler after delete", () => {
+    test("does not call synthetic click handler after removal", () => {
       expect.assertions(2);
       const button = document.createElement("button");
       const handler = mock(() => {});

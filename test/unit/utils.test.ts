@@ -13,8 +13,7 @@ import {
   text,
 } from "../../src/utils.ts";
 
-// These are templates, never the subject of a test — every test clones
-// them and mutates the clone, so no state carries between tests.
+// Read-only templates: tests mutate only clones, so no state carries between tests.
 const ul = document.createElement("ul");
 const liA = document.createElement("li");
 liA.className = "a";
@@ -102,6 +101,7 @@ describe("fragment", () => {
     expectTypeOf(fragment).toBeFunction();
     expectTypeOf(fragment).parameters.toEqualTypeOf<[]>();
     expectTypeOf(fragment).returns.not.toBeAny();
+    expectTypeOf(fragment).returns.not.toBeNever();
     expectTypeOf(fragment).returns.toEqualTypeOf<DocumentFragment>();
   });
 
@@ -129,6 +129,7 @@ describe("text", () => {
     expectTypeOf(text).toBeFunction();
     expectTypeOf(text).parameters.toEqualTypeOf<[string]>();
     expectTypeOf(text).returns.not.toBeAny();
+    expectTypeOf(text).returns.not.toBeNever();
     expectTypeOf(text).returns.toEqualTypeOf<Text>();
   });
 
@@ -186,8 +187,8 @@ describe("create", () => {
     expect(create).toHaveParameters(1, 0);
   });
 
-  const inputs: [tag: string, ctor: new () => HTMLElement][] = [
-    ["x", window.HTMLUnknownElement],
+  // Characterization: create() forwards to document.createElement, so this pins happy-dom's tag mapping.
+  const inputs: [tag: keyof HTMLElementTagNameMap, ctor: new () => HTMLElement][] = [
     ["div", window.HTMLDivElement],
     ["span", window.HTMLSpanElement],
     ["a", window.HTMLAnchorElement],
@@ -250,10 +251,16 @@ describe("create", () => {
 
   test.each(inputs)("returns the expected element for %s argument", (input, expected) => {
     expect.assertions(1);
-    // @ts-expect-error - "x" is an intentional invalid element name
     expect(create(input)).toBeInstanceOf(expected);
   });
 
+  test("returns the expected element for x argument", () => {
+    expect.assertions(1);
+    // @ts-expect-error - "x" is neither a known HTML tag nor a hyphenated name
+    expect(create("x")).toBeInstanceOf(window.HTMLUnknownElement);
+  });
+
+  // Characterization: happy-dom's validation of an empty tag name.
   test("throws when parameter is an empty string", () => {
     expect.assertions(1);
     // @ts-expect-error - intentional invalid parameters
@@ -271,6 +278,7 @@ describe("clone", () => {
     expectTypeOf(clone).returns.not.toBeNever();
     expectTypeOf(clone).returns.toEqualTypeOf<Node>();
     expectTypeOf(clone<HTMLLIElement>).toEqualTypeOf<(node: HTMLLIElement) => HTMLLIElement>();
+    expectTypeOf((li: HTMLLIElement) => clone(li)).returns.toEqualTypeOf<HTMLLIElement>();
   });
 
   test("is a function", () => {
@@ -292,6 +300,7 @@ describe("clone", () => {
     expect(result).toEqual(newNode);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws without parameters", () => {
     expect.assertions(3);
     // @ts-expect-error - intentional invalid parameters
@@ -314,23 +323,17 @@ describe("clone", () => {
     expect(result.outerHTML).toBe(root.outerHTML);
   });
 
-  const inputs: HTMLElement[] = [
-    document.createElement("div"),
-    document.createElement("span"),
-    document.createElement("p"),
-    document.createElement("a"),
-    document.createElement("button"),
-    document.createElement("input"),
-    document.createElement("textarea"),
-    document.createElement("select"),
-  ];
-
-  test.each(inputs)("returns cloned element", (input) => {
-    expect.assertions(2);
-    const result = clone(input);
-    expect(result).not.toBe(input);
-    expect(result.tagName).toBe(input.tagName);
-  });
+  // Characterization: happy-dom's cloneNode across element types.
+  test.each(["div", "span", "p", "a", "button", "input", "textarea", "select"] as const)(
+    "returns a cloned %s element",
+    (tag) => {
+      expect.assertions(2);
+      const input = document.createElement(tag);
+      const result = clone(input);
+      expect(result).not.toBe(input);
+      expect(result.tagName).toBe(input.tagName);
+    },
+  );
 });
 
 describe("append", () => {
@@ -345,6 +348,9 @@ describe("append", () => {
     expectTypeOf(append<HTMLLIElement>).toEqualTypeOf<
       (node: HTMLLIElement, parent: Node) => HTMLLIElement
     >();
+    expectTypeOf((li: HTMLLIElement, parent: Node) =>
+      append(li, parent),
+    ).returns.toEqualTypeOf<HTMLLIElement>();
   });
 
   test("is a function", () => {
@@ -366,6 +372,7 @@ describe("append", () => {
     expect(result).toBe(newNode);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws without parameters", () => {
     expect.assertions(5);
     // @ts-expect-error - intentional invalid parameters
@@ -380,6 +387,7 @@ describe("append", () => {
     expect(() => append(undefined, undefined)).toThrow(window.TypeError);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws when parameters are not an element", () => {
     expect.assertions(NOT_DOM_NODES.length * 2);
     for (const input of NOT_DOM_NODES) {
@@ -426,6 +434,9 @@ describe("prepend", () => {
     expectTypeOf(prepend<HTMLLIElement>).toEqualTypeOf<
       (node: HTMLLIElement, parent: Node) => HTMLLIElement
     >();
+    expectTypeOf((li: HTMLLIElement, parent: Node) =>
+      prepend(li, parent),
+    ).returns.toEqualTypeOf<HTMLLIElement>();
   });
 
   test("is a function", () => {
@@ -447,6 +458,7 @@ describe("prepend", () => {
     expect(result).toBe(newNode);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws without parameters", () => {
     expect.assertions(5);
     // @ts-expect-error - intentional invalid parameters
@@ -461,14 +473,12 @@ describe("prepend", () => {
     expect(() => prepend(undefined, undefined)).toThrow(window.TypeError);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws when parameters are not an element", () => {
-    expect.assertions(NOT_DOM_NODES.length * 2 - 1); // skip null as child node
+    expect.assertions(NOT_DOM_NODES.length * 2);
     for (const input of NOT_DOM_NODES) {
       // @ts-expect-error - intentional invalid parameters
       expect(() => prepend(ul.cloneNode(), input)).toThrow(window.TypeError);
-      // TODO: happy-dom does not handle this as per spec.
-      // oxlint-disable-next-line no-continue vitest/no-conditional-in-test
-      if (input === null) continue;
       // @ts-expect-error - intentional invalid parameters
       expect(() => prepend(input, ul.cloneNode())).toThrow(window.TypeError);
     }
@@ -511,6 +521,9 @@ describe("insert", () => {
     expectTypeOf(insert<HTMLLIElement>).toEqualTypeOf<
       (node: HTMLLIElement, target: Node) => HTMLLIElement
     >();
+    expectTypeOf((li: HTMLLIElement, target: Node) =>
+      insert(li, target),
+    ).returns.toEqualTypeOf<HTMLLIElement>();
   });
 
   test("is a function", () => {
@@ -534,6 +547,7 @@ describe("insert", () => {
     expect(result).toBe(newNode);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws without parameters", () => {
     expect.assertions(5);
     // @ts-expect-error - intentional invalid parameters
@@ -548,6 +562,7 @@ describe("insert", () => {
     expect(() => insert(undefined, undefined)).toThrow(window.TypeError);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws when parameters are not an element", () => {
     expect.assertions(NOT_DOM_NODES.length * 2);
     for (const input of NOT_DOM_NODES) {
@@ -604,6 +619,9 @@ describe("replace", () => {
     expectTypeOf(replace<HTMLLIElement>).toEqualTypeOf<
       (node: HTMLLIElement, target: Node) => HTMLLIElement
     >();
+    expectTypeOf((li: HTMLLIElement, target: Node) =>
+      replace(li, target),
+    ).returns.toEqualTypeOf<HTMLLIElement>();
   });
 
   test("is a function", () => {
@@ -627,6 +645,7 @@ describe("replace", () => {
     expect(result).toBe(newNode);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws without parameters", () => {
     expect.assertions(5);
     // @ts-expect-error - intentional invalid parameters
@@ -641,6 +660,7 @@ describe("replace", () => {
     expect(() => replace(undefined, undefined)).toThrow(window.TypeError);
   });
 
+  // Characterization: happy-dom's argument validation.
   test("throws when parameters are not an element", () => {
     expect.assertions(NOT_DOM_NODES.length * 2);
     for (const input of NOT_DOM_NODES) {

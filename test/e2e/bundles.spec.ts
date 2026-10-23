@@ -40,10 +40,7 @@ const PRECOMPILED_EXPORTS = [
   "text",
 ];
 
-/**
- * Code-unit order, as a module namespace has. Not `localeCompare`, which sorts
- * case-insensitively and would put ONCLICK mid-list.
- */
+/** Code-unit order, as a module namespace has; `localeCompare` would put ONCLICK mid-list. */
 function byCodeUnit(a: string, b: string): number {
   if (a === b) return 0;
   return a < b ? -1 : 1;
@@ -55,9 +52,7 @@ test.describe("the IIFE browser build", () => {
 
     const result = await page.evaluate(() => Object.keys(window.stage1));
 
-    // Sorted because this is a plain object, not a module namespace: its key
-    // order is rollup's insertion order and matches only by coincidence, so
-    // pinning it would fail a reshuffle as if an export went missing (R3).
+    // Sorted: a plain object's key order is rollup's insertion order, which matches only by chance.
     expect(result.toSorted(byCodeUnit)).toEqual(BROWSER_EXPORTS);
   });
 
@@ -105,9 +100,7 @@ test.describe("the precompiled build", () => {
   });
 
   test("compiles a view", async ({ page }) => {
-    // The same template as the browser builds: precompiled h() only sets
-    // innerHTML while browser h() also collapses whitespace and extracts refs,
-    // but both take a string and return the root.
+    // Same template as the browser builds: both h() variants take a string and return its root.
     const result = await page.evaluate(async (src) => {
       const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
       // oxlint-disable-next-line typescript/consistent-type-imports

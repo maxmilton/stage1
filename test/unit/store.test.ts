@@ -64,7 +64,7 @@ describe("store", () => {
   });
 
   test("returns an object with the same properties", () => {
-    expect.assertions(25);
+    expect.assertions(27);
     // oxlint-disable-next-line typescript/no-extraneous-class
     class TestClass {}
     const s = Symbol("s");
@@ -99,9 +99,12 @@ describe("store", () => {
       z: window,
     };
     const state = store(initialState);
-    // oxlint-disable-next-line guard-for-in
-    for (const key in initialState) {
-      expect(state).toHaveProperty(key, initialState[key as keyof typeof initialState]);
+    // Reflect.ownKeys, unlike for…in, includes the symbol key; toHaveProperty rejects symbols.
+    expect(state).toContainKeys(Reflect.ownKeys(initialState) as (keyof typeof initialState)[]);
+    for (const key of Reflect.ownKeys(initialState)) {
+      expect(state[key as keyof typeof initialState]).toBe(
+        initialState[key as keyof typeof initialState],
+      );
     }
   });
 
@@ -160,8 +163,7 @@ describe("store", () => {
 
     test("calls callback with new value and previous value", () => {
       expect.assertions(1);
-      const initialState = { a: "old" };
-      const state = store(initialState);
+      const state = store({ a: "old" });
       const callback = mock(() => {});
       state.on("a", callback);
       state.a = "new";
@@ -205,8 +207,7 @@ describe("store", () => {
 
     test("does not call handler removed by an earlier handler", () => {
       expect.assertions(2);
-      // Handlers are stored in a Set which src/store.ts iterates with forEach, so
-      // a handler deleted before it is reached during notification is skipped.
+      // A handler removed mid-notification is skipped, as Set iteration skips deleted entries.
       const state = store({ a: 0 });
       const laterHandler = mock(() => {});
       // oxlint-disable-next-line prefer-const
@@ -223,8 +224,7 @@ describe("store", () => {
 
     test("calls all callbacks for mutated property", () => {
       expect.assertions(9);
-      const initialState = { a: 0 };
-      const state = store(initialState);
+      const state = store({ a: 0 });
       const callback1 = mock(() => {});
       const callback2 = mock(() => {});
       const callback3 = mock(() => {});
@@ -248,8 +248,7 @@ describe("store", () => {
 
     test("calls only callbacks for mutated property", () => {
       expect.assertions(12);
-      const initialState = { a: 0, b: 0, c: 0 };
-      const state = store(initialState);
+      const state = store({ a: 0, b: 0, c: 0 });
       const callbackA = mock(() => {});
       const callbackB = mock(() => {});
       const callbackC1 = mock(() => {});
@@ -295,8 +294,7 @@ describe("store", () => {
 
   test("mutating store state triggers callback", () => {
     expect.assertions(4);
-    const initialState = { a: 0 };
-    const state = store(initialState);
+    const state = store({ a: 0 });
     const callback = mock(() => {});
     state.on("a", callback);
     state.a = 1;
@@ -310,8 +308,7 @@ describe("store", () => {
 
   test("mutating store state does not trigger callback after off()", () => {
     expect.assertions(2);
-    const initialState = { a: 0 };
-    const state = store(initialState);
+    const state = store({ a: 0 });
     const callback = mock(() => {});
     const off = state.on("a", callback);
     state.a = 1;
