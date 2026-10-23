@@ -100,6 +100,25 @@ describe("keyed", () => {
     >();
     expectTypeOf(reconcileKeyed<Item, HTMLSpanElement>).returns.toBeVoid();
     expectTypeOf(reconcileKeyed<Item, HTMLSpanElement>).returns.not.toBeUndefined();
+    // Unannotated callbacks infer the item type from the data and the node type from createFn.
+    expectTypeOf((parent: Element, items: readonly Item[]) => {
+      reconcileKeyed(
+        "id",
+        parent,
+        items,
+        items,
+        (item) => {
+          expectTypeOf(item).toEqualTypeOf<Item>();
+          return document.createElement("span");
+        },
+        (node, item) => {
+          expectTypeOf(node).toEqualTypeOf<HTMLSpanElement>();
+          expectTypeOf(item).toEqualTypeOf<Item>();
+        },
+      );
+      // @ts-expect-error - key must be a property of the items
+      reconcileKeyed("missing", parent, items, items, createItemNode);
+    }).toBeFunction();
   });
 
   test("is a function", () => {
@@ -177,8 +196,8 @@ describe("keyed", () => {
     expect(parent.textContent).toBe("SeaBeeAye");
   });
 
-  test("reuses and updates nodes with matching keys", () => {
-    expect.assertions(4);
+  test("reuses nodes with matching keys", () => {
+    expect.assertions(3);
     const parent = document.createElement("div");
     reconcileKeyed("id", parent, [], ITEMS, createItemNode, updateItemNode);
     const nodes = [...parent.children];
@@ -187,6 +206,13 @@ describe("keyed", () => {
     expect(firstNode).toBe(nodes[3]);
     expect(secondNode).toBe(nodes[1]);
     expect(fourthNode).toBe(nodes[0]);
+  });
+
+  test("updates reused nodes with the new item", () => {
+    expect.assertions(1);
+    const parent = document.createElement("div");
+    reconcileKeyed("id", parent, [], ITEMS, createItemNode, updateItemNode);
+    reconcileKeyed("id", parent, ITEMS, REORDERED_ITEMS, createItemNode, updateItemNode);
     expect(parent.textContent).toBe("DeltaBetaEpsilonAlpha");
   });
 
@@ -246,8 +272,6 @@ describe("keyed", () => {
     expect(nodes[3].parentNode).toBeNull();
   });
 
-  // Removing from the front makes the suffix-skip fast path consume the
-  // trailing match first, so the shrink loop ends with `prevEnd === 0`.
   test("removes the leading node when data shrinks from the front", () => {
     expect.assertions(3);
     const parent = document.createElement("div");
@@ -350,6 +374,25 @@ describe("keyed", () => {
     expect(parent.textContent).toBe("ABCD");
   });
 
+  test("reorders nodes between boundary nodes", () => {
+    expect.assertions(3);
+    const [parent, before, after] = createBoundedParent();
+    reconcileKeyed("id", parent, [], ITEMS, createItemNode, updateItemNode, before, after);
+    reconcileKeyed(
+      "id",
+      parent,
+      ITEMS,
+      REORDERED_ITEMS,
+      createItemNode,
+      updateItemNode,
+      before,
+      after,
+    );
+    expect(parent.firstChild).toBe(before);
+    expect(parent.lastChild).toBe(after);
+    expect(itemOrder(parent).slice(1, -1)).toEqual(["d", "b", "e", "a"]);
+  });
+
   test("clears only nodes between boundary nodes", () => {
     expect.assertions(3);
     const [parent, before, after] = createBoundedParent();
@@ -394,6 +437,22 @@ describe("non-keyed", () => {
     >();
     expectTypeOf(reconcileNonKeyed<Item, HTMLSpanElement>).returns.toBeVoid();
     expectTypeOf(reconcileNonKeyed<Item, HTMLSpanElement>).returns.not.toBeUndefined();
+    // Unannotated callbacks infer the item type from the data and the node type from createFn.
+    expectTypeOf((parent: Element, items: readonly Item[]) => {
+      reconcileNonKeyed(
+        parent,
+        items,
+        items,
+        (item) => {
+          expectTypeOf(item).toEqualTypeOf<Item>();
+          return document.createElement("span");
+        },
+        (node, item) => {
+          expectTypeOf(node).toEqualTypeOf<HTMLSpanElement>();
+          expectTypeOf(item).toEqualTypeOf<Item>();
+        },
+      );
+    }).toBeFunction();
   });
 
   test("is a function", () => {
@@ -542,8 +601,6 @@ describe("non-keyed", () => {
     expect(nodes[1].parentNode).toBeNull();
   });
 
-  // Removing from the front makes the suffix-skip fast path consume the
-  // trailing match first, so the shrink loop ends with `prevEnd === 0`.
   test("removes the leading node when data shrinks from the front", () => {
     expect.assertions(3);
     const parent = document.createElement("div");
@@ -602,6 +659,35 @@ describe("non-keyed", () => {
     expect(parent.textContent).toBe("abcd");
   });
 
+  test("clears all nodes when data is empty", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileNonKeyed(parent, [], IDS, createStringItemNode, updateStringItemNode);
+    const nodes = [...parent.children];
+    reconcileNonKeyed(parent, IDS, [], createStringItemNode, updateStringItemNode);
+    expect(parent.childNodes).toHaveLength(0);
+    expect(nodes[0].parentNode).toBeNull();
+    expect(nodes[3].parentNode).toBeNull();
+  });
+
+  test("reorders nodes between boundary nodes", () => {
+    expect.assertions(3);
+    const [parent, before, after] = createBoundedParent();
+    reconcileNonKeyed(parent, [], IDS, createStringItemNode, undefined, before, after);
+    reconcileNonKeyed(
+      parent,
+      IDS,
+      REORDERED_IDS,
+      createStringItemNode,
+      updateStringItemNode,
+      before,
+      after,
+    );
+    expect(parent.firstChild).toBe(before);
+    expect(parent.lastChild).toBe(after);
+    expect(itemOrder(parent).slice(1, -1)).toEqual(["d", "b", "e", "a"]);
+  });
+
   test("clears only nodes between boundary nodes", () => {
     expect.assertions(3);
     const [parent, before, after] = createBoundedParent();
@@ -646,6 +732,22 @@ describe("reuse-nodes", () => {
     >();
     expectTypeOf(reconcileReuseNodes<Item, HTMLSpanElement>).returns.toBeVoid();
     expectTypeOf(reconcileReuseNodes<Item, HTMLSpanElement>).returns.not.toBeUndefined();
+    // Unannotated callbacks infer the item type from the data and the node type from createFn.
+    expectTypeOf((parent: Element, items: readonly Item[]) => {
+      reconcileReuseNodes(
+        parent,
+        items,
+        items,
+        (item) => {
+          expectTypeOf(item).toEqualTypeOf<Item>();
+          return document.createElement("span");
+        },
+        (node, item) => {
+          expectTypeOf(node).toEqualTypeOf<HTMLSpanElement>();
+          expectTypeOf(item).toEqualTypeOf<Item>();
+        },
+      );
+    }).toBeFunction();
   });
 
   test("is a function", () => {
@@ -757,6 +859,63 @@ describe("reuse-nodes", () => {
     expect(parent.firstChild).toBe(before);
     expect(parent.lastChild).toBe(after);
     expect(parent.textContent).toBe("ABCD");
+  });
+
+  test("clears all nodes when data is empty", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileReuseNodes(parent, [], ITEMS, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    reconcileReuseNodes(parent, ITEMS, [], createItemNode, updateItemNode);
+    expect(parent.childNodes).toHaveLength(0);
+    expect(nodes[0].parentNode).toBeNull();
+    expect(nodes[3].parentNode).toBeNull();
+  });
+
+  test("removes surplus nodes before the after boundary", () => {
+    expect.assertions(3);
+    const [parent, before, after] = createBoundedParent();
+    reconcileReuseNodes(parent, [], ITEMS, createItemNode, updateItemNode, before, after);
+    reconcileReuseNodes(
+      parent,
+      ITEMS,
+      REPLACEMENT_ITEMS,
+      createItemNode,
+      updateItemNode,
+      before,
+      after,
+    );
+    expect(parent.firstChild).toBe(before);
+    expect(parent.lastChild).toBe(after);
+    expect(itemOrder(parent).slice(1, -1)).toEqual(["x", "y"]);
+  });
+
+  test("updates nodes between boundary nodes in place", () => {
+    expect.assertions(2);
+    const [parent, before, after] = createBoundedParent();
+    reconcileReuseNodes(
+      parent,
+      [],
+      REPLACEMENT_ITEMS,
+      createItemNode,
+      updateItemNode,
+      before,
+      after,
+    );
+    const nodes = [...parent.children].slice(1, -1);
+    const next = ITEMS.slice(0, 2);
+    reconcileReuseNodes(
+      parent,
+      REPLACEMENT_ITEMS,
+      next,
+      createItemNode,
+      updateItemNode,
+      before,
+      after,
+    );
+    // Boundary nodes carry no data-id, so they read as "".
+    expect(itemOrder(parent)).toEqual(["", "a", "b", ""]);
+    expect([...parent.children].slice(1, -1)).toEqual(nodes);
   });
 
   test("clears only nodes between boundary nodes", () => {

@@ -7,11 +7,7 @@ import { collect, h, html } from "../../src/browser/runtime.ts";
 import type { Refs } from "../../src/types.ts";
 import { Test } from "../fixtures/TestComponent_browser.ts";
 
-// A deep mixed tree exercising every node kind the TreeWalker has to step
-// over. Each ref is its own test so a miss names the ref that went missing
-// instead of stopping at the first of nineteen assertions. `nodeName` is the
-// discriminating assertion — `instanceof HTMLElement` passes for any element,
-// so it would not catch collect() landing on the wrong one.
+// One test per ref so a miss names its ref; nodeName, unlike instanceof HTMLElement, tells elements apart.
 const deepTree = () =>
   h(/* html */ `
     <div @a>
@@ -71,24 +67,28 @@ describe("h", () => {
   });
 
   test("returns a DOM node for div", () => {
-    expect.assertions(1);
+    expect.assertions(2);
     const node = h(/* html */ "<div></div>");
     expect(node).toBeInstanceOf(Node);
+    expect(node.nodeName).toBe("DIV");
   });
 
   test("returns a DOM node for text", () => {
-    expect.assertions(1);
+    expect.assertions(2);
     const node = h(/* html */ "foo");
     expect(node).toBeInstanceOf(Node);
+    expect(node.nodeName).toBe("#text");
   });
 
   // TODO: Add documentation about this; it differs from precompiled runtime h() behaviour.
+  // Characterization: h() has no empty-template guard, so it throws on the missing first child.
   test("throws for empty string", () => {
     expect.assertions(1);
-    expect(() => h(/* html */ "")).toThrow();
+    expect(() => h(/* html */ "")).toThrow(window.TypeError);
   });
 
-  describe("render", () => {
+  // Serial: renders into the shared document.body.
+  describe.serial("render", () => {
     afterEach(cleanup);
 
     test("renders basic template", () => {
@@ -166,9 +166,13 @@ describe("h", () => {
       expect(rendered.container.getHTML()).toBe(/* html */ "<ul><li>A</li><li>B</li></ul>");
     });
 
-    // Accepted tradeoff (V7): h() would be too slow if it minified inside
-    // whitespace-sensitive blocks, so live mode skips that entirely.
-    test.skip("does not minify in whitespace-sensitive blocks", () => {});
+    // Accepted tradeoff: skipping whitespace-sensitive blocks would make live h() too slow (README).
+    test("minifies whitespace in whitespace-sensitive blocks", () => {
+      expect.assertions(1);
+      const view = h(/* html */ "<div><pre>a  b</pre></div>");
+      const rendered = render(view);
+      expect(rendered.container.getHTML()).toBe(/* html */ "<div><pre>a b</pre></div>");
+    });
   });
 });
 
@@ -200,7 +204,8 @@ describe("html", () => {
     expect(html).toHaveParameters(1, 1);
   });
 
-  describe("render", () => {
+  // Serial: renders into the shared document.body.
+  describe.serial("render", () => {
     afterEach(cleanup);
 
     test("renders basic template", () => {
@@ -295,7 +300,7 @@ describe("collect", () => {
     expect(refs[name].nodeName).toBe(nodeName);
   });
 
-  test("collects every ref in a deep tree and no others", () => {
+  test("collects exactly the 19 marked refs in a deep tree", () => {
     expect.assertions(1);
     const view = deepTree();
     expect(Object.keys(collect(view, view))).toHaveLength(19);
@@ -343,21 +348,33 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
-  // Live mode does no validation, so the unused marker stays in the output.
+  // Accepted tradeoff: live mode doesn't validate, and its reverse attribute scan saves bytes.
   test("uses the last ref marker when an element has several", () => {
-    expect.assertions(3);
+    expect.assertions(2);
     const view = h(/* html */ "<div @a @b></div>");
     const refs = collect<{ b: HTMLDivElement }>(view, view);
     expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
     expect(Object.keys(refs)).toEqual(["b"]);
-    expect(view.outerHTML).toBe(/* html */ '<div @a=""></div>');
+  });
+
+  // Accepted tradeoff: live mode doesn't validate, so the unused markers ship to the page.
+  test("leaves the other ref markers in the DOM", () => {
+    expect.assertions(1);
+    const view = h(/* html */ "<div @a @b></div>");
+    collect(view, view);
+    expect(view.getAttributeNames()).toHaveLength(1);
   });
 
   test("does not collect an escaped ref marker", () => {
-    expect.assertions(2);
+    expect.assertions(1);
     const view = h(/* html */ String.raw`<div \@a></div>`);
-    const refs = collect(view, view);
-    expect(Object.keys(refs)).toBeEmpty();
+    expect(Object.keys(collect(view, view))).toBeEmpty();
+  });
+
+  // Escaping is emergent: nothing strips the backslash, so it stays in the output.
+  test("keeps the backslash of an escaped ref marker", () => {
+    expect.assertions(1);
+    const view = h(/* html */ String.raw`<div \@a></div>`);
     expect(view.outerHTML).toBe(/* html */ String.raw`<div \@a=""></div>`);
   });
 
@@ -370,9 +387,7 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(1);
   });
 
-  // Unlike compile(), browser mode comment refs must have no surrounding
-  // whitespace: h()'s whitespace collapse keeps spaces inside comments and
-  // collector() only matches when nodeValue starts with "@" (V17).
+  // No spaces: live mode only reads a comment ref whose text starts with "@".
   test("collects ref from template with only comment", () => {
     expect.assertions(3);
     const view = h<Comment>(/* html */ "<!--@a-->");
@@ -384,9 +399,7 @@ describe("collect", () => {
 
   test("collects refs against a cloned root", () => {
     expect.assertions(3);
-    // How components actually render: compile the view once, clone it per
-    // instance, collect against the clone. The walker is rooted at the
-    // module-level <template>, and the clone was never in it.
+    // How components render: compile once, then collect against a clone h() never saw.
     const view = h(/* html */ "<ul @l><li @a>A</li><li @b>B</li></ul>");
     const root = view.cloneNode(true) as HTMLUListElement;
     const refs = collect<{ l: Element; a: Element; b: Element }>(root, view);
@@ -398,9 +411,7 @@ describe("collect", () => {
 
   test("collects refs from a view compiled before a later h() call", () => {
     expect.assertions(2);
-    // h() reuses one module-level <template>, so a second call replaces its
-    // content and orphans the first view. Module-scope views (see
-    // test/TestComponent_browser.ts) depend on surviving that.
+    // h() reuses one <template>; module-scope views like test/fixtures/TestComponent_browser.ts must survive that.
     const view = h(/* html */ "<div @a><span @b>x</span></div>");
     h(/* html */ "<p @c>other</p>");
     const refs = collect<{ a: Element; b: Element }>(view, view);
@@ -409,27 +420,21 @@ describe("collect", () => {
     expect(refs.b).toBe(span);
   });
 
-  // Characterization (T11): text refs are read from nodeValue, which the
-  // parser does not normalise, so the runtime key keeps its case — a name
-  // `Refs<R>` rejects, so it can't be typed. compile() rejects it too (V19).
+  // Characterization: the parser doesn't lowercase text, so the key keeps a case `Refs<R>` can't type.
   test("keeps the case of a text ref name", () => {
     expect.assertions(1);
     const view = h(/* html */ "<div>@Foo</div>");
     expect(Object.keys(collect(view, view))).toEqual(["Foo"]);
   });
 
-  // Characterization (V17): the whitespace collapse does not reach inside
-  // comments and collector() only matches nodeValue[0]. compile() accepts
-  // both spellings.
+  // Characterization: live mode only reads a comment ref whose text starts with "@"; compile() accepts both.
   test("does not collect a comment ref with surrounding whitespace", () => {
     expect.assertions(1);
     const view = h(/* html */ "<div><!-- @a --><b @c></b></div>");
     expect(Object.keys(collect(view, view))).toEqual(["c"]);
   });
 
-  // Accepted tradeoff (B9): <style> content is a text node, and any text node
-  // starting with "@" is a ref. compile() is protected by RAW_TAGS (B7);
-  // guarding live mode costs bytes. Use precompiled mode for <script>/<style>.
+  // Accepted tradeoff: live mode reads any text starting with "@" as a ref; guarding <style> costs bytes.
   test("reads a style at-rule as a ref name", () => {
     expect.assertions(1);
     const view = h(/* html */ "<div><style>@media print{a{b:c}}</style></div>");
@@ -437,9 +442,9 @@ describe("collect", () => {
     expect(Object.keys(collect(view, view))).toEqual([/* css */ "media print{a{b:c}}"]);
   });
 
+  // Accepted tradeoff, destructive half: the stylesheet is blanked.
   test("wipes the CSS of a style element read as a ref", () => {
     expect.assertions(1);
-    // Accepted tradeoff (B9), destructive half: the stylesheet is blanked.
     const view = h(/* html */ "<div><style>@media print{a{b:c}}</style></div>");
     collect(view, view);
     expect(view.outerHTML).toBe(/* html */ "<div><style></style></div>");
@@ -486,8 +491,7 @@ describe("collect", () => {
     expect(Object.keys(refs)).toHaveLength(6);
   });
 
-  // The regular mode h() function does not support options like the runtime
-  // mode compile() macro does. So there's no need to test them here.
+  // h() takes no options, so compile()'s keepSpaces tests have no counterpart here.
 });
 
 describe("Test component", () => {
@@ -497,10 +501,12 @@ describe("Test component", () => {
     expectTypeOf(Test).toBeFunction();
     expectTypeOf(Test).parameters.toEqualTypeOf<[props: { text: string }]>();
     expectTypeOf(Test).returns.not.toBeAny();
+    expectTypeOf(Test).returns.not.toBeNever();
     expectTypeOf(Test).returns.toEqualTypeOf<HTMLDivElement>();
   });
 
-  describe("render", () => {
+  // Serial: renders into the shared document.body.
+  describe.serial("render", () => {
     afterEach(cleanup);
 
     test("renders basic template", () => {

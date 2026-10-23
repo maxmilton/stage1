@@ -4,16 +4,6 @@ import { expect, test } from "@playwright/test";
 const jsPath = path.resolve(import.meta.dirname, "../../dist/browser.js");
 
 test.describe("a compiled view", () => {
-  test("is the template's root element", async ({ page }) => {
-    await page.addScriptTag({ path: jsPath });
-
-    const result = await page.evaluate(
-      () => window.stage1.h(/* html */ "<ul id=root><li>A</li></ul>").nodeName,
-    );
-
-    expect(result).toBe("UL");
-  });
-
   test("has whitespace between tags collapsed away", async ({ page }) => {
     await page.addScriptTag({ path: jsPath });
 
@@ -40,9 +30,7 @@ test.describe("a compiled view", () => {
 
   test("puts SVG elements in the SVG namespace", async ({ page }) => {
     await page.addScriptTag({ path: jsPath });
-    // h() never calls createElementNS — the namespace comes from the parser, so
-    // only a real one can answer. The unit test asserts instanceof, which is
-    // happy-dom judging its own output.
+    // The namespace comes from the parser, so only a real browser can answer; the unit test is happy-dom judging itself.
     const result = await page.evaluate(
       () => window.stage1.h(/* html */ "<svg><circle cx=10 /></svg>").namespaceURI,
     );
@@ -121,51 +109,42 @@ test.describe("collect", () => {
   const CASES: Case[] = [
     {
       name: "lowercases element attribute ref names",
-      // V8: no runtime .toLowerCase() anywhere — the browser does it while
-      // parsing, which is why `Refs<R>` requires lowercase names.
+      // The browser lowercases attribute names while parsing, which is why `Refs<R>` requires lowercase.
       template: /* html */ "<div @Foo></div>",
       field: "keys",
       expected: ["foo"],
     },
     {
       name: "keeps the case of text ref names",
-      // Open issue T11: nodeValue is not normalised, so the key keeps its case
-      // — a name `Refs<R>` rejects, so it can't be typed. compile() rejects it
-      // (V19); live mode does no validation by design.
+      // Characterization: the parser doesn't lowercase text, so the key keeps a case `Refs<R>` can't type.
       template: /* html */ "<div>@Foo</div>",
       field: "keys",
       expected: ["Foo"],
     },
     {
       name: "keeps the last marker when an element has several",
-      // Accepted tradeoff (B1): the reverse attribute scan saves bytes, so live
-      // mode keeps the LAST marker where compile() keeps the first and errors.
+      // Accepted tradeoff: live mode doesn't validate, and its reverse attribute scan saves bytes.
       template: /* html */ "<div @a @b></div>",
       field: "keys",
       expected: ["b"],
     },
     {
       name: "leaves the unused marker of a multi-marker element in the DOM",
-      // Accepted tradeoff (B1), visible half: the losing marker ships to the page.
+      // Accepted tradeoff: live mode doesn't validate, so the unused markers ship to the page.
       template: /* html */ "<div @a @b></div>",
       field: "html",
       expected: /* html */ '<div @a=""></div>',
     },
     {
       name: "ignores a comment ref with surrounding whitespace",
-      // Characterization (V17): the whitespace collapse does not reach inside
-      // comments and collector() only matches nodeValue[0], so this is silently
-      // not a ref. compile() accepts both spellings.
+      // Characterization: live mode only reads a comment ref whose text starts with "@"; compile() accepts both.
       template: /* html */ "<div><!-- @a --><b @c></b></div>",
       field: "keys",
       expected: ["c"],
     },
     {
       name: "reads a style at-rule as a ref name",
-      // Accepted tradeoff (B9): <style> content is a text node, and any text
-      // node starting with "@" is a ref. compile() is protected by RAW_TAGS
-      // (B7); guarding live mode costs bytes. Use precompiled mode for
-      // <script>/<style>.
+      // Accepted tradeoff: live mode reads any text starting with "@" as a ref; guarding <style> costs bytes.
       template: /* html */ "<div><style>@media print{a{b:c}}</style></div>",
       field: "keys",
       // eslint-disable-next-line array-bracket-spacing
@@ -173,7 +152,7 @@ test.describe("collect", () => {
     },
     {
       name: "wipes the CSS of a style element read as a ref",
-      // Accepted tradeoff (B9), destructive half: the stylesheet is blanked.
+      // Accepted tradeoff, destructive half: the stylesheet is blanked.
       template: /* html */ "<div><style>@media print{a{b:c}}</style></div>",
       field: "html",
       expected: /* html */ "<div><style></style></div>",
@@ -205,9 +184,7 @@ test.describe("collect", () => {
 
   test("roots the view at the foster-parented element", async ({ page }) => {
     await page.addScriptTag({ path: jsPath });
-    // Characterization (B10): the parser foster-parents the <div> out of the
-    // <table>, so h()'s "root" is that <div> and the table is its SIBLING.
-    // Templates must use parser-valid nesting; not detectable at build time.
+    // Characterization: the parser foster-parents the <div> out of the <table>, so it becomes h()'s root.
     const result = await page.evaluate(
       () =>
         window.stage1.h(
@@ -219,9 +196,7 @@ test.describe("collect", () => {
 
   test("roots the view at the first of several parser-produced roots", async ({ page }) => {
     await page.addScriptTag({ path: jsPath });
-    // Characterization (B10), other half: <div> inside <p> auto-closes it, so
-    // this one template becomes THREE roots and h() returns only the first —
-    // the ref is not even inside what the caller gets back.
+    // Characterization: <div> inside <p> closes it, so h() returns only the first of three roots.
     const result = await page.evaluate(
       () => window.stage1.h(/* html */ "<p>a<div @a>b</div></p>").outerHTML,
     );

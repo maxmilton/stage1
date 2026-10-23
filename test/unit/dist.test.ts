@@ -1,15 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import pkg from "../../package.json" with { type: "json" };
 
-// This is the only test file which needs `bun build.ts` to have run — it
-// reads dist/ from disk. Kept separate from the src/ tests for that reason.
+// The only test file that reads dist/, so run `bun run build` first.
 describe("dist files", () => {
-  // TODO: Remove the file MIME type checks? Bun infers it from the file
-  // extension, not the actual file data, so the usefulness is questionable.
-
-  // Files of unknown type (e.g., symlinks) fall back to the default
-  // "application/octet-stream". Bun.file() does not resolve symlinks so it's
-  // safe to infer that all these files are therefore regular files.
+  // TODO: Remove the MIME type checks? Bun infers them from the file extension, not the data.
+  // Unknown types (e.g. symlinks, which Bun.file() doesn't follow) report application/octet-stream.
 
   const distFiles: [filename: string, type: string, minBytes?: number, maxBytes?: number][] = [
     ["reconcile/keyed.js", "text/javascript;charset=utf-8", 2000, 3500],
@@ -26,8 +21,7 @@ describe("dist files", () => {
     ["index.d.ts.map", "application/json;charset=utf-8"],
     ["index.js", "text/javascript;charset=utf-8", 1000, 1500],
     ["index.js.map", "application/json;charset=utf-8"],
-    // Looser ceiling than the runtime bundles; macro.js runs at build
-    // time in bun and is never shipped to a browser, so bytes are cheap here.
+    // Looser ceiling: macro.js runs in Bun at build time and never ships to a browser.
     ["macro.js", "text/javascript;charset=utf-8", 1000, 2000],
     ["macro.js.map", "application/json;charset=utf-8"],
   ];
@@ -35,10 +29,14 @@ describe("dist files", () => {
   describe.each(distFiles)("%s", (filename, type, minBytes, maxBytes) => {
     const file = Bun.file(`dist/${filename}`);
 
-    test("exists with correct MIME type", () => {
-      expect.assertions(3);
+    test("exists with content", () => {
+      expect.assertions(2);
       expect(file.exists()).resolves.toBeTrue();
       expect(file.size).toBeGreaterThan(0);
+    });
+
+    test("has the expected MIME type", () => {
+      expect.assertions(1);
       expect(file.type).toBe(type);
     });
 

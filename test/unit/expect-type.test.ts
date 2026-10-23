@@ -1,5 +1,4 @@
 // Characterization: Bun's `expectTypeOf` and TypeScript behaviour the type tests rely on.
-// A failure after an upgrade means one of these changed; update the tests that depend on it.
 // oxlint-disable typescript/no-explicit-any
 
 import { describe, expect, expectTypeOf, mock, test } from "bun:test";
@@ -40,6 +39,8 @@ describe("expectTypeOf", () => {
     // @ts-expect-error - never doesn't equal string
     expectTypeOf<never>().toEqualTypeOf<string>();
     expectTypeOf<any>().toExtend<string>();
+    // toExtend also accepts extra properties, so it never proves equality.
+    expectTypeOf<{ a: number; b: string }>().toExtend<{ a: number }>();
     expectTypeOf<{ value: any }>().not.toBeAny();
 
     // Equality is representation-sensitive; branded compares structure.
@@ -56,6 +57,13 @@ describe("expectTypeOf", () => {
     expectTypeOf<Overloaded>().returns.toEqualTypeOf<string>();
     expectTypeOf<Parameters<Overloaded>>().toEqualTypeOf<[a: number]>();
     expectTypeOf<ReturnType<Overloaded>>().toBeNever();
+    interface OverloadedConstructor {
+      new (a: string): { s: string };
+      new (a: number): { n: number };
+    }
+    expectTypeOf<OverloadedConstructor>().constructorParameters.toEqualTypeOf<
+      [a: string] | [a: number]
+    >();
 
     class Box<T> {
       public items: T[] = [];
@@ -86,6 +94,10 @@ describe("expectTypeOf", () => {
     // @ts-expect-error - class instances are compared whole
     expectTypeOf<Box<string>>().toMatchObjectType<{ size: number }>();
     expectTypeOf<Pick<Box<string>, "size">>().toEqualTypeOf<{ readonly size: number }>();
+
+    // Interfaces lack the implicit index signature that object-literal types have.
+    expectTypeOf<Fields>().not.toExtend<Record<string, unknown>>();
+    expectTypeOf<{ a: number; b: string }>().toExtend<Record<string, unknown>>();
 
     // toExtend: method parameters are bivariant; function-property parameters aren't.
     expectTypeOf<Box<string>>().toExtend<Box<string | number>>();

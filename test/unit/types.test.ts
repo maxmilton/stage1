@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, test } from "bun:test";
-import type { Refs } from "../../src/types.ts";
+import type { InferRefs, Refs } from "../../src/types.ts";
 
 describe("Refs", () => {
   test("types", () => {
@@ -10,5 +10,16 @@ describe("Refs", () => {
     expectTypeOf<Refs>().toEqualTypeOf<Record<string, Node>>();
     // Bad keys map to `never`, so a generic `R` stays assignable to `Refs`.
     expectTypeOf(<R extends Refs<R>>(refs: R): Refs => refs).toBeFunction();
+  });
+});
+
+describe("InferRefs", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<InferRefs<{ foo: Text }>>().toEqualTypeOf<{
+      readonly "~refs"?: { foo: Text } | undefined;
+    }>();
+    // Optional, so a plain array still satisfies a typed `d` parameter.
+    expectTypeOf<readonly number[]>().toExtend<readonly number[] & InferRefs<{ foo: Text }>>();
   });
 });

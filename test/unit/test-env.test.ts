@@ -61,3 +61,16 @@ describe("globals", () => {
     });
   });
 });
+
+// Characterization: dist.test.ts leaves .resolves unawaited, which is safe only while its failure fails the test.
+describe("unawaited .resolves", () => {
+  test("passes a test when it passes", () => {
+    expect.assertions(1);
+    expect(Bun.file(import.meta.path).exists()).resolves.toBeTrue();
+  });
+
+  // No expect.assertions: a count mismatch would also fail this body and hide an ignored matcher.
+  test.failing("fails a test when it fails", () => {
+    expect(Bun.file("missing").exists()).resolves.toBeTrue();
+  });
+});

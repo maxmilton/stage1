@@ -3,9 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 const jsPath = path.resolve(import.meta.dirname, "../../dist/browser.js");
 
-// Handlers append to #log rather than counting into a variable, so a failure
-// says what happened: "" means the click never reached handleClick, a doubled
-// value means it did not stop.
+// Handlers append to #log so a failure shows what happened: "" never arrived, a doubled value didn't stop.
 async function setupLog(page: Page): Promise<void> {
   await page.addScriptTag({ path: jsPath });
   await page.evaluate(() => {
