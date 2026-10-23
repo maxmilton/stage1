@@ -61,6 +61,7 @@ await Bun.build({
   naming: "[dir]/browser.mjs",
   target: "browser",
   allowUnresolved: [],
+  env: "disable",
   define: {
     "Node.ELEMENT_NODE": "1",
   },
@@ -73,6 +74,7 @@ await Bun.build({
   outdir: "dist",
   target: "browser",
   allowUnresolved: [],
+  env: "disable",
   minify: true,
   sourcemap: "linked",
 });
@@ -82,6 +84,7 @@ await Bun.build({
   outdir: "dist",
   target: "bun",
   allowUnresolved: [],
+  env: "disable",
   minify: true,
   sourcemap: "linked",
 });
@@ -95,6 +98,7 @@ await Bun.build({
   outdir: "dist/reconcile",
   target: "browser",
   allowUnresolved: [],
+  env: "disable",
   minify: true,
   sourcemap: "linked",
 });
