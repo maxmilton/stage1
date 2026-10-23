@@ -14,8 +14,6 @@ High-performance JavaScript micro framework.
 
 - zero runtime dependencies
 
-Originally started as a fork of the excellent <https://github.com/Freak613/stage0> project.
-
 ## TODO
 
 - Decide whether to keep multiple implementations
@@ -128,6 +126,10 @@ Report any bugs you encounter on the [GitHub issue tracker](https://github.com/m
 ## Changelog
 
 See [releases on GitHub](https://github.com/maxmilton/stage1/releases).
+
+## Credits
+
+Originally started as a fork of <https://github.com/Freak613/stage0>.
 
 ## License
 
