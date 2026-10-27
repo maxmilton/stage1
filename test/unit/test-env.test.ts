@@ -2,10 +2,6 @@
 
 import { describe, expect, test } from "bun:test";
 
-type Mutable<T> = {
-  -readonly [K in keyof T]: T[K];
-};
-
 describe("globals", () => {
   // @see https://github.com/maxmilton/test-utils/blob/master/src/dom.ts#L34
   const usedGlobals = [
@@ -35,10 +31,7 @@ describe("globals", () => {
     "Node",
   ] as const;
 
-  test.each(
-    // HACK: Workaround for bun types; should work with `readonly unknown[]`.
-    usedGlobals as Mutable<typeof usedGlobals>,
-  )("has window.%s mapped to global", (globalName) => {
+  test.each(usedGlobals)("has window.%s mapped to global", (globalName) => {
     expect.assertions(3);
     expect(global[globalName]).toBeDefined();
     expect(window[globalName]).toBeDefined();

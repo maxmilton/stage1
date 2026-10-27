@@ -171,7 +171,6 @@ describe("compile", () => {
     expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
-  // TODO: Add documentation about this; it differs from browser runtime h() behaviour.
   test("has 1 k, d, and ref properties when 1 text ref with whitespace", () => {
     expect.assertions(4);
     const meta = compile(/* html */ "<div> @a</div>");
@@ -181,7 +180,6 @@ describe("compile", () => {
     expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
-  // TODO: Add documentation about this; it differs from browser runtime h() behaviour.
   test("has 1 k, d, and ref properties when 1 comment ref with whitespace", () => {
     expect.assertions(4);
     const meta = compile(/* html */ "<div><!--  @a --></div>");
