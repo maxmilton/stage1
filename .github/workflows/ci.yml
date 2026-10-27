@@ -77,7 +77,6 @@ jobs:
           - name: Install WebKit system dependencies
             # Runtime libraries only; no media plugins or extra fonts.
             run: |
-              sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
               opts=(-o Acquire::Languages=none -o Acquire::Retries=3 -o Acquire::http::Timeout=15
                     -o Dir::Etc::SourceParts=- -o Dpkg::Options::=--force-unsafe-io)
               for i in 1 2; do sudo timeout 60 apt-get "${opts[@]}" update && break; done
