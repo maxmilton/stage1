@@ -73,9 +73,9 @@ jobs:
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      - run: bun playwright install --no-shell chromium firefox
+      - run: bun playwright install --with-deps --no-shell chromium firefox webkit
       - run: bun run build
-      - run: bun run test:e2e --reporter=github,html
+      - run: bun run test:e2e --reporter=github,html --projects='*'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
