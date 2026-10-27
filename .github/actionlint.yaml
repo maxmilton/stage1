@@ -1,4 +1,10 @@
 paths:
+  .github/workflows/ci.yml:
+    ignore:
+      # actionlint 1.7.12 does not recognize ubuntu-26.04
+      - '^label "ubuntu-26\.04" is unknown\.'
+      # actionlint 1.7.12 does not recognize parallel step groups
+      - '^step must run script with "run" section or run action with "uses" section$'
   .github/workflows/publish.yml:
     ignore:
       # actionlint 1.7.12 lacks concurrency.queue

@@ -73,4 +73,8 @@ jobs:
         run: |
           echo "::add-matcher::$RUNNER_TEMP/actionlint-matcher.json"
           actionlint -color -verbose -shellcheck shellcheck -pyflakes 'ruff check --isolated --select F,B,UP,SIM,PERF,RUF --output-format concise --stdin-filename "<stdin>" -'
-      - run: shellcheck --norc -a .github/scripts/*.sh
+      - name: Check shell scripts
+        run: |
+          files=(.github/scripts/*.sh)
+          printf 'Checking %s\n' "${files[@]}"
+          shellcheck --norc -a "${files[@]}"
