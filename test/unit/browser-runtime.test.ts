@@ -427,6 +427,7 @@ describe("collect", () => {
     expect(Object.keys(collect(view, view))).toEqual(["Foo"]);
   });
 
+  // TODO: Add documentation about this; it differs from precompiled macro behaviour.
   // Characterization: live mode only reads a comment ref whose text starts with "@"; compile() accepts both.
   test("does not collect a comment ref with surrounding whitespace", () => {
     expect.assertions(1);
