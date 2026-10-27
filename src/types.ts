@@ -18,6 +18,6 @@ export interface InferRefs<R> {
  */
 type RefKey<K extends string> = `@${K}`;
 
-export type RefKeys<T> = { readonly [K in keyof T & string]: RefKey<K> };
+export type RefKeys<T> = { readonly [K in keyof T as K & string]: RefKey<K & string> };
 
 export type FlatRefs<T> = Node[] & { [K in keyof T & string as RefKey<K>]: T[K] };

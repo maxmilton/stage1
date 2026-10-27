@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, test } from "bun:test";
-import type { InferRefs, Refs } from "../../src/types.ts";
+import type { InferRefs, RefKeys, Refs } from "../../src/types.ts";
 
 describe("Refs", () => {
   test("types", () => {
@@ -21,5 +21,16 @@ describe("InferRefs", () => {
     }>();
     // Optional, so a plain array still satisfies a typed `d` parameter.
     expectTypeOf<readonly number[]>().toExtend<readonly number[] & InferRefs<{ foo: Text }>>();
+  });
+});
+
+describe("RefKeys", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<RefKeys<{ text: Text; 1: Comment; [Symbol.iterator]: Node }>>().toEqualTypeOf<{
+      readonly text: "@text";
+    }>();
+    // Homomorphic, so `?` and declaration links survive.
+    expectTypeOf<RefKeys<{ opt?: Text }>>().toEqualTypeOf<{ readonly opt?: "@opt" }>();
   });
 });
