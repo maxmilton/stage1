@@ -77,9 +77,11 @@ jobs:
           - name: Install WebKit system dependencies
             # Runtime libraries only; no media plugins or extra fonts.
             run: |
-              sudo apt-get update -o Acquire::Languages=none
-              sudo NEEDRESTART_SUSPEND=1 timeout 150 apt-get install -y --no-install-recommends \
-                -o Dpkg::Options::=--force-unsafe-io \
+              sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+              opts=(-o Acquire::Languages=none -o Acquire::Retries=3 -o Acquire::http::Timeout=15
+                    -o Dir::Etc::SourceParts=- -o Dpkg::Options::=--force-unsafe-io)
+              for i in 1 2; do sudo timeout 60 apt-get "${opts[@]}" update && break; done
+              sudo NEEDRESTART_SUSPEND=1 timeout 150 apt-get install "${opts[@]}" -y --no-install-recommends \
                 libavif16 \
                 libevent-2.1-7t64 \
                 libflite1 \
