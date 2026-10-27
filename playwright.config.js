@@ -7,8 +7,8 @@ export default defineConfig({
   testDir: "test/e2e",
   failOnFlakyTests: Boolean(process.env["CI"]),
   forbidOnly: Boolean(process.env["CI"]),
-  globalTimeout: 8 * 60 * 1000, // 8 minutes (keep under CI timeout)
   fullyParallel: true,
+  globalTimeout: 8 * 60 * 1000, // 8 minutes (keep under CI timeout)
   // repeatEach: 3, // uncomment to detect flaky tests
   retries: process.env["CI"] ? 1 : 0,
   use: {
