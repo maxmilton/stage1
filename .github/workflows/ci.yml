@@ -77,7 +77,6 @@ jobs:
           - name: Install WebKit system dependencies
             # Runtime libraries only; no media plugins or extra fonts.
             run: |
-              sudo rm -f /var/lib/man-db/auto-update # prevent man-db index rebuilds
               sudo apt-get update -o Acquire::Languages=none
               sudo NEEDRESTART_SUSPEND=1 timeout 150 apt-get install -y --no-install-recommends \
                 -o Dpkg::Options::=--force-unsafe-io \
