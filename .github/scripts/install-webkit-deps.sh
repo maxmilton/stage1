@@ -27,7 +27,7 @@ apt_get() {
   sudo timeout 120 apt-get "${opts[@]}" "$@"
 }
 
-apt_get update
+apt_get --error-on=any update
 apt_get install -y --no-install-recommends --download-only "${pkgs[@]}"
 sudo NEEDRESTART_SUSPEND=1 apt-get install -y --no-install-recommends --no-download \
   -o Dpkg::Options::=--force-unsafe-io "${pkgs[@]}"
