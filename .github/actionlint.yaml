@@ -1,4 +1,8 @@
 paths:
+  .github/workflows/ci.yml:
+    ignore:
+      # actionlint 1.7.12 does not recognize ubuntu-26.04
+      - '^label "ubuntu-26\.04" is unknown\.'
   .github/workflows/publish.yml:
     ignore:
       # actionlint 1.7.12 lacks concurrency.queue
