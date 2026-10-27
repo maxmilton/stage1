@@ -73,27 +73,28 @@ jobs:
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      - name: Install WebKit system dependencies
-        # Runtime libraries only; these DOM tests do not need media plugins or extra fonts.
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libavif16 \
-            libevent-2.1-7t64 \
-            libflite1 \
-            libgles2 \
-            libgstreamer-gl1.0-0 \
-            libgstreamer-plugins-extra1.0-0 \
-            libgtk-4-1 \
-            libharfbuzz-icu0 \
-            libhyphen0 \
-            libmanette-0.2-0 \
-            libopus0 \
-            libsecret-1-0 \
-            libsoup-3.0-0 \
-            libwayland-server0 \
-            libx264-165
-      - run: bun playwright install --no-shell chromium firefox webkit
+      - parallel:
+          - name: Install WebKit system dependencies
+            # Runtime libraries only; these DOM tests do not need media plugins or extra fonts.
+            run: |
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends \
+                libavif16 \
+                libevent-2.1-7t64 \
+                libflite1 \
+                libgles2 \
+                libgstreamer-gl1.0-0 \
+                libgstreamer-plugins-extra1.0-0 \
+                libgtk-4-1 \
+                libharfbuzz-icu0 \
+                libhyphen0 \
+                libmanette-0.2-0 \
+                libopus0 \
+                libsecret-1-0 \
+                libsoup-3.0-0 \
+                libwayland-server0 \
+                libx264-165
+          - run: bun playwright install --no-shell chromium firefox webkit
       - run: bun run build
       - run: bun run test:e2e --reporter=github,html --project='*'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
