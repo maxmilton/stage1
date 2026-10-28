@@ -90,6 +90,7 @@ describe("package.json", () => {
       "./reconcile/reuse-nodes",
       "./reconcile/reuse-lite",
       "./fast",
+      "./ng",
       "./dist/*",
       "./package.json",
     ]);

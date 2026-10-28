@@ -48,6 +48,22 @@ const render = (
   return [parent, source, dispose];
 };
 
+/** One item per letter, each labelled with its own id. */
+const lettered = (ids: string): Item[] => ids.split("").map((id) => ({ id, label: id }));
+
+/** Ids of the rows `change` inserts into `parent`, moves included, in insertion order. */
+const insertedIds = (parent: Element, change: () => void): string[] => {
+  const observer = new MutationObserver(() => {});
+  observer.observe(parent, { childList: true });
+  change();
+  const ids: string[] = [];
+  for (const record of observer.takeRecords()) {
+    for (const node of record.addedNodes) ids.push((node as HTMLElement).dataset["id"] ?? "");
+  }
+  observer.disconnect();
+  return ids;
+};
+
 /** Seeded PRNG (Park–Miller), so a failing edit sequence replays exactly. */
 const random = (seed: number): (() => number) => {
   let state = seed;
@@ -146,6 +162,62 @@ describe("list", () => {
     } finally {
       host.remove();
     }
+  });
+
+  test("Regression: keeps rows in order when the parent starts with whitespace text", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    parent.append("\n  ", "\n");
+    const items = signal(ITEMS);
+    list(parent, items, "id", createItemNode, updateItemNode);
+    set(items, REORDERED_ITEMS);
+    expect(itemOrder(parent)).toEqual(["d", "b", "e", "a"]);
+    expect([...parent.children].map((node) => node.textContent)).toEqual([
+      "Delta",
+      "Beta",
+      "Epsilon",
+      "Alpha",
+    ]);
+  });
+
+  test("moves only the row that moved later", () => {
+    expect.assertions(1);
+    const [parent, items] = render(lettered("abcdefghij"));
+    expect(
+      insertedIds(parent, () => {
+        set(items, lettered("abdefghcij"));
+      }),
+    ).toEqual(["c"]);
+  });
+
+  test("moves only the row that moved earlier", () => {
+    expect.assertions(1);
+    const [parent, items] = render(lettered("abcdefghij"));
+    expect(
+      insertedIds(parent, () => {
+        set(items, lettered("abhcdefgij"));
+      }),
+    ).toEqual(["h"]);
+  });
+
+  test("moves the fewest rows when no end matches", () => {
+    expect.assertions(1);
+    const [parent, items] = render(lettered("abcdefghij"));
+    // Old order c d e f g h in the middle becomes d c e f h g: 4 rows can stay
+    expect(
+      insertedIds(parent, () => {
+        set(items, lettered("abdcefhgij"));
+      }),
+    ).toHaveLength(2);
+  });
+
+  test("swaps two rows with two moves", () => {
+    expect.assertions(1);
+    const [parent, items] = render(lettered("abcdef"));
+    const inserted = insertedIds(parent, () => {
+      set(items, lettered("aecdbf"));
+    });
+    expect(inserted.toSorted((x, y) => x.localeCompare(y))).toEqual(["b", "e"]);
   });
 
   test("reorders rows to match the new items", () => {
