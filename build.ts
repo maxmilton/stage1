@@ -94,6 +94,7 @@ await Bun.build({
     "src/reconcile/keyed.ts",
     "src/reconcile/non-keyed.ts",
     "src/reconcile/reuse-nodes.ts",
+    "src/reconcile/reuse-lite.ts",
   ],
   outdir: "dist/reconcile",
   target: "browser",
@@ -116,6 +117,7 @@ await createBundle({
     "stage1/reconcile/keyed": "src/reconcile/keyed.ts",
     "stage1/reconcile/non-keyed": "src/reconcile/non-keyed.ts",
     "stage1/reconcile/reuse-nodes": "src/reconcile/reuse-nodes.ts",
+    "stage1/reconcile/reuse-lite": "src/reconcile/reuse-lite.ts",
   },
   include: ["src"],
 });

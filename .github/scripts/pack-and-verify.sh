@@ -37,6 +37,8 @@ jq -e '
   index("dist/reconcile/non-keyed.js.map") != null and
   index("dist/reconcile/reuse-nodes.js") != null and
   index("dist/reconcile/reuse-nodes.js.map") != null and
+  index("dist/reconcile/reuse-lite.js") != null and
+  index("dist/reconcile/reuse-lite.js.map") != null and
   index("package.json") != null and
   index("src/browser/index.ts") != null and
   index("src/browser/runtime.ts") != null and
@@ -46,6 +48,7 @@ jq -e '
   index("src/reconcile/keyed.ts") != null and
   index("src/reconcile/non-keyed.ts") != null and
   index("src/reconcile/reuse-nodes.ts") != null and
+  index("src/reconcile/reuse-lite.ts") != null and
   index("src/index.ts") != null and
   index("src/macro.ts") != null and
   index("src/runtime.ts") != null and
@@ -54,8 +57,8 @@ jq -e '
   index("src/utils.ts") != null
 ' "$PACK_JSON" \
   || fail "Required package files missing"
-jq -e '.[keys[0]].entryCount == 33' "$PACK_JSON" \
-  || fail "Expected 33 packed files"
+jq -e '.[keys[0]].entryCount == 36' "$PACK_JSON" \
+  || fail "Expected 36 packed files"
 filename="$(jq -er '.[keys[0]].filename' "$PACK_JSON")" \
   || fail "Package filename missing"
 mv -- "$filename" publish.tgz \

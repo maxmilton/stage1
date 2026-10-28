@@ -50,6 +50,11 @@
       "bun": "./src/reconcile/reuse-nodes.ts",
       "default": "./dist/reconcile/reuse-nodes.js"
     },
+    "./reconcile/reuse-lite": {
+      "types": "./dist/index.d.ts",
+      "bun": "./src/reconcile/reuse-lite.ts",
+      "default": "./dist/reconcile/reuse-lite.js"
+    },
     "./fast": "./src/fast/index.ts",
     "./ng": "./src/ng/index.ts",
     "./dist/*": "./dist/*",
