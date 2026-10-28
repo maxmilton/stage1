@@ -2,7 +2,7 @@ import js from "@eslint/js";
 import mm from "@maxmilton/eslint-config";
 import oxlint from "eslint-plugin-oxlint";
 import unicorn from "eslint-plugin-unicorn";
-import { defineConfig } from "eslint/config";
+import { defineConfig, includeIgnoreFile } from "eslint/config";
 import ts from "typescript-eslint";
 
 // eslint-disable-next-line unicorn/no-top-level-side-effects
@@ -35,6 +35,7 @@ export default defineConfig(
       "@typescript-eslint/naming-convention": "off",
       "@typescript-eslint/prefer-optional-chain": "off",
       "consistent-return": "off",
+      "unicorn/consistent-boolean-name": "off",
       "unicorn/no-for-loop": "off",
       "unicorn/prefer-add-event-listener": "off",
       "unicorn/prefer-dom-node-append": "off",
@@ -57,5 +58,5 @@ export default defineConfig(
       "unicorn/isolated-functions": "off", // page.evaluate callbacks run in the browser
     },
   },
-  { ignores: ["dist"] },
+  includeIgnoreFile(`${import.meta.dirname}/.gitignore`),
 );

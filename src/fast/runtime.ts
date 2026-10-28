@@ -1,4 +1,4 @@
-import type { FlatRefs, InferRefs } from "../types.ts";
+import type { FlatRefs, InferRefs, Refs } from "../types.ts";
 import { create } from "../utils.ts";
 
 const template = create("template");
@@ -19,13 +19,11 @@ export const h = <T extends Node = Element>(html: string): ChildNode & T => {
  *
  * @param root - Root node.
  * @param d - Distances from previous ref node or root.
- * @returns An object mapping ref nodes keyed by their ref name. Note that
- *   browsers lowercase rendered HTML element attribute names so we lowercase
- *   the typed key names to prevent surprises.
+ * @returns An array of ref nodes in template order.
  */
-export const collect = /*@__NOINLINE__*/ <R extends InferRefs<R>>(
+export const collect = /*@__NOINLINE__*/ <R extends Refs<R>>(
   root: Node,
-  d: readonly number[],
+  d: readonly number[] & InferRefs<R>,
 ): FlatRefs<R> => {
   const len = d.length;
   const refs = new Array<Node>(len);

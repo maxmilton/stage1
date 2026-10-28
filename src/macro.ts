@@ -1,4 +1,4 @@
-import type { IndicesOf, InferRefs, TupleOfKeys } from "./types.ts";
+import type { InferRefs, RefKeys, Refs } from "./types.ts";
 
 /**
  * Valid ref name; lowercase because browsers normalise element attribute names
@@ -27,9 +27,9 @@ export interface CompileResult<R> {
   /** Array of ref key names. */
   k: readonly string[];
   /** Array of distances from previous ref node or template root. */
-  d: readonly number[];
+  d: readonly number[] & InferRefs<R>;
   /** Object mapping ref key names to their indices in the `k` array. */
-  ref: IndicesOf<TupleOfKeys<R>>;
+  ref: RefKeys<R>;
   /** Whether the template was successfully compiled without any errors. */
   success: boolean;
 }
@@ -41,7 +41,7 @@ export interface CompileResult<R> {
  * @param template - HTML template string.
  * @param options - Compile options.
  */
-export function compile<R extends InferRefs<R> = object>(
+export function compile<R extends Refs<R> = object>(
   template: string,
   { keepSpaces }: CompileOptions = {},
 ): CompileResult<R> {
@@ -186,8 +186,7 @@ export function compile<R extends InferRefs<R> = object>(
     html,
     k,
     d,
-    // @ts-expect-error - computed type
-    ref: Object.fromEntries(k.map((name, index) => [name, index])),
+    ref: Object.fromEntries(k.map((name, index) => [name, index])) as unknown as RefKeys<R>,
     success: !didFail,
   };
 }

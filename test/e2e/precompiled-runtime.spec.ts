@@ -1,25 +1,28 @@
+import { execFileSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
-import { compile, type CompileResult } from "../../src/macro.ts";
-import type { InferRefs, LowercaseKeys, Refs } from "../../src/types.ts";
+import { compile as compileInProcess, type CompileResult } from "../../src/macro.ts";
+import type { Refs } from "../../src/types.ts";
 
-// These precompiled runtime tests are only available when running in Bun.
-test.skip(!("bun" in process.versions), "Requires Bun");
-if (!("bun" in process.versions)) {
-  // oxlint-disable-next-line node/no-process-env
-  if (process.env["CI"]) {
-    throw new TypeError("Bun is required to run this e2e test file.");
-  }
-  // @ts-expect-error - stub to prevent runtime error in node, for debugging
-  // eslint-disable-next-line unicorn/no-global-object-property-assignment
-  global.Bun = { file: () => ({ text: () => {} }) };
+const jsSrc = await readFile(new URL("../../dist/index.js", import.meta.url), "utf8");
+
+// VS Code's Playwright extension runs Node, which lacks Bun's HTMLRewriter, so compile in a Bun child there.
+function compile<R extends Refs<R> = object>(template: string): CompileResult<R> {
+  if ("bun" in process.versions) return compileInProcess<R>(template);
+  const script =
+    'import { compile } from "../../src/macro.ts"; console.write(JSON.stringify(compile(await Bun.stdin.text())));';
+  const json = execFileSync("bun", ["--eval", script], {
+    cwd: import.meta.dirname,
+    input: template,
+    encoding: "utf8",
+  });
+  return JSON.parse(json) as CompileResult<R>;
 }
 
-const jsSrc = await Bun.file(new URL("../../dist/index.js", import.meta.url)).text();
-
-function render<R extends InferRefs<R>>(
+function render<R extends Refs<R>>(
   page: Page,
   meta: CompileResult<R>,
-): Promise<{ refs: Record<keyof LowercaseKeys<R>, string>; html: string }> {
+): Promise<{ refs: Record<keyof Refs<R>, string>; html: string }> {
   expect(meta.success).toBe(true);
 
   return page.evaluate(
@@ -28,7 +31,7 @@ function render<R extends InferRefs<R>>(
       // oxlint-disable-next-line typescript/consistent-type-imports
       const runtime = (await import(url)) as typeof import("../../src/index.ts");
       const root = runtime.h(html);
-      const refs = runtime.collect<Refs>(root, k, d);
+      const refs = runtime.collect<Refs>(root, k, d as typeof meta.d);
 
       return {
         refs: Object.fromEntries(Object.entries(refs).map(([name, node]) => [name, node.nodeName])),
@@ -122,31 +125,26 @@ test.describe("a compiled template", () => {
       /* html */ "<div @a><pre @b>  keep   me  </pre><span @c>after</span></div>",
     );
     const { refs } = await render(page, meta);
-    expect(refs.c).toBe("SPAN");
+    expect(refs).toHaveProperty("c", "SPAN");
   });
 });
 
 test.describe("a table template", () => {
   test("misses the cell when the parser inserts an implied tbody", async ({ page }) => {
-    // Characterization (B14): unlike B10's malformed examples this source is
-    // VALID HTML — <tbody> is optional and the parser inserts it. compile()
-    // counts table→tr→td and emits d=[2]; the DOM is table→tbody→tr→td, so the
-    // walk lands on the TR. Silent — no error, just the wrong node. The fix is
-    // in the template; see the next test.
+    // Characterization: the parser inserts the optional <tbody> compile() never sees, so valid HTML lands on the TR.
     const meta = compile<{ a: HTMLTableCellElement }>(
       /* html */ "<table><tr><td @a>x</td></tr></table>",
     );
     const { refs } = await render(page, meta);
-    expect(refs.a).toBe("TR");
+    expect(refs).toHaveProperty("a", "TR");
   });
 
   test("collects the cell when the template spells out tbody", async ({ page }) => {
-    // The workaround half, and why the test above is characterization rather than
-    // a bug report: spelling out the implied element realigns source and DOM.
+    // The workaround: spelling out the implied <tbody> realigns source and DOM.
     const meta = compile<{ a: HTMLTableCellElement }>(
       /* html */ "<table><tbody><tr><td @a>x</td></tr></tbody></table>",
     );
     const { refs } = await render(page, meta);
-    expect(refs.a).toBe("TD");
+    expect(refs).toHaveProperty("a", "TD");
   });
 });

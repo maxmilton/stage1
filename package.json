@@ -1,6 +1,6 @@
 {
   "name": "stage1",
-  "version": "0.11.0",
+  "version": "0.12.1",
   "description": "High-performance JavaScript micro framework",
   "bugs": "https://github.com/maxmilton/stage1/issues",
   "license": "MIT",
@@ -62,27 +62,27 @@
     "lint:js2": "eslint",
     "lint:ts": "tsc --noEmit",
     "test": "bun test --only-failures",
-    "test:ci": "bun test --coverage --randomize --rerun-each=50",
+    "test:ci": "bun test --coverage --randomize --parallel --no-isolate --rerun-each=50",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@maxmilton/eslint-config": "0.3.7",
-    "@maxmilton/oxlint-config": "0.0.22",
+    "@maxmilton/oxlint-config": "0.0.24",
     "@maxmilton/test-utils": "0.0.18",
-    "@playwright/test": "1.64.0",
-    "@types/bun": "1.4.2",
+    "@playwright/test": "1.64.1",
+    "@types/bun": "1.4.3",
     "dts-buddy": "0.8.3",
-    "eslint": "10.12.0",
-    "eslint-plugin-oxlint": "1.87.0",
-    "eslint-plugin-unicorn": "77.0.0",
-    "happy-dom": "20.14.5",
-    "oxfmt": "0.72.0",
-    "oxlint": "1.87.0",
-    "oxlint-tsgolint": "7.0.2003",
-    "rollup": "4.64.2",
+    "eslint": "10.13.0",
+    "eslint-plugin-oxlint": "1.89.0",
+    "eslint-plugin-unicorn": "78.0.0",
+    "happy-dom": "21.0.4",
+    "oxfmt": "0.74.0",
+    "oxlint": "1.89.0",
+    "oxlint-tsgolint": "7.0.2004",
+    "rollup": "4.64.12",
     "terser": "5.51.2",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.1"
+    "typescript-eslint": "8.72.0"
   }
 }

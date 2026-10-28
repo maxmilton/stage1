@@ -1,5 +1,4 @@
-// Set process-wide state for tests. Safe only while bun runs a file's tests
-// sequentially and nothing else writes to these globals.
+// Process-wide test state; safe only while tests touching these globals run serially.
 
 // oxlint-disable vitest/require-hook
 /* eslint-disable unicorn/no-global-object-property-assignment */

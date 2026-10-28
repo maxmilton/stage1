@@ -7,18 +7,24 @@ describe("store", () => {
     expect.assertions(0);
     expectTypeOf(store).not.toBeAny();
     expectTypeOf(store).toBeFunction();
-    expectTypeOf(store).parameters.branded.toEqualTypeOf<[object & { on?: never }]>();
+    expectTypeOf(store).parameters.toEqualTypeOf<
+      [initialState: Readonly<Record<string | symbol, unknown>> & { on?: never }]
+    >();
     expectTypeOf(store).returns.not.toBeAny();
     expectTypeOf(store).returns.not.toBeNever();
-    expectTypeOf(store).returns.toExtend<
-      object & {
-        on: (
-          key: string | symbol,
-          callback: (value: unknown, prev: unknown) => void,
+    // Erased: `T` -> its constraint; `T[K]` stays deferred inside the generic `on`.
+    expectTypeOf(store).returns.toEqualTypeOf<
+      Record<string | symbol, unknown> & {
+        readonly on: <K extends string | symbol>(
+          key: K,
+          callback: (
+            value: Record<string | symbol, unknown>[K],
+            prev: Readonly<Record<string | symbol, unknown>[K]>,
+          ) => void,
         ) => /** off */ () => boolean;
       }
     >();
-    expectTypeOf<ReturnType<typeof store<{ count: number }>>["count"]>().toBeNumber();
+    expectTypeOf(store<{ count: number }>).returns.toMatchObjectType<{ count: number }>();
     const key = Symbol();
     const state = store({ count: 0, label: "", [key]: true });
     state.on("count", (value, prev) => {
@@ -58,7 +64,7 @@ describe("store", () => {
   });
 
   test("returns an object with the same properties", () => {
-    expect.assertions(25);
+    expect.assertions(27);
     // oxlint-disable-next-line typescript/no-extraneous-class
     class TestClass {}
     const s = Symbol("s");
@@ -93,9 +99,12 @@ describe("store", () => {
       z: window,
     };
     const state = store(initialState);
-    // oxlint-disable-next-line guard-for-in
-    for (const key in initialState) {
-      expect(state).toHaveProperty(key, initialState[key as keyof typeof initialState]);
+    // Reflect.ownKeys, unlike for…in, includes the symbol key; toHaveProperty rejects symbols.
+    expect(state).toContainKeys(Reflect.ownKeys(initialState) as (keyof typeof initialState)[]);
+    for (const key of Reflect.ownKeys(initialState)) {
+      expect(state[key as keyof typeof initialState]).toBe(
+        initialState[key as keyof typeof initialState],
+      );
     }
   });
 
@@ -154,8 +163,7 @@ describe("store", () => {
 
     test("calls callback with new value and previous value", () => {
       expect.assertions(1);
-      const initialState = { a: "old" };
-      const state = store(initialState);
+      const state = store({ a: "old" });
       const callback = mock(() => {});
       state.on("a", callback);
       state.a = "new";
@@ -199,8 +207,7 @@ describe("store", () => {
 
     test("does not call handler removed by an earlier handler", () => {
       expect.assertions(2);
-      // Handlers are stored in a Set which src/store.ts iterates with forEach, so
-      // a handler deleted before it is reached during notification is skipped.
+      // A handler removed mid-notification is skipped, as Set iteration skips deleted entries.
       const state = store({ a: 0 });
       const laterHandler = mock(() => {});
       // oxlint-disable-next-line prefer-const
@@ -217,8 +224,7 @@ describe("store", () => {
 
     test("calls all callbacks for mutated property", () => {
       expect.assertions(9);
-      const initialState = { a: 0 };
-      const state = store(initialState);
+      const state = store({ a: 0 });
       const callback1 = mock(() => {});
       const callback2 = mock(() => {});
       const callback3 = mock(() => {});
@@ -242,8 +248,7 @@ describe("store", () => {
 
     test("calls only callbacks for mutated property", () => {
       expect.assertions(12);
-      const initialState = { a: 0, b: 0, c: 0 };
-      const state = store(initialState);
+      const state = store({ a: 0, b: 0, c: 0 });
       const callbackA = mock(() => {});
       const callbackB = mock(() => {});
       const callbackC1 = mock(() => {});
@@ -289,8 +294,7 @@ describe("store", () => {
 
   test("mutating store state triggers callback", () => {
     expect.assertions(4);
-    const initialState = { a: 0 };
-    const state = store(initialState);
+    const state = store({ a: 0 });
     const callback = mock(() => {});
     state.on("a", callback);
     state.a = 1;
@@ -304,8 +308,7 @@ describe("store", () => {
 
   test("mutating store state does not trigger callback after off()", () => {
     expect.assertions(2);
-    const initialState = { a: 0 };
-    const state = store(initialState);
+    const state = store({ a: 0 });
     const callback = mock(() => {});
     const off = state.on("a", callback);
     state.a = 1;
