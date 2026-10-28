@@ -51,6 +51,7 @@
       "default": "./dist/reconcile/reuse-nodes.js"
     },
     "./fast": "./src/fast/index.ts",
+    "./ng": "./src/ng/index.ts",
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },

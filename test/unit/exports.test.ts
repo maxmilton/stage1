@@ -3,6 +3,8 @@ import * as browserExports from "../../src/browser/index.ts";
 import * as fastExports from "../../src/fast/index.ts";
 import * as indexExports from "../../src/index.ts";
 import * as macroExports from "../../src/macro.ts";
+import * as ngExports from "../../src/ng/index.ts";
+import type { Signal } from "../../src/ng/signal.ts";
 import * as keyedExports from "../../src/reconcile/keyed.ts";
 import * as nonKeyedExports from "../../src/reconcile/non-keyed.ts";
 import * as reuseNodesExports from "../../src/reconcile/reuse-nodes.ts";
@@ -152,6 +154,66 @@ describe("fast", () => {
   test("has no default export", () => {
     expect.assertions(1);
     expect(fastExports).not.toHaveProperty("default");
+  });
+});
+
+describe("ng", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<ngExports.Refs>().toEqualTypeOf<Refs>();
+    expectTypeOf<ngExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
+    expectTypeOf<ngExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf<ngExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
+    expectTypeOf<ngExports.Signal<number>>().toEqualTypeOf<Signal<number>>();
+  });
+
+  const publicExports = [
+    ["h", "Function"],
+    ["collect", "Function"],
+    ["ONCLICK", "Symbol"],
+    ["handleClick", "Function"],
+    ["setupSyntheticClick", "Function"],
+    ["removeSyntheticClick", "Function"],
+    ["list", "Function"],
+    ["signal", "Function"],
+    ["get", "Function"],
+    ["set", "Function"],
+    ["sub", "Function"],
+    ["selector", "Function"],
+    ["batch", "Function"],
+    ["computed", "Function"],
+    ["effect", "Function"],
+    ["noop", "Function"],
+    ["fragment", "Function"],
+    ["text", "Function"],
+    ["create", "Function"],
+    ["clone", "Function"],
+    ["append", "Function"],
+    ["prepend", "Function"],
+    ["insert", "Function"],
+    ["replace", "Function"],
+  ] as const;
+
+  test.each(publicExports)('exports public "%s" %s', (name, type) => {
+    expect.assertions(2);
+    expect(ngExports).toHaveProperty(name);
+    // oxlint-disable-next-line import/namespace
+    expect(ngExports[name]).toHaveObjectType(`[object ${type}]`);
+  });
+
+  test("does not export any private internals", () => {
+    expect.assertions(publicExports.length + 1);
+    const publicExportNames: string[] = publicExports.map(([name, _type]) => name);
+    // oxlint-disable-next-line guard-for-in
+    for (const name in ngExports) {
+      expect(publicExportNames).toContain(name);
+    }
+    expect(publicExportNames).toHaveLength(Object.keys(ngExports).length);
+  });
+
+  test("has no default export", () => {
+    expect.assertions(1);
+    expect(ngExports).not.toHaveProperty("default");
   });
 });
 
