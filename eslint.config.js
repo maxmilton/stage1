@@ -39,6 +39,7 @@ export default defineConfig(
       "unicorn/no-for-loop": "off",
       "unicorn/prefer-add-event-listener": "off",
       "unicorn/prefer-dom-node-append": "off",
+      "unicorn/prefer-modern-dom-apis": "off",
       "unicorn/prefer-global-number-constants": "off",
       "unicorn/prefer-global-this": "off",
       "unicorn/prefer-query-selector": "off",

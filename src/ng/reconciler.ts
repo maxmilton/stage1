@@ -6,6 +6,9 @@
 // placed right to left around the longest run of rows that kept their order,
 // so no row moves unless it has to.
 
+/* eslint-disable @typescript-eslint/no-unnecessary-condition, unicorn/prefer-continue, unicorn/prefer-early-return, unicorn/prefer-simple-condition-first */
+// oxlint-disable id-length no-bitwise no-continue oxclippy/excessive-nesting oxclippy/similar-names
+
 import { type Signal, sub } from "./signal.ts";
 import { noop } from "./utils.ts";
 
@@ -19,6 +22,38 @@ let collected: (() => void)[] | undefined;
 
 const own = (dispose: () => void): void => {
   (collected ??= []).push(dispose);
+};
+
+/**
+ * Marks with -1 the entries of `a` in its longest increasing subsequence,
+ * ignoring zeros. https://en.wikipedia.org/wiki/Longest_increasing_subsequence
+ */
+const markLIS = (a: Int32Array): void => {
+  const length = a.length;
+  const parent = new Int32Array(length);
+  const tails = new Int32Array(length);
+  let top = -1;
+  for (let i = 0; i < length; i++) {
+    const k = a[i];
+    if (!k) continue;
+    if (top < 0 || a[tails[top]] < k) {
+      parent[i] = tails[top];
+      tails[++top] = i;
+      continue;
+    }
+    let lo = 0;
+    let hi = top;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (a[tails[mid]] < k) lo = mid + 1;
+      else hi = mid;
+    }
+    if (k < a[tails[lo]]) {
+      if (lo) parent[i] = tails[lo - 1];
+      tails[lo] = i;
+    }
+  }
+  for (let j = tails[top]; top-- >= 0; j = parent[j]) a[j] = -1;
 };
 
 /**
@@ -46,6 +81,7 @@ export const list = <T, N extends ChildNode>(
     collected = undefined;
     try {
       const node = create(item, own);
+      // oxlint-disable-next-line typescript/no-unnecessary-condition
       if (collected) {
         (node as Row)[CLEANUPS] = collected;
         owners++;
@@ -75,7 +111,7 @@ export const list = <T, N extends ChildNode>(
 
   // Measured faster: built off-document, the rows cost no per-insert work
   const build = (next: readonly T[]): N[] => {
-    const host = next.length && parent.isConnected ? parent.parentNode : null;
+    const host = next.length > 0 && parent.isConnected ? parent.parentNode : null;
     const after = parent.nextSibling;
     if (host) parent.remove();
     const built = new Array<N>(next.length);
@@ -90,6 +126,7 @@ export const list = <T, N extends ChildNode>(
     return build(next);
   };
 
+  // oxlint-disable-next-line complexity
   const reconcile = (next: readonly T[]): N[] => {
     const length = next.length;
     let aEnd = data.length - 1;
@@ -168,36 +205,4 @@ export const list = <T, N extends ChildNode>(
     unsubscribe();
     releaseAll();
   };
-};
-
-/**
- * Marks with -1 the entries of `a` in its longest increasing subsequence,
- * ignoring zeros. https://en.wikipedia.org/wiki/Longest_increasing_subsequence
- */
-const markLIS = (a: Int32Array): void => {
-  const length = a.length;
-  const parent = new Int32Array(length);
-  const tails = new Int32Array(length);
-  let top = -1;
-  for (let i = 0; i < length; i++) {
-    const k = a[i];
-    if (!k) continue;
-    if (top < 0 || a[tails[top]] < k) {
-      parent[i] = tails[top];
-      tails[++top] = i;
-      continue;
-    }
-    let lo = 0;
-    let hi = top;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (a[tails[mid]] < k) lo = mid + 1;
-      else hi = mid;
-    }
-    if (k < a[tails[lo]]) {
-      if (lo) parent[i] = tails[lo - 1];
-      tails[lo] = i;
-    }
-  }
-  for (let j = tails[top]; top-- >= 0; j = parent[j]) a[j] = -1;
 };

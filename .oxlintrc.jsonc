@@ -51,6 +51,7 @@
       "files": ["src/**"],
       "rules": {
         "eslint/id-length": ["error", { "exceptions": ["h", "k", "d", "K", "P", "R", "T"] }],
+        "eslint/prefer-destructuring": "off",
         "typescript/prefer-nullish-coalescing": "off", // compat
         "unicorn/no-new-array": "off", // byte savings + faster
       },
