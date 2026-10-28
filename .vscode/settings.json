@@ -31,7 +31,6 @@
   "[javascript]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": "never",
-      "source.fixAll.eslint": "never",
       "source.fixAll.oxc": "never"
     },
     "editor.defaultFormatter": "oxc.oxc-vscode"
@@ -57,7 +56,6 @@
   "[typescript]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": "never",
-      "source.fixAll.eslint": "never",
       "source.fixAll.oxc": "never"
     },
     "editor.defaultFormatter": "oxc.oxc-vscode"

@@ -108,7 +108,6 @@ describe("h", () => {
 
     test("renders basic template with messy whitespace", () => {
       expect.assertions(1);
-      // eslint-disable-next-line unicorn/prefer-literal-ascii
       const view = h(/* html */ `
         <ul>
           <li \f\n\r\t\v\u0020\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF   >A</li>
@@ -439,7 +438,6 @@ describe("collect", () => {
   test("reads a style at-rule as a ref name", () => {
     expect.assertions(1);
     const view = h(/* html */ "<div><style>@media print{a{b:c}}</style></div>");
-    // eslint-disable-next-line array-bracket-spacing
     expect(Object.keys(collect(view, view))).toEqual([/* css */ "media print{a{b:c}}"]);
   });
 
