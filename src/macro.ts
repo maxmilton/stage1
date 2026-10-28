@@ -88,7 +88,6 @@ export function compile<R extends Refs<R> = object>(
       comments(node) {
         const text = node.text.trim();
         node.remove();
-        // eslint-disable-next-line unicorn/prefer-early-return
         if (!isRawText && text[0] === "@") {
           claimRoot();
           addRef(text.slice(1));
