@@ -145,6 +145,17 @@ describe.each([
     expect(calls).toBe(1);
   });
 
+  test("treats -0 as a change from 0", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    let calls = 0;
+    ng.sub(s, () => {
+      calls++;
+    });
+    ng.set(s, -0);
+    expect(calls).toBe(2);
+  });
+
   test("does not call a disposed sink", () => {
     expect.assertions(1);
     const s = ng.signal(1);
@@ -1095,6 +1106,194 @@ describe("batch", () => {
       set(a, 1);
     });
     expect(seen).toEqual([0, 1]);
+  });
+
+  test("a sink's write as it ends is not delivered again by the batch", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    sub(a, (value) => {
+      if (value) set(b, 2);
+    });
+    const seen: number[] = [];
+    sub(b, (value) => {
+      seen.push(value);
+    });
+    batch(() => {
+      set(a, 1);
+      set(b, 1);
+    });
+    expect(seen).toEqual([0, 2]);
+  });
+
+  test("skips a sink when a sink restores the value as it ends", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    sub(a, (value) => {
+      if (value) set(b, 0);
+    });
+    const seen: number[] = [];
+    sub(b, (value) => {
+      seen.push(value);
+    });
+    batch(() => {
+      set(a, 1);
+      set(b, 1);
+    });
+    expect(seen).toEqual([0]);
+  });
+
+  test("a write in a batch a sink starts as it ends is not delivered twice", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    sub(a, (value) => {
+      if (value) {
+        batch(() => {
+          set(b, 2);
+        });
+      }
+    });
+    const seen: number[] = [];
+    sub(b, (value) => {
+      seen.push(value);
+    });
+    batch(() => {
+      set(a, 1);
+      set(b, 1);
+    });
+    expect(seen).toEqual([0, 2]);
+  });
+
+  test("a write by the sink of a signal a nested batch wrote is not delivered twice", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    const c = signal(0);
+    sub(a, (value) => {
+      if (value) {
+        batch(() => {
+          set(c, 1);
+        });
+      }
+    });
+    sub(c, (value) => {
+      if (value) set(b, 2);
+    });
+    const seen: number[] = [];
+    sub(b, (value) => {
+      seen.push(value);
+    });
+    batch(() => {
+      set(a, 1);
+      set(b, 1);
+    });
+    expect(seen).toEqual([0, 1, 2]);
+  });
+
+  test("a batch a sink starts as it ends notifies when the outermost ends", () => {
+    expect.assertions(2);
+    const a = signal(0);
+    const c = signal(0);
+    const seen: number[] = [];
+    sub(c, (value) => {
+      seen.push(value);
+    });
+    let seenOnReturn: number[] = [];
+    sub(a, (value) => {
+      if (value) {
+        batch(() => {
+          set(c, 1);
+        });
+        seenOnReturn = [...seen];
+      }
+    });
+    batch(() => {
+      set(a, 1);
+    });
+    expect(seenOnReturn).toEqual([0]);
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test("a sink's write to a signal the batch end already notified is delivered at once", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    const seen: number[] = [];
+    sub(b, (value) => {
+      seen.push(value);
+    });
+    let seenBySink: number[] = [];
+    sub(a, (value) => {
+      if (value) {
+        set(b, 2);
+        seenBySink = [...seen];
+      }
+    });
+    batch(() => {
+      set(b, 1);
+      set(a, 1);
+    });
+    expect(seenBySink).toEqual([0, 1, 2]);
+  });
+
+  test("a sink subscribed as it ends learns when a sink then restores the value", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    const seen: number[] = [];
+    sub(a, (value) => {
+      if (value) {
+        sub(b, (next) => {
+          seen.push(next);
+        });
+        set(b, 0);
+      }
+    });
+    sub(b, () => {});
+    batch(() => {
+      set(a, 1);
+      set(b, 1);
+    });
+    expect(seen).toEqual([1, 0]);
+  });
+
+  test("a computed read inside it leaves each sink one notification", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const double = computed(() => get(s) * 2);
+    effect(() => {
+      double();
+    });
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+    });
+    batch(() => {
+      set(s, 1);
+      double();
+      set(s, 2);
+    });
+    expect(seen).toEqual([0, 2]);
+  });
+
+  test("disposing a signal's last effect inside it leaves each sink one notification", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const dispose = effect(() => {
+      get(s);
+    });
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+    });
+    batch(() => {
+      set(s, 1);
+      dispose();
+      set(s, 2);
+    });
+    expect(seen).toEqual([0, 2]);
   });
 
   test("skips a sink when the batch restores the value", () => {
