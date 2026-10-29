@@ -14,7 +14,8 @@
 // Bit flags, labelled loops and chained assignments are alien-signals' own, kept as is.
 // oxlint-disable id-length no-bitwise no-continue no-labels no-multi-assign oxclippy/never-loop
 // oxlint-disable no-param-reassign no-use-before-define typescript/no-non-null-assertion
-// oxlint-disable typescript/prefer-optional-chain max-depth unicorn/explicit-length-check
+// oxlint-disable typescript/prefer-optional-chain max-depth oxclippy/excessive-nesting
+// oxlint-disable unicorn/explicit-length-check
 
 export interface Signal<T> {
   /** The current value; reading it does not subscribe anything. */
@@ -90,6 +91,11 @@ const DIRTY = 16;
 const PENDING = 32;
 // Marks a parent effect whose dependencies include a child effect.
 const HAS_CHILD_EFFECT = 64;
+// A signal is never a subscriber, so it reuses WATCHING's and RECURSED_CHECK's bits for
+// its sinks: QUEUED while in `pairs` for a batch end, and LATE once given a sink since,
+// so that end notifies whatever the value.
+const QUEUED = 2;
+const LATE = 4;
 
 /**
  * Sentinel for "no error caught", since anything can be thrown. As a batched
@@ -131,8 +137,8 @@ export const set = <T>(s: Signal<T>, value: T): void => {
 /**
  * Calls `fn` with the signal's value now and after every change, until the
  * returned function is called. Reads inside `fn` subscribe nothing. Subscribing
- * during a batch that wrote the signal makes the batch notify every sink when it
- * ends, even if the value is unchanged.
+ * after a batch wrote the signal, but before it notifies the signal's sinks, makes
+ * it notify every sink, even if the value is unchanged.
  */
 export const sub = <T>(s: Signal<T>, fn: (value: T) => void): (() => void) => {
   const node = s as SignalNode;
@@ -187,7 +193,10 @@ let writes = 0;
 let notifyIndex = 0;
 let queuedLength = 0;
 const queued: (EffectNode | undefined)[] = [];
-let batched = new Map<SignalNode, unknown>();
+/** Signals with sinks that batches wrote, each followed by its value before the write. */
+const pairs: unknown[] = [];
+/** 1 while the outermost batch notifies `pairs`, which it does at depth 1. */
+let ending = 0;
 
 // An unbatched write, and the end of an outermost batch, is a pass: a sink or effect
 // that throws does not stop the others, and the pass throws the first error once all
@@ -218,7 +227,7 @@ const install = (): void => {
 // A sink subscribed after a batched write saw a value the others didn't, so the
 // batch notifies when it ends even if it restores the value
 const late = (s: SignalNode): void => {
-  if (batched.has(s)) batched.set(s, NONE);
+  if (s.f & QUEUED) s.f |= LATE;
 };
 
 const trackSignal = (s: SignalNode): void => {
@@ -231,13 +240,19 @@ const write = (s: SignalNode, prev: unknown): void => {
   if (s.s) {
     if (!(s.f & DIRTY)) {
       s.c = prev;
-      s.f = MUTABLE | DIRTY;
+      s.f |= DIRTY;
     }
     propagate(s.s, runDepth > 0);
   }
   if (batchDepth) {
-    if (s.k && !batched.has(s)) batched.set(s, prev);
-    return;
+    // No sinks, or a batch end that has yet to reach them notifies the final value
+    if (!s.k || s.f & QUEUED) return;
+    if (batchDepth > ending) {
+      s.f |= QUEUED;
+      pairs.push(s, prev);
+      return;
+    }
+    // A write made as the batch ends, outside a nested batch, notifies at once
   }
   const outer = thrown;
   thrown = NONE;
@@ -256,7 +271,11 @@ const write = (s: SignalNode, prev: unknown): void => {
   end(outer);
 };
 
-/** Defers sinks and effects until `fn` returns; nested batches wait for the outermost. */
+/**
+ * Defers sinks and effects until `fn` returns; nested batches, including one a sink
+ * starts as the outermost ends, wait for the outermost. As it ends, a write to a
+ * signal it has yet to notify joins it.
+ */
 export const batch = (fn: () => void): void => {
   install();
   ++batchDepth;
@@ -266,23 +285,27 @@ export const batch = (fn: () => void): void => {
     if (!--batchDepth) {
       const outer = thrown;
       thrown = NONE;
-      if (batched.size) {
-        // A fresh map, so a batch started by a sink collects separately
-        const pending = batched;
-        batched = new Map();
+      // Measured: an empty batch skips this, as setting `length` is slow in JSC even
+      // when unchanged
+      if (pairs.length) {
         const prevSub = activeSub;
         activeSub = undefined;
-        // Measured faster than for…of, which allocates a [key, value] pair per entry
-        // oxlint-disable-next-line unicorn/no-array-for-each
-        pending.forEach((prev, s) => {
-          if (!Object.is(prev, s.v)) {
+        // Writes by sinks see a batch, so one to a signal not yet reached joins it
+        batchDepth = ending = 1;
+        for (let i = 0; i < pairs.length; i += 2) {
+          const s = pairs[i] as SignalNode;
+          const flags = s.f;
+          s.f = flags & ~(QUEUED | LATE);
+          if (flags & LATE || !Object.is(pairs[i + 1], s.v)) {
             try {
               notify(s);
             } catch (error) {
               report(error);
             }
           }
-        });
+        }
+        batchDepth = ending = 0;
+        pairs.length = 0;
         activeSub = prevSub;
       }
       flush();
@@ -388,7 +411,7 @@ const updateComputed = (c: ComputedNode): boolean => {
 };
 
 const updateSignal = (s: SignalNode): boolean => {
-  s.f = MUTABLE;
+  s.f &= ~DIRTY;
   return !Object.is(s.c, s.v);
 };
 
@@ -475,9 +498,10 @@ const enqueue = (e: Node): void => {
   }
 };
 
-// A signal goes through disposeEffect too: clearing its flags is harmless, since
-// a write sets them again and every tracked read commits a pending value first.
+// A signal keeps its flags, since its sink bits outlive its subscribers. A stale
+// DIRTY is harmless: every tracked read commits a pending value before linking.
 const unwatched = (node: Node): void => {
+  if ("k" in node) return;
   if (!("n" in node)) disposeEffect(node);
   else if (node.e) {
     node.f = 0;
