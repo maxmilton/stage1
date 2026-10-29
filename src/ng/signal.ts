@@ -2,7 +2,7 @@
 //  1. signal, get, set and sub: a value with direct sinks, no dependency tracking.
 //  2. computed, effect and batch: a glitch-free push-pull graph, ported from
 //     alien-signals 3.2.1 (https://github.com/stackblitz/alien-signals). Its first
-//     use installs `hook` and `track`, so code using only tier 1 bundles none of it.
+//     use installs `hook`, `track` and `added`, so code using only tier 1 bundles none of it.
 //
 // Differences from alien-signals: values compare with Object.is; a computed read
 // outside any effect does not link to its sources (it revalidates against a global
@@ -91,12 +91,16 @@ const PENDING = 32;
 // Marks a parent effect whose dependencies include a child effect.
 const HAS_CHILD_EFFECT = 64;
 
-/** Sentinel for "no error caught", since anything can be thrown. */
+/**
+ * Sentinel for "no error caught", since anything can be thrown. As a batched
+ * write's previous value, it makes the batch notify whatever the value.
+ */
 const NONE = {};
 
 let activeSub: Node | undefined;
 let hook: ((s: SignalNode, prev: unknown) => void) | undefined;
 let track: ((s: SignalNode) => void) | undefined;
+let added: ((s: SignalNode) => void) | undefined;
 
 // ── Tier 1 ──────────────────────────────────────────────────────────────────
 
@@ -121,12 +125,14 @@ export const set = <T>(s: Signal<T>, value: T): void => {
   if (Object.is(prev, value)) return;
   (s as SignalNode).v = value;
   if (hook) hook(s as SignalNode, prev);
-  else rethrow(notify(s as SignalNode, NONE));
+  else notify(s as SignalNode);
 };
 
 /**
  * Calls `fn` with the signal's value now and after every change, until the
- * returned function is called. Reads inside `fn` subscribe nothing.
+ * returned function is called. Reads inside `fn` subscribe nothing. Subscribing
+ * during a batch that wrote the signal makes the batch notify every sink when it
+ * ends, even if the value is unchanged.
  */
 export const sub = <T>(s: Signal<T>, fn: (value: T) => void): (() => void) => {
   const node = s as SignalNode;
@@ -134,6 +140,7 @@ export const sub = <T>(s: Signal<T>, fn: (value: T) => void): (() => void) => {
   const sink: Sink = { f: fn, n: head, p: undefined };
   if (head) head.p = sink;
   node.k = sink;
+  if (added) added(node);
   const dispose = (): void => {
     if (!sink.f) return;
     sink.f = null;
@@ -155,26 +162,20 @@ export const sub = <T>(s: Signal<T>, fn: (value: T) => void): (() => void) => {
   return dispose;
 };
 
-/** Calls `fn(arg)`; returns `error` unless that is NONE and `fn` threw. */
-const attempt = <A>(fn: (arg: A) => void, arg: A, error: unknown): unknown => {
-  try {
-    fn(arg);
-  } catch (error_) {
-    if (error === NONE) return error_;
-  }
-  return error;
-};
-
-const rethrow = (error: unknown): void => {
-  if (error !== NONE) throw error;
-};
-
-// New sinks go first, so a notification in progress never reaches them.
-const notify = (s: SignalNode, error: unknown): unknown => {
+// Calls every sink, then throws the first error. New sinks go first, so a
+// notification in progress never reaches them.
+const notify = (s: SignalNode): void => {
+  let error: unknown = NONE;
   for (let sink = s.k; sink; sink = sink.n) {
-    if (sink.f) error = attempt(sink.f, s.v as never, error);
+    if (sink.f) {
+      try {
+        sink.f(s.v as never);
+      } catch (error_) {
+        if (error === NONE) error = error_;
+      }
+    }
   }
-  return error;
+  if (error !== NONE) throw error;
 };
 
 // ── Tier 2 ──────────────────────────────────────────────────────────────────
@@ -186,11 +187,38 @@ let writes = 0;
 let notifyIndex = 0;
 let queuedLength = 0;
 const queued: (EffectNode | undefined)[] = [];
-const batched = new Map<SignalNode, unknown>();
+let batched = new Map<SignalNode, unknown>();
+
+// An unbatched write, and the end of an outermost batch, is a pass: a sink or effect
+// that throws does not stop the others, and the pass throws the first error once all
+// have run. A pass inside a sink or effect keeps its errors apart from the enclosing one.
+
+/** The first error a sink or effect threw in the current pass, or NONE. */
+let thrown: unknown = NONE;
+
+const report = (error: unknown): void => {
+  if (thrown === NONE) thrown = error;
+};
+
+/** Ends a pass: restores the enclosing pass's error, then throws this pass's first. */
+const end = (outer: unknown): void => {
+  const error = thrown;
+  thrown = outer;
+  if (error !== NONE) throw error;
+};
 
 const install = (): void => {
-  hook = write;
-  track = trackSignal;
+  if (!hook) {
+    hook = write;
+    track = trackSignal;
+    added = late;
+  }
+};
+
+// A sink subscribed after a batched write saw a value the others didn't, so the
+// batch notifies when it ends even if it restores the value
+const late = (s: SignalNode): void => {
+  if (batched.has(s)) batched.set(s, NONE);
 };
 
 const trackSignal = (s: SignalNode): void => {
@@ -208,20 +236,24 @@ const write = (s: SignalNode, prev: unknown): void => {
     propagate(s.s, runDepth > 0);
   }
   if (batchDepth) {
-    if (!batched.has(s)) batched.set(s, prev);
+    if (s.k && !batched.has(s)) batched.set(s, prev);
     return;
   }
-  const error = notifyUntracked(s, NONE);
-  rethrow(queuedLength ? attempt(flush, undefined, error) : error);
-};
-
-const notifyUntracked = (s: SignalNode, error: unknown): unknown => {
-  if (!s.k || !activeSub) return notify(s, error);
-  const prevSub = activeSub;
-  activeSub = undefined;
-  error = notify(s, error);
-  activeSub = prevSub;
-  return error;
+  const outer = thrown;
+  thrown = NONE;
+  if (s.k) {
+    // Sinks run outside any subscriber
+    const prevSub = activeSub;
+    activeSub = undefined;
+    try {
+      notify(s);
+    } catch (error) {
+      report(error);
+    }
+    activeSub = prevSub;
+  }
+  flush();
+  end(outer);
 };
 
 /** Defers sinks and effects until `fn` returns; nested batches wait for the outermost. */
@@ -232,13 +264,29 @@ export const batch = (fn: () => void): void => {
     fn();
   } finally {
     if (!--batchDepth) {
-      let error: unknown = NONE;
-      const entries = [...batched];
-      batched.clear();
-      for (const [s, prev] of entries) {
-        if (!Object.is(prev, s.v)) error = notifyUntracked(s, error);
+      const outer = thrown;
+      thrown = NONE;
+      if (batched.size) {
+        // A fresh map, so a batch started by a sink collects separately
+        const pending = batched;
+        batched = new Map();
+        const prevSub = activeSub;
+        activeSub = undefined;
+        // Measured faster than for…of, which allocates a [key, value] pair per entry
+        // oxlint-disable-next-line unicorn/no-array-for-each
+        pending.forEach((prev, s) => {
+          if (!Object.is(prev, s.v)) {
+            try {
+              notify(s);
+            } catch (error) {
+              report(error);
+            }
+          }
+        });
+        activeSub = prevSub;
       }
-      rethrow(attempt(flush, undefined, error));
+      flush();
+      end(outer);
     }
   }
 };
@@ -278,6 +326,7 @@ export const effect = (fn: () => void): (() => void) => {
   }
   try {
     ++runDepth;
+    // TODO: Support effect return value as cleanup function? Supported but undocumented in alien-signals.
     fn();
   } finally {
     --runDepth;
@@ -374,16 +423,18 @@ const disposeChildEffects = (e: EffectNode): void => {
   }
 };
 
+// Runs the queued effects, and any they queue.
 const flush = (): void => {
-  let error: unknown = NONE;
   while (notifyIndex < queuedLength) {
     const e = queued[notifyIndex]!;
     queued[notifyIndex++] = undefined;
-    error = attempt(run, e, error);
+    try {
+      run(e);
+    } catch (error) {
+      report(error);
+    }
   }
-  notifyIndex = 0;
-  queuedLength = 0;
-  rethrow(error);
+  notifyIndex = queuedLength = 0;
 };
 
 const disposeEffect = (e: Node): void => {
