@@ -1,14 +1,12 @@
 // Browser side: one page per variant, ops modelled on js-framework-benchmark.
 
-import { mapper, selector } from "../../src/ng/composables.ts";
-import { list } from "../../src/ng/reconcile.ts";
+import { list, mark } from "../../src/ng/reconcile.ts";
 import { set, signal } from "../../src/ng/signal.ts";
 
 interface Row {
   id: number;
   label: string;
 }
-type Create = (item: Row, own: (dispose: () => void) => void) => HTMLTableRowElement;
 
 declare const gc: () => void;
 
@@ -42,35 +40,14 @@ document.body.append(table);
 const items = signal<readonly Row[]>([]);
 const selected = signal(0);
 
-const viaSelector =
-  (make: typeof selector): (() => Create) =>
-  () => {
-    const select = make(selected);
-    return (item, own) => {
-      const tr = fill(item);
-      own(
-        select(item.id, (on) => {
-          paint(tr, on);
-        }),
-      );
-      return tr;
-    };
-  };
-const viaMapper =
-  (make: typeof mapper): (() => Create) =>
-  () => {
-    const mark = make(selected, paint);
-    return (item, own) => {
-      const tr = fill(item);
-      own(mark(item.id, tr));
-      return tr;
-    };
-  };
-
-const variants: Record<string, () => Create> = {
-  none: () => fill,
-  selector: viaSelector(selector),
-  mapper: viaMapper(mapper),
+// Each variant renders `items` into `tbody`
+const variants: Record<string, () => void> = {
+  none: () => {
+    list(tbody, items, "id", fill);
+  },
+  mark: () => {
+    mark(selected, list(tbody, items, "id", fill), paint);
+  },
 };
 
 // Forcing style and layout costs the same for every variant, so it's opt-in
@@ -79,7 +56,7 @@ let layout = false;
 const setup = (variant: string, withLayout: boolean): void => {
   if (!Object.hasOwn(variants, variant)) throw new Error(`Unknown variant: ${variant}`);
   layout = withLayout;
-  list(tbody, items, "id", variants[variant]());
+  variants[variant]();
 };
 
 const reset = (count: number): void => {

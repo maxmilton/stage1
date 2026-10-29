@@ -2,8 +2,8 @@
 // oxlint-disable vitest/no-conditional-in-test
 
 import { describe, expect, expectTypeOf, test } from "bun:test";
-import { list } from "../../src/ng/reconcile.ts";
-import { set, signal, type Signal } from "../../src/ng/signal.ts";
+import { type List, list, mark } from "../../src/ng/reconcile.ts";
+import { batch, set, signal, type Signal, sub } from "../../src/ng/signal.ts";
 
 interface Item {
   readonly id: string;
@@ -41,7 +41,11 @@ const itemOrder = (parent: Element): readonly string[] =>
 /** Renders `items` into a new parent; returns the parent, the items signal and the list's dispose. */
 const render = (
   items: readonly Item[],
-): [parent: HTMLDivElement, items: Signal<readonly Item[]>, dispose: () => void] => {
+): [
+  parent: HTMLDivElement,
+  items: Signal<readonly Item[]>,
+  dispose: List<string, HTMLSpanElement>,
+] => {
   const parent = document.createElement("div");
   const source = signal(items);
   const dispose = list(parent, source, "id", createItemNode, updateItemNode);
@@ -102,16 +106,20 @@ describe("list", () => {
     expect.assertions(0);
     expectTypeOf(list).not.toBeAny();
     expectTypeOf(list).toBeFunction();
-    expectTypeOf(list<Item, HTMLSpanElement>).parameters.toEqualTypeOf<
+    expectTypeOf(list<Item, "id", HTMLSpanElement>).parameters.toEqualTypeOf<
       [
         parent: Element,
         items: Signal<readonly Item[]>,
-        key: keyof Item,
+        key: "id",
         create: (item: Item, own: (dispose: () => void) => void) => HTMLSpanElement,
         update?: ((node: HTMLSpanElement, item: Item) => void) | undefined,
       ]
     >();
-    expectTypeOf(list<Item, HTMLSpanElement>).returns.toEqualTypeOf<() => void>();
+    // The dispose function, which mark also takes
+    expectTypeOf(list<Item, "id", HTMLSpanElement>).returns.toExtend<() => void>();
+    expectTypeOf(list<Item, "id", HTMLSpanElement>).returns.toEqualTypeOf<
+      List<string, HTMLSpanElement>
+    >();
     // Unannotated callbacks infer the item type from the signal and the node type from create.
     expectTypeOf((parent: Element) => {
       list(
@@ -128,6 +136,10 @@ describe("list", () => {
           expectTypeOf(item).toEqualTypeOf<Item>();
         },
       );
+      // The key's type comes from the key passed
+      expectTypeOf(list(parent, signal(ITEMS), "id", createItemNode)).toEqualTypeOf<
+        List<string, HTMLSpanElement>
+      >();
       // @ts-expect-error - key must be a property of the items
       list(parent, signal(ITEMS), "missing", createItemNode);
     }).toBeFunction();
@@ -581,5 +593,310 @@ describe("list", () => {
     innerCreates = 0;
     set(inner, [ITEMS[2]]);
     expect(innerCreates).toBe(0);
+  });
+});
+
+/** The data ids of the nodes `fn` marked, in order. */
+const markedIds = (nodes: Iterable<Element>): readonly string[] =>
+  [...nodes]
+    .filter((node) => node.className === "on")
+    .map((node) => (node as HTMLElement).dataset["id"] ?? "");
+
+/** A mark callback that sets a class on the node and records each call as [data id, on]. */
+const recorder = (): [calls: [string, boolean][], fn: (node: HTMLElement, on: boolean) => void] => {
+  const calls: [string, boolean][] = [];
+  return [
+    calls,
+    (node, on) => {
+      calls.push([node.dataset["id"] ?? "", on]);
+      node.className = on ? "on" : "";
+    },
+  ];
+};
+
+/** A list of `items` in a new parent, for marks that need only its rows. */
+const rowsOf = (items: readonly Item[]): List<string, HTMLSpanElement> =>
+  list(document.createElement("div"), signal(items), "id", createItemNode);
+
+/** A map from each letter to an element with that data id, all in one parent unless `detached`. */
+const elements = (ids: string, detached = false): Map<string, HTMLSpanElement> => {
+  const nodes = new Map(ids.split("").map((id) => [id, createItemNode({ id, label: id })]));
+  if (!detached) document.createElement("div").append(...nodes.values());
+  return nodes;
+};
+
+describe("mark", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf(mark).not.toBeAny();
+    expectTypeOf(mark).toBeFunction();
+    expectTypeOf(mark<string, HTMLSpanElement>).parameters.toEqualTypeOf<
+      [
+        source: Signal<string>,
+        nodes:
+          | List<string, HTMLSpanElement>
+          // oxlint-disable-next-line typescript/method-signature-style
+          | { get(key: string): HTMLSpanElement | undefined },
+        fn: (node: HTMLSpanElement, on: boolean) => void,
+      ]
+    >();
+    expectTypeOf(mark<string, HTMLSpanElement>).returns.toEqualTypeOf<() => void>();
+    // Unannotated callbacks infer the node type from the list or the map; the
+    // signal sets the key type, so a map may hold only some keys.
+    expectTypeOf((parent: Element) => {
+      const rows = list(parent, signal(ITEMS), "id", createItemNode);
+      mark(signal(""), rows, (node, on) => {
+        expectTypeOf(node).toEqualTypeOf<HTMLSpanElement>();
+        expectTypeOf(on).toEqualTypeOf<boolean>();
+      });
+      mark(signal<"x" | "y">("x"), new Map([["x", document.createElement("b")]]), (node) => {
+        expectTypeOf(node).toEqualTypeOf<HTMLElement>();
+      });
+      // @ts-expect-error - the selection's keys have the list's key type
+      mark(signal(0), rows, () => {});
+      // @ts-expect-error - the map's keys must take the selection's keys
+      mark(signal(""), new Map([[1, document.createElement("b")]]), () => {});
+    }).toBeFunction();
+  });
+
+  test("marks the selected key's row at once", () => {
+    expect.assertions(1);
+    const rows = rowsOf(ITEMS);
+    const [calls, fn] = recorder();
+    mark(signal("b"), rows, fn);
+    expect(calls).toEqual([["b", true]]);
+  });
+
+  test("unmarks the old row and marks the new one when the selection changes", () => {
+    expect.assertions(1);
+    const rows = rowsOf(ITEMS);
+    const selected = signal("b");
+    const [calls, fn] = recorder();
+    mark(selected, rows, fn);
+    calls.length = 0;
+    set(selected, "c");
+    expect(calls).toEqual([
+      ["b", false],
+      ["c", true],
+    ]);
+  });
+
+  test("marks nothing when no row has the selected key", () => {
+    expect.assertions(1);
+    const rows = rowsOf(ITEMS);
+    const [calls, fn] = recorder();
+    mark(signal("z"), rows, fn);
+    expect(calls).toEqual([]);
+  });
+
+  test("calls nothing for rows created with unselected keys", () => {
+    expect.assertions(1);
+    const [, items, rows] = render(ITEMS);
+    const [calls, fn] = recorder();
+    mark(signal("z"), rows, fn);
+    set(items, [...ITEMS, ...lettered("xy")]);
+    expect(calls).toEqual([]);
+  });
+
+  test("marks a row created while its key is selected", () => {
+    expect.assertions(1);
+    const [, items, rows] = render(ITEMS);
+    const [calls, fn] = recorder();
+    mark(signal("e"), rows, fn);
+    set(items, [...ITEMS, ...lettered("e")]);
+    expect(calls).toEqual([["e", true]]);
+  });
+
+  test("unmarks a row marked as it was created when the selection moves", () => {
+    expect.assertions(1);
+    const [parent, items, rows] = render(ITEMS);
+    const selected = signal("e");
+    const [, fn] = recorder();
+    mark(selected, rows, fn);
+    set(items, [...ITEMS, ...lettered("e")]);
+    set(selected, "a");
+    expect(markedIds(parent.children)).toEqual(["a"]);
+  });
+
+  test("never passes a removed row to fn", () => {
+    expect.assertions(1);
+    const [, items, rows] = render(ITEMS);
+    const selected = signal("b");
+    const [calls, fn] = recorder();
+    mark(selected, rows, fn);
+    set(
+      items,
+      ITEMS.filter((item) => item.id !== "b"),
+    );
+    calls.length = 0;
+    set(selected, "c");
+    expect(calls).toEqual([["c", true]]);
+  });
+
+  test("calls nothing when notified of an unchanged value", () => {
+    expect.assertions(1);
+    const rows = rowsOf(ITEMS);
+    const selected = signal("a");
+    const [calls, fn] = recorder();
+    mark(selected, rows, fn);
+    calls.length = 0;
+    // A sink subscribed during the batch makes it notify, though it restores the value
+    batch(() => {
+      set(selected, "b");
+      sub(selected, () => {});
+      set(selected, "a");
+    });
+    expect(calls).toEqual([]);
+  });
+
+  test("marks the right row after many selections and then a list change", () => {
+    expect.assertions(1);
+    const [parent, items, rows] = render(lettered("abcdefghijklmnop"));
+    const selected = signal("a");
+    const [, fn] = recorder();
+    mark(selected, rows, fn);
+    // More selections than mark answers by scanning, while the list stays the same
+    for (const id of "bcdefghijklm") set(selected, id);
+    set(items, [...items.v.filter((item) => item.id !== "c"), ...lettered("q")]);
+    set(selected, "q");
+    expect(markedIds(parent.children)).toEqual(["q"]);
+  });
+
+  test("leaves only the new row marked when a batch adds a row and then selects it", () => {
+    expect.assertions(1);
+    const [parent, items, rows] = render(ITEMS);
+    const selected = signal("a");
+    const [, fn] = recorder();
+    mark(selected, rows, fn);
+    batch(() => {
+      set(items, [...ITEMS, ...lettered("e")]);
+      set(selected, "e");
+    });
+    expect(markedIds(parent.children)).toEqual(["e"]);
+  });
+
+  test("marks the restored key's row when created during a batch that restores the value", () => {
+    expect.assertions(1);
+    const [parent, , rows] = render(ITEMS);
+    const selected = signal("a");
+    sub(selected, () => {});
+    const [, fn] = recorder();
+    batch(() => {
+      set(selected, "b");
+      mark(selected, rows, fn);
+      set(selected, "a");
+    });
+    expect(markedIds(parent.children)).toEqual(["a"]);
+  });
+
+  test("leaves only the final row marked when fn changes the selection mid-change", () => {
+    expect.assertions(1);
+    const [parent, , rows] = render(ITEMS);
+    const selected = signal("a");
+    const [, paint] = recorder();
+    mark(selected, rows, (node, on) => {
+      paint(node, on);
+      if (node.dataset["id"] === "a" && !on) set(selected, "c");
+    });
+    set(selected, "b");
+    expect(markedIds(parent.children)).toEqual(["c"]);
+  });
+
+  test("stops following the selection once stopped", () => {
+    expect.assertions(1);
+    const rows = rowsOf(ITEMS);
+    const selected = signal("a");
+    const [calls, fn] = recorder();
+    const stop = mark(selected, rows, fn);
+    stop();
+    calls.length = 0;
+    set(selected, "b");
+    expect(calls).toEqual([]);
+  });
+
+  test("stops marking new rows once stopped", () => {
+    expect.assertions(1);
+    const [, items, rows] = render(ITEMS);
+    const [calls, fn] = recorder();
+    mark(signal("e"), rows, fn)();
+    set(items, [...ITEMS, ...lettered("e")]);
+    expect(calls).toEqual([]);
+  });
+
+  test("marks a map's element for the selected key at once", () => {
+    expect.assertions(1);
+    const [calls, fn] = recorder();
+    mark(signal("b"), elements("abc"), fn);
+    expect(calls).toEqual([["b", true]]);
+  });
+
+  test("unmarks the old map element and marks the new one when the selection changes", () => {
+    expect.assertions(1);
+    const selected = signal("b");
+    const [calls, fn] = recorder();
+    mark(selected, elements("abc"), fn);
+    calls.length = 0;
+    set(selected, "c");
+    expect(calls).toEqual([
+      ["b", false],
+      ["c", true],
+    ]);
+  });
+
+  test("only unmarks when the map lacks the selected key", () => {
+    expect.assertions(1);
+    const selected = signal("a");
+    const [calls, fn] = recorder();
+    mark(selected, elements("abc"), fn);
+    calls.length = 0;
+    set(selected, "z");
+    expect(calls).toEqual([["a", false]]);
+  });
+
+  test("lets several marks share one map and one signal", () => {
+    expect.assertions(1);
+    const tabs = elements("ab");
+    const selected = signal("a");
+    const seen: string[] = [];
+    mark(selected, tabs, (node, on) => {
+      seen.push(`first ${node.dataset["id"]} ${on}`);
+    });
+    mark(selected, tabs, (node, on) => {
+      seen.push(`second ${node.dataset["id"]} ${on}`);
+    });
+    seen.length = 0;
+    set(selected, "b");
+    expect(seen.toSorted((x, y) => x.localeCompare(y))).toEqual([
+      "first a false",
+      "first b true",
+      "second a false",
+      "second b true",
+    ]);
+  });
+
+  test("unmarks a map's element that has no parent", () => {
+    expect.assertions(1);
+    const selected = signal("a");
+    const [calls, fn] = recorder();
+    mark(selected, elements("ab", true), fn);
+    calls.length = 0;
+    set(selected, "b");
+    expect(calls).toEqual([
+      ["a", false],
+      ["b", true],
+    ]);
+  });
+
+  test("leaves only the final map element marked when fn changes the selection mid-change", () => {
+    expect.assertions(1);
+    const tabs = elements("abc");
+    const selected = signal("a");
+    const [, paint] = recorder();
+    mark(selected, tabs, (node, on) => {
+      paint(node, on);
+      if (node.dataset["id"] === "a" && !on) set(selected, "c");
+    });
+    set(selected, "b");
+    expect(markedIds(tabs.values())).toEqual(["c"]);
   });
 });

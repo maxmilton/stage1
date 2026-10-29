@@ -4,6 +4,7 @@ import * as fastExports from "../../src/fast/index.ts";
 import * as indexExports from "../../src/index.ts";
 import * as macroExports from "../../src/macro.ts";
 import * as ngExports from "../../src/ng/index.ts";
+import type { List } from "../../src/ng/reconcile.ts";
 import type { Signal } from "../../src/ng/signal.ts";
 import * as keyedExports from "../../src/reconcile/keyed.ts";
 import * as nonKeyedExports from "../../src/reconcile/non-keyed.ts";
@@ -166,6 +167,7 @@ describe("ng", () => {
     expectTypeOf<ngExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
     expectTypeOf<ngExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
     expectTypeOf<ngExports.Signal<number>>().toEqualTypeOf<Signal<number>>();
+    expectTypeOf<ngExports.List<number, Element>>().toEqualTypeOf<List<number, Element>>();
   });
 
   const publicExports = [
@@ -176,6 +178,7 @@ describe("ng", () => {
     ["setupSyntheticClick", "Function"],
     ["removeSyntheticClick", "Function"],
     ["list", "Function"],
+    ["mark", "Function"],
     ["signal", "Function"],
     ["get", "Function"],
     ["set", "Function"],

@@ -16,7 +16,7 @@ const roundsArg = args.find((arg) => arg.startsWith("--rounds="));
 const ROUNDS = roundsArg ? Number(roundsArg.slice("--rounds=".length)) : 6;
 if (!Number.isInteger(ROUNDS) || ROUNDS < 1) throw new Error(`Invalid ${roundsArg}`);
 const variants = args.filter((arg) => !arg.startsWith("--"));
-if (variants.length === 0) variants.push("none", "selector", "mapper");
+if (variants.length === 0) variants.push("none", "mark");
 
 const start = performance.now();
 const out = await Bun.build({ entrypoints: [`${import.meta.dir}/page.ts`], minify: true });

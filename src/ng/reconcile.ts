@@ -17,6 +17,25 @@ const CLEANUPS = Symbol();
 
 type Row = ChildNode & { [CLEANUPS]?: (() => void)[] };
 
+/** What `mark` reaches a list through, kept on the list's dispose function. */
+const ROWS = Symbol();
+
+/**
+ * Sets the list's one callback for new rows and returns its items' key and
+ * getters for its items and rows, in the same order. The lookup lives in
+ * `mark`, so a list without one ships none of it.
+ */
+type Attach<K, N> = (
+  created?: (key: K, row: N) => void,
+) => [
+  key: PropertyKey,
+  items: () => readonly Record<PropertyKey, unknown>[],
+  rows: () => readonly N[],
+];
+
+/** A list's dispose function, which `mark` also takes to reach its rows. */
+export type List<K, N> = (() => void) & { readonly [ROWS]: Attach<K, N> };
+
 // Cleanups registered by the create call in progress
 let collected: (() => void)[] | undefined;
 
@@ -60,21 +79,24 @@ const markLIS = (a: Int32Array): void => {
  * Renders a row per item into `parent` and keeps the rows in step with
  * `items`, matching them by `key`. `update` runs on a kept row whose item is a
  * new object; `own` registers a cleanup to run when the row is removed. The
- * returned function stops the list and runs every row's cleanups.
+ * returned function stops the list and runs every row's cleanups; pass it to
+ * `mark` to highlight a row by key.
  */
-export const list = <T, N extends ChildNode>(
+export const list = <T, K extends keyof T, N extends ChildNode>(
   parent: Element,
   items: Signal<readonly T[]>,
-  key: keyof T,
+  key: K,
   create: (item: T, own: (dispose: () => void) => void) => N,
   update: (node: N, item: T) => void = noop,
-): (() => void) => {
+): List<T[K], N> => {
   // An undefined reference node appends, as for null
   const insert = parent.insertBefore.bind(parent) as (node: N, before?: N) => N;
   let data: readonly T[] = [];
   let rows: N[] = [];
   // Rows holding cleanups, so clearing can skip the walk when there are none
   let owners = 0;
+  // The mark's callback for new rows
+  let created: ((key: T[K], row: N) => void) | undefined;
 
   const make = (item: T): N => {
     const outer = collected;
@@ -86,6 +108,7 @@ export const list = <T, N extends ChildNode>(
         (node as Row)[CLEANUPS] = collected;
         owners++;
       }
+      if (created) created(item[key], node);
       return node;
     } finally {
       collected = outer;
@@ -205,8 +228,96 @@ export const list = <T, N extends ChildNode>(
     data = next;
   });
 
-  return () => {
+  const dispose = (): void => {
     unsubscribe();
     releaseAll();
+  };
+  (dispose as { [ROWS]?: Attach<T[K], N> })[ROWS] = (fn) => {
+    created = fn;
+    return [key, () => data as readonly Record<PropertyKey, unknown>[], () => rows];
+  };
+  return dispose as List<T[K], N>;
+};
+
+/** Lookups since a list last changed before `mark` builds a key map for the rest. */
+const SCANS = 8;
+
+/**
+ * Marks the element whose key is `source`'s value: `fn(node, true)` marks it,
+ * and when `source` changes, `fn(node, false)` unmarks it and the new key's
+ * element is marked. `nodes` is a `list` (its dispose function) or any map from
+ * key to element with `get`, such as a `Map`.
+ *
+ * - A list's rows start unmarked, and a row created while its key is selected is marked as it is
+ *   created. Nothing is registered per row, so the list creates and clears rows at full speed. One
+ *   mark per list; `fn` never runs for a removed row.
+ * - A map's elements must be in it before their key is selected.
+ *
+ * The returned function stops marking.
+ */
+export const mark = <K, N extends ChildNode>(
+  source: Signal<K>,
+  // The keys' type comes from `source`, so a map may hold only some of them; a
+  // method, as on Map, so a map typed with fewer keys is still accepted
+  // oxlint-disable-next-line typescript/method-signature-style
+  nodes: List<NoInfer<K>, N> | { get(key: NoInfer<K>): N | undefined },
+  fn: (node: N, on: boolean) => void,
+): (() => void) => {
+  // The value the sink has seen, which in a batch can differ from `source.v`
+  let shown = source.v;
+  let lit: N | undefined;
+  let find: (key: K) => N | undefined;
+  let attach: Attach<K, N> | undefined;
+  if (ROWS in nodes) {
+    attach = nodes[ROWS];
+    const [key, items, rows] = attach((k, row) => {
+      if (Object.is(k, shown)) {
+        lit = row;
+        fn(row, true);
+      }
+    });
+    // A lookup scans the rows until the list has gone SCANS lookups without
+    // changing; then a key map, built once, serves the rest until it changes.
+    // Measured in Chromium, building a map costs as much as 5 to 56 scans.
+    let seen: unknown;
+    let scans = 0;
+    let map: Map<unknown, N> | undefined;
+    find = (k) => {
+      const data = items();
+      const all = rows();
+      if (data !== seen) {
+        seen = data;
+        scans = 0;
+        map = undefined;
+      }
+      if (!map && ++scans > SCANS) {
+        map = new Map();
+        for (let i = 0; i < data.length; i++) map.set(data[i][key], all[i]);
+      }
+      if (map) return map.get(k);
+      let i = 0;
+      while (i < data.length && data[i][key] !== k) i++;
+      // Past the last row when no item has the key
+      return all[i];
+    };
+  } else {
+    find = (k) => nodes.get(k);
+  }
+  lit = find(shown);
+  if (lit) fn(lit, true);
+  const unsubscribe = sub(source, (k) => {
+    if (Object.is(k, shown)) return;
+    shown = k;
+    const old = lit;
+    lit = find(k);
+    // A row the list removed has no parent; a map's elements are always unmarked
+    if (old && (!attach || old.parentNode)) fn(old, false);
+    // `lit`, not a local: if that call changed the selection again, this
+    // re-marks the newest element rather than marking a stale one
+    if (lit) fn(lit, true);
+  });
+  return () => {
+    unsubscribe();
+    attach?.();
   };
 };
