@@ -66,7 +66,7 @@ for (const { section, cases } of testSuite.filter((s) => s.type !== "behavioral"
           expect.hasAssertions();
           expect(() => {
             fn(ng);
-          }).toThrow("expect(received)");
+          }).toThrow(/^\S*expect\(\S*received/u); // \S* skips ANSI colours on a TTY
         });
       } else if (NO_THROW.has(name)) {
         test(name, () => {
