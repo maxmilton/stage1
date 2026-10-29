@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, test } from "bun:test";
-import { selector } from "../../src/ng/signal-utils.ts";
+import { selector } from "../../src/ng/composables.ts";
 import { set, signal, type Signal } from "../../src/ng/signal.ts";
 
 describe("selector", () => {

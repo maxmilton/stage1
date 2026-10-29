@@ -180,7 +180,6 @@ describe("ng", () => {
     ["get", "Function"],
     ["set", "Function"],
     ["sub", "Function"],
-    ["selector", "Function"],
     ["batch", "Function"],
     ["computed", "Function"],
     ["effect", "Function"],
