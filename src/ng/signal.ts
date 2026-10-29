@@ -155,43 +155,6 @@ export const sub = <T>(s: Signal<T>, fn: (value: T) => void): (() => void) => {
   return dispose;
 };
 
-/**
- * Selection by key: `select(key, fn)` calls `fn(selected)` now and whenever
- * `key` becomes or stops being `source`'s value. A change calls only the old
- * and new keys' callbacks, however many keys there are. One callback per key;
- * `source` is subscribed only while some key is.
- */
-export const selector = <K>(
-  source: Signal<K>,
-): ((key: K, fn: (selected: boolean) => void) => () => void) => {
-  const fns = new Map<K, (selected: boolean) => void>();
-  let current: K;
-  let unsubscribe: (() => void) | undefined;
-  const move = (value: K): void => {
-    if (Object.is(value, current)) return;
-    const prev = current;
-    current = value;
-    fns.get(prev)?.(false);
-    fns.get(value)?.(true);
-  };
-  return (key, fn) => {
-    fn(Object.is(key, source.v));
-    fns.set(key, fn);
-    if (!unsubscribe) {
-      current = source.v;
-      unsubscribe = sub(source, move);
-    }
-    return () => {
-      if (fns.get(key) !== fn) return;
-      fns.delete(key);
-      if (!fns.size) {
-        unsubscribe!();
-        unsubscribe = undefined;
-      }
-    };
-  };
-};
-
 /** Calls `fn(arg)`; returns `error` unless that is NONE and `fn` threw. */
 const attempt = <A>(fn: (arg: A) => void, arg: A, error: unknown): unknown => {
   try {
