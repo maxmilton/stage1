@@ -113,8 +113,10 @@ export const list = <T, N extends ChildNode>(
     const host = next.length > 0 && parent.isConnected ? parent.parentNode : null;
     const after = parent.nextSibling;
     if (host) parent.remove();
-    const built = new Array<N>(next.length);
-    for (let i = 0; i < next.length; i++) parent.appendChild((built[i] = make(next[i])));
+    // make takes only the item, so map's index and array arguments are ignored
+    // oxlint-disable-next-line unicorn/no-array-callback-reference
+    const built = next.map(make);
+    for (const row of built) parent.appendChild(row);
     if (host) host.insertBefore(parent, after);
     return built;
   };
