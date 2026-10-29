@@ -209,3 +209,12 @@ describe.each(reconcilers)("reconcile/%s", (_reconciler, exports) => {
     expect(exports).not.toHaveProperty("default");
   });
 });
+
+test.each(["keyed", "non-keyed", "reuse-nodes"])(
+  "package reconciler export %s resolves",
+  async (name) => {
+    expect.assertions(1);
+    const entry = (await import(`stage1/reconcile/${name}`)) as { reconcile: unknown };
+    expect(entry.reconcile).toBeInstanceOf(Function);
+  },
+);

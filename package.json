@@ -35,20 +35,10 @@
       "import": "./dist/browser.mjs",
       "require": "./dist/browser.js"
     },
-    "./reconcile/keyed": {
+    "./reconcile/*": {
       "types": "./dist/index.d.ts",
-      "bun": "./src/reconcile/keyed.ts",
-      "default": "./dist/reconcile/keyed.js"
-    },
-    "./reconcile/non-keyed": {
-      "types": "./dist/index.d.ts",
-      "bun": "./src/reconcile/non-keyed.ts",
-      "default": "./dist/reconcile/non-keyed.js"
-    },
-    "./reconcile/reuse-nodes": {
-      "types": "./dist/index.d.ts",
-      "bun": "./src/reconcile/reuse-nodes.ts",
-      "default": "./dist/reconcile/reuse-nodes.js"
+      "bun": "./src/reconcile/*.ts",
+      "default": "./dist/reconcile/*.js"
     },
     "./fast": "./src/fast/index.ts",
     "./dist/*": "./dist/*",
