@@ -1,7 +1,6 @@
 // Process-wide test state; safe only while tests touching these globals run serially.
 
 // oxlint-disable vitest/require-hook
-/* eslint-disable unicorn/no-global-object-property-assignment */
 
 import "@maxmilton/test-utils/extend";
 import { setupDOM } from "@maxmilton/test-utils/dom";

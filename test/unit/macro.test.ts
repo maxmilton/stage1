@@ -1,5 +1,3 @@
-/* eslint-disable unicorn/prefer-literal-ascii */
-
 import { describe, expect, expectTypeOf, onTestFinished, spyOn, test } from "bun:test";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import {
@@ -376,7 +374,6 @@ describe("compile", () => {
   });
 
   // HTMLRewriter lowercases attribute names, so a node ref name can't be non-lowercase.
-  // eslint-disable-next-line array-bracket-spacing
   test.each([/* html */ "<div @Foo></div>", /* html */ "<div @fOo></div>"])(
     "lowercases the node ref name in %j",
     (template) => {
@@ -690,7 +687,6 @@ describe("compile", () => {
     });
 
     // Characterization: per the WHATWG comment start states these never close, so the comment runs to the end.
-    // eslint-disable-next-line array-bracket-spacing
     test.each([/* html */ "<div><!---!></div>", /* html */ "<div><!--!></div>"])(
       "removes the rest of the template after the unclosed comment in %j",
       (template) => {
@@ -1374,7 +1370,6 @@ describe("compile", () => {
     });
 
     const invalidRefs: [template: string, name: string][] = [
-      /* eslint-disable array-bracket-spacing */
       // spaces
       [/* html */ "<div>@a and more</div>", "a and more"],
       [/* html */ "<div><!-- @a and more --></div>", "a and more"],
@@ -1479,7 +1474,6 @@ describe("compile", () => {
       [/* html */ "@🙂", "🙂"],
       [/* html */ "<div><!-- @🙂 --></div>", "🙂"],
       [/* html */ "<!-- @🙂 -->", "🙂"],
-      /* eslint-enable array-bracket-spacing */
     ];
 
     test.each(invalidRefs)("logs error for invalid ref name in %j", (template, name) => {
@@ -1672,13 +1666,11 @@ describe("HTMLRewriter", () => {
     });
 
     test.each([
-      /* eslint-disable array-bracket-spacing */
       [/* html */ "<div>a &lt; b</div>"],
       [/* html */ "<div>a && b</div>"],
       [/* html */ "<div>a --> b</div>"],
       [/* html */ "<div>a </ b</div>"],
       [/* html */ "<div>a <! b</div>"],
-      /* eslint-enable array-bracket-spacing */
     ])("does not split %j", (template) => {
       expect.assertions(1);
       let chunks = 0;
@@ -1790,14 +1782,12 @@ describe("HTMLRewriter", () => {
 
     // compile() guards onEndTag on canHaveContent alone; the last two rows show selfClosing doesn't predict the throw.
     test.each([
-      /* eslint-disable array-bracket-spacing */
       [/* html */ "<div></div>", true, false, false],
       [/* html */ "<input>", false, false, true],
       [/* html */ "<br>", false, false, true],
       [/* html */ "<svg/>", false, true, true],
       [/* html */ "<div/>", true, true, false],
       [/* html */ "<p/>", true, true, false],
-      /* eslint-enable array-bracket-spacing */
     ])(
       "%j: canHaveContent %p, selfClosing %p, onEndTag throws %p",
       (template, canHaveContent, selfClosing, shouldThrow) => {
@@ -1906,11 +1896,9 @@ describe("HTMLRewriter", () => {
     });
 
     test.each([
-      /* eslint-disable array-bracket-spacing */
       [/* html */ "<!DOCTYPE html><div></div>"],
       [/* html */ "<div><!DOCTYPE html></div>"],
       [/* html */ "<div></div><!DOCTYPE html>"],
-      /* eslint-enable array-bracket-spacing */
     ])("reports a doctype in %j", (template) => {
       expect.assertions(1);
       let found = 0;

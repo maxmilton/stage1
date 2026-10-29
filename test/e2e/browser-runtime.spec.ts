@@ -147,7 +147,6 @@ test.describe("collect", () => {
       // Accepted tradeoff: live mode reads any text starting with "@" as a ref; guarding <style> costs bytes.
       template: /* html */ "<div><style>@media print{a{b:c}}</style></div>",
       field: "keys",
-      // eslint-disable-next-line array-bracket-spacing
       expected: [/* css */ "media print{a{b:c}}"],
     },
     {

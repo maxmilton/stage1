@@ -36,7 +36,6 @@ const collector = /*@__NOINLINE__*/ (node: Node): string | undefined => {
   }
 
   str = node.nodeValue;
-  // eslint-disable-next-line unicorn/prefer-early-return
   if (str && str[0] === "@") {
     node.nodeValue = "";
     return str.slice(1);
