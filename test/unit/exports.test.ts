@@ -218,3 +218,12 @@ test.each(["keyed", "non-keyed", "reuse-nodes"])(
     expect(entry.reconcile).toBeInstanceOf(Function);
   },
 );
+
+// Bun resolves keyed.js to keyed.ts, so it cannot be asserted as an invalid path here.
+test.each(["keyed.ts", "notarealpath"])(
+  "package reconciler export %s rejects an invalid path",
+  (name) => {
+    expect.assertions(1);
+    expect(import(`stage1/reconcile/${name}`)).rejects.toThrow();
+  },
+);
