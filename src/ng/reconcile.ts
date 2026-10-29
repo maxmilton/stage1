@@ -6,7 +6,6 @@
 // placed right to left around the longest run of rows that kept their order,
 // so no row moves unless it has to.
 
-/* eslint-disable @typescript-eslint/no-unnecessary-condition, unicorn/prefer-continue, unicorn/prefer-early-return, unicorn/prefer-simple-condition-first */
 // oxlint-disable id-length no-bitwise no-continue oxclippy/excessive-nesting oxclippy/similar-names
 
 import { type Signal, sub } from "./signal.ts";

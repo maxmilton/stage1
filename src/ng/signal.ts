@@ -12,7 +12,6 @@
 // Property names are short because minifiers keep them as written.
 
 // Bit flags, labelled loops and chained assignments are alien-signals' own, kept as is.
-/* eslint-disable unicorn/prefer-early-return, unicorn/prefer-simple-condition-first */
 // oxlint-disable id-length no-bitwise no-continue no-labels no-multi-assign oxclippy/never-loop
 // oxlint-disable no-param-reassign no-use-before-define typescript/no-non-null-assertion
 // oxlint-disable typescript/prefer-optional-chain max-depth unicorn/explicit-length-check

@@ -2,7 +2,7 @@
 // oxlint-disable vitest/no-conditional-in-test
 
 import { describe, expect, expectTypeOf, test } from "bun:test";
-import { list } from "../../src/ng/reconciler.ts";
+import { list } from "../../src/ng/reconcile.ts";
 import { set, signal, type Signal } from "../../src/ng/signal.ts";
 
 interface Item {

@@ -19,7 +19,6 @@ export const reconcile = <T, N extends Node>(
   }
   while (node) {
     next = node.nextSibling;
-    // eslint-disable-next-line unicorn/prefer-dom-node-remove
     parent.removeChild(node);
     node = next;
   }
