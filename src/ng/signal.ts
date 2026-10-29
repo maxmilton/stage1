@@ -268,7 +268,7 @@ const write = (s: SignalNode, prev: unknown): void => {
 /**
  * Defers sinks and effects until `fn` returns; nested batches, including one a sink
  * starts as the outermost ends, wait for the outermost. As it ends, a write to a
- * signal it has yet to notify joins it.
+ * signal it has yet to notify joins it. The order its signals' sinks run in is unspecified.
  */
 export const batch = (fn: () => void): void => {
   install();
@@ -284,11 +284,14 @@ export const batch = (fn: () => void): void => {
         activeSub = undefined;
         // Writes by sinks see a batch, so one to a signal not yet reached joins it
         batchDepth = ending = 1;
-        for (let i = 0; i < pairs.length; i += 2) {
-          const s = pairs[i] as SignalNode;
+        // Popped as notified: one pass, last written first. Measured: popping keeps V8's
+        // backing store, where `length = 0` drops it and the next batch regrows it
+        while (pairs.length) {
+          const prev = pairs.pop();
+          const s = pairs.pop() as SignalNode;
           const flags = s.f;
           s.f = flags & ~(QUEUED | LATE);
-          if (flags & LATE || !Object.is(pairs[i + 1], s.v)) {
+          if (flags & LATE || !Object.is(prev, s.v)) {
             try {
               notify(s);
             } catch (error) {
@@ -297,9 +300,6 @@ export const batch = (fn: () => void): void => {
           }
         }
         batchDepth = ending = 0;
-        // Measured: popping keeps V8's backing store, where `length = 0` drops it and the
-        // next batch regrows it (2.3x faster for one signal); JSC prefers truncating
-        while (pairs.length) pairs.pop();
         activeSub = prevSub;
       }
       flush();

@@ -1120,8 +1120,8 @@ describe("batch", () => {
       seen.push(value);
     });
     batch(() => {
-      set(a, 1);
       set(b, 1);
+      set(a, 1);
     });
     expect(seen).toEqual([0, 2]);
   });
@@ -1138,8 +1138,8 @@ describe("batch", () => {
       seen.push(value);
     });
     batch(() => {
-      set(a, 1);
       set(b, 1);
+      set(a, 1);
     });
     expect(seen).toEqual([0]);
   });
@@ -1160,8 +1160,8 @@ describe("batch", () => {
       seen.push(value);
     });
     batch(() => {
-      set(a, 1);
       set(b, 1);
+      set(a, 1);
     });
     expect(seen).toEqual([0, 2]);
   });
@@ -1232,8 +1232,8 @@ describe("batch", () => {
       }
     });
     batch(() => {
-      set(b, 1);
       set(a, 1);
+      set(b, 1);
     });
     expect(seenBySink).toEqual([0, 1, 2]);
   });
