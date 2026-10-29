@@ -4,7 +4,8 @@
 // markup) cannot be mistaken for rows. Rows matched at either end are kept, a
 // row that crossed to the other end is moved there directly, and the rest are
 // placed right to left around the longest run of rows that kept their order,
-// so no row moves unless it has to.
+// so no row moves unless it has to. New rows with no others left to place go
+// in in order.
 
 // oxlint-disable id-length no-bitwise no-continue oxclippy/excessive-nesting oxclippy/similar-names
 
@@ -159,7 +160,9 @@ export const list = <T, N extends ChildNode>(
     }
 
     if (aStart > aEnd) {
-      for (let i = bEnd; i >= bStart; i--) insert((result[i] = make(next[i])), result[i + 1]);
+      // In order before one node, so an append inserts before no row: in Chromium,
+      // inserting before a row makes `:nth-*` rules restyle every row
+      for (let i = bStart; i <= bEnd; i++) insert((result[i] = make(next[i])), result[bEnd + 1]);
     } else if (bStart > bEnd) {
       for (let i = aStart; i <= aEnd; i++) drop(rows[i]);
     } else {

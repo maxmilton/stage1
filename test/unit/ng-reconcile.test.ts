@@ -200,6 +200,16 @@ describe("list", () => {
     ).toEqual(["h"]);
   });
 
+  test("appends new rows at the end in order", () => {
+    expect.assertions(1);
+    const [parent, items] = render(lettered("abc"));
+    expect(
+      insertedIds(parent, () => {
+        set(items, lettered("abcdef"));
+      }),
+    ).toEqual(["d", "e", "f"]);
+  });
+
   test("moves the fewest rows when no end matches", () => {
     expect.assertions(1);
     const [parent, items] = render(lettered("abcdefghij"));

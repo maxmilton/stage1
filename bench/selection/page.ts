@@ -30,7 +30,9 @@ const paint = (tr: HTMLElement, selected: boolean): void => {
 };
 
 const style = document.createElement("style");
-style.textContent = ".danger{background:#f88}td{padding:2px 6px}";
+// The striped rows mirror js-framework-benchmark's bootstrap `table-striped`
+style.textContent =
+  ".danger{background:#f88}td{padding:2px 6px}tbody>tr:nth-of-type(odd){background:#f9f9f9}";
 document.head.append(style);
 const table = document.createElement("table");
 const tbody = document.createElement("tbody");
