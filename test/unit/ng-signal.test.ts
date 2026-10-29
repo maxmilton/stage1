@@ -294,6 +294,82 @@ describe.each([
     }).toThrow();
     expect(calls).toEqual([2, 2]);
   });
+
+  test("set throws the first error when several sinks throw", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    let calls = 0;
+    const fail = (value: number): void => {
+      if (value) throw new Error(calls++ ? "later sink failed" : "first sink failed");
+    };
+    ng.sub(s, fail);
+    ng.sub(s, fail);
+    expect(() => {
+      ng.set(s, 1);
+    }).toThrow("first sink failed");
+  });
+
+  test("a set inside a sink throws that set's first error into the sink", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    const t = ng.signal(0);
+    ng.sub(t, (value) => {
+      if (value) throw new Error("t failed");
+    });
+    // On both sides and throwing once, so a sink has thrown before the nested set in either order
+    let failed = false;
+    const fail = (value: number): void => {
+      if (!value || failed) return;
+      failed = true;
+      throw new Error("s failed");
+    };
+    ng.sub(s, fail);
+    let caught: unknown;
+    ng.sub(s, (value) => {
+      if (!value) return;
+      try {
+        ng.set(t, value);
+      } catch (error) {
+        caught = error;
+      }
+    });
+    ng.sub(s, fail);
+    try {
+      ng.set(s, 1);
+    } catch {
+      // "s failed", the next test's subject
+    }
+    expect(caught).toHaveProperty("message", "t failed");
+  });
+
+  test("set throws its first error after a sink catches one from a nested set", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    const t = ng.signal(0);
+    ng.sub(t, (value) => {
+      if (value) throw new Error("t failed");
+    });
+    // On both sides and throwing once, so a sink has thrown before the nested set in either order
+    let failed = false;
+    const fail = (value: number): void => {
+      if (!value || failed) return;
+      failed = true;
+      throw new Error("s failed");
+    };
+    ng.sub(s, fail);
+    ng.sub(s, (value) => {
+      if (!value) return;
+      try {
+        ng.set(t, value);
+      } catch {
+        // Handled here, so it must not surface from the outer set
+      }
+    });
+    ng.sub(s, fail);
+    expect(() => {
+      ng.set(s, 1);
+    }).toThrow("s failed");
+  });
 });
 
 describe("effect", () => {
@@ -522,6 +598,132 @@ describe("effect", () => {
     }).toThrow();
     set(s, 2);
     expect(seen).toEqual([0, 1, 2]);
+  });
+
+  test("set throws the first error when several effects throw", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    let calls = 0;
+    const fail = (): void => {
+      if (get(s)) throw new Error(calls++ ? "later effect failed" : "first effect failed");
+    };
+    effect(fail);
+    effect(fail);
+    expect(() => {
+      set(s, 1);
+    }).toThrow("first effect failed");
+  });
+
+  test("a throwing sink does not stop the effects", () => {
+    expect.assertions(2);
+    const s = signal(0);
+    sub(s, (value) => {
+      if (value) throw new Error("sink failed");
+    });
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(get(s));
+    });
+    expect(() => {
+      set(s, 1);
+    }).toThrow("sink failed");
+    expect(seen).toEqual([0, 1]);
+  });
+
+  const writes: [string, (s: Signal<number>, value: number) => void][] = [
+    ["set", set],
+    [
+      "batch",
+      (s, value) => {
+        batch(() => {
+          set(s, value);
+        });
+      },
+    ],
+  ];
+
+  test.each(writes)("a %s inside it throws its own first error into it", (_, write) => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    sub(t, (value) => {
+      if (value) throw new Error("t failed");
+    });
+    // On both sides and throwing once, so an effect has thrown before the nested write in either order
+    let failed = false;
+    const fail = (): void => {
+      const value = get(s);
+      if (!value || failed) return;
+      failed = true;
+      throw new Error("s failed");
+    };
+    effect(fail);
+    let caught: unknown;
+    effect(() => {
+      const value = get(s);
+      if (!value) return;
+      try {
+        write(t, value);
+      } catch (error) {
+        caught = error;
+      }
+    });
+    effect(fail);
+    try {
+      set(s, 1);
+    } catch {
+      // "s failed", the next test's subject
+    }
+    expect(caught).toHaveProperty("message", "t failed");
+  });
+
+  test.each(writes)(
+    "set throws its first error after it catches one from a nested %s",
+    (_, write) => {
+      expect.assertions(1);
+      const s = signal(0);
+      const t = signal(0);
+      sub(t, (value) => {
+        if (value) throw new Error("t failed");
+      });
+      // On both sides and throwing once, so an effect has thrown before the nested write in either order
+      let failed = false;
+      const fail = (): void => {
+        const value = get(s);
+        if (!value || failed) return;
+        failed = true;
+        throw new Error("s failed");
+      };
+      effect(fail);
+      effect(() => {
+        const value = get(s);
+        if (!value) return;
+        try {
+          write(t, value);
+        } catch {
+          // Handled here, so it must not surface from the outer set
+        }
+      });
+      effect(fail);
+      expect(() => {
+        set(s, 1);
+      }).toThrow("s failed");
+    },
+  );
+
+  test.each(writes)("subscribes what it reads after a %s to a signal with sinks", (_, write) => {
+    expect.assertions(1);
+    const relay = signal(0);
+    const other = signal(0);
+    sub(relay, () => {});
+    let runs = 0;
+    effect(() => {
+      runs++;
+      write(relay, 1);
+      get(other);
+    });
+    set(other, 1);
+    expect(runs).toBe(2);
   });
 
   test("a sink's reads do not subscribe the effect whose write triggered it", () => {
@@ -833,6 +1035,68 @@ describe("batch", () => {
     expect(seen).toEqual([0, 2]);
   });
 
+  test("Regression: a sink subscribed during it after a write is called once for that value", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    batch(() => {
+      set(s, 1);
+      sub(s, (value) => {
+        seen.push(value);
+      });
+    });
+    expect(seen).toEqual([1]);
+  });
+
+  test("Regression: a sink subscribed during it after a write learns when it restores the value", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    sub(s, () => {});
+    const seen: number[] = [];
+    batch(() => {
+      set(s, 1);
+      sub(s, (value) => {
+        seen.push(value);
+      });
+      set(s, 0);
+    });
+    expect(seen).toEqual([1, 0]);
+  });
+
+  test("rethrows an effect's error when it ends", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    effect(() => {
+      if (get(s)) throw new Error("effect failed");
+    });
+    expect(() => {
+      batch(() => {
+        set(s, 1);
+      });
+    }).toThrow("effect failed");
+  });
+
+  test("a batch started by a sink as it ends notifies each write once", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    sub(a, (value) => {
+      if (value) {
+        batch(() => {
+          set(b, value);
+        });
+      }
+    });
+    const seen: number[] = [];
+    sub(b, (value) => {
+      seen.push(value);
+    });
+    batch(() => {
+      set(a, 1);
+    });
+    expect(seen).toEqual([0, 1]);
+  });
+
   test("skips a sink when the batch restores the value", () => {
     expect.assertions(1);
     const s = signal(0);
@@ -963,6 +1227,52 @@ describe("batch", () => {
       });
     }).toThrow("batch failed");
     set(s, 1);
+    expect(runs).toBe(2);
+  });
+
+  test("a throwing sink does not stop the other deferred sinks", () => {
+    expect.assertions(2);
+    const a = signal(0);
+    const b = signal(0);
+    const called: string[] = [];
+    // Both throw, since the notification order is unspecified
+    for (const [name, s] of [
+      ["a", a],
+      ["b", b],
+    ] as const) {
+      sub(s, (value) => {
+        if (!value) return;
+        called.push(name);
+        throw new Error(`${name} failed`);
+      });
+    }
+    expect(() => {
+      batch(() => {
+        set(a, 1);
+        set(b, 1);
+      });
+    }).toThrow();
+    expect(called.toSorted((x, y) => x.localeCompare(y))).toEqual(["a", "b"]);
+  });
+
+  test("a deferred sink's reads do not subscribe the effect whose batch ended", () => {
+    expect.assertions(1);
+    const trigger = signal(0);
+    const relay = signal(0);
+    const other = signal(0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      const value = get(trigger);
+      batch(() => {
+        set(relay, value);
+      });
+    });
+    sub(relay, () => {
+      get(other);
+    });
+    set(trigger, 1);
+    set(other, 1);
     expect(runs).toBe(2);
   });
 });
