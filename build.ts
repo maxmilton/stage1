@@ -20,6 +20,7 @@ const { outputs } = await Bun.build({
   },
   minify: true,
   emitDCEAnnotations: true,
+  legalComments: "none",
   sourcemap: "inline",
 });
 const bundle = await rollup({
@@ -66,6 +67,7 @@ await Bun.build({
     "Node.ELEMENT_NODE": "1",
   },
   minify: true,
+  legalComments: "none",
   sourcemap: "linked",
 });
 
@@ -76,6 +78,7 @@ await Bun.build({
   allowUnresolved: [],
   env: "disable",
   minify: true,
+  legalComments: "none",
   sourcemap: "linked",
 });
 
@@ -86,6 +89,7 @@ await Bun.build({
   allowUnresolved: [],
   env: "disable",
   minify: true,
+  legalComments: "none",
   sourcemap: "linked",
 });
 
@@ -100,6 +104,7 @@ await Bun.build({
   allowUnresolved: [],
   env: "disable",
   minify: true,
+  legalComments: "none",
   sourcemap: "linked",
 });
 

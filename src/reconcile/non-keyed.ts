@@ -1,4 +1,6 @@
-// TODO: Fix these lint issues rather than disabling them.
+//! SPDX-FileCopyrightText: (c) Max Milton <max@2okki.com>
+//! SPDX-License-Identifier: MIT
+
 // oxlint-disable complexity id-length no-continue no-labels no-multi-assign no-param-reassign typescript/no-non-null-assertion typescript/no-unsafe-member-access typescript/prefer-for-of
 
 import { noop } from "../utils.ts";

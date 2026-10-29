@@ -1,3 +1,6 @@
+//! SPDX-FileCopyrightText: (c) Max Milton <max@2okki.com>
+//! SPDX-License-Identifier: MIT
+
 // oxlint-disable typescript/no-non-null-assertion
 
 import { noop } from "../utils.ts";

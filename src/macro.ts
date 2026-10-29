@@ -1,3 +1,6 @@
+//! SPDX-FileCopyrightText: (c) Max Milton <max@2okki.com>
+//! SPDX-License-Identifier: MIT
+
 import type { InferRefs, RefKeys, Refs } from "./types.ts";
 
 /**
