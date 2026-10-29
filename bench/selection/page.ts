@@ -96,6 +96,24 @@ const selectAmong = (count: number) => (): [number, number] => {
   });
 };
 
+const RESCANS = 100;
+
+/**
+ * Times RESCANS list changes among `count` rows, each followed by a selection,
+ * so every lookup comes right after a change, when a mark has no key map.
+ */
+const rescanAmong = (count: number) => (): [number, number] => {
+  if (items.v.length !== count) reset(count);
+  const ids = Array.from({ length: RESCANS }, (_item, index) => items.v[(index * 7919) % count].id);
+  return time(() => {
+    for (const id of ids) {
+      // A new array of the same items: the list keeps every row
+      set(items, [...items.v]);
+      set(selected, id);
+    }
+  });
+};
+
 const ops: Record<string, () => [number, number]> = {
   create1k: from(0, () => rows(1000)),
   create10k: from(0, () => rows(10_000)),
@@ -110,6 +128,7 @@ const ops: Record<string, () => [number, number]> = {
   clear10k: from(10_000, () => []),
   [`select1k x${SELECTS}`]: selectAmong(1000),
   [`select10k x${SELECTS}`]: selectAmong(10_000),
+  [`rescan1k x${RESCANS}`]: rescanAmong(1000),
 };
 
 Object.assign(globalThis, { setup, ops });

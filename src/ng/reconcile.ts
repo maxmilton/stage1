@@ -252,6 +252,7 @@ const SCANS = 8;
  *   created. Nothing is registered per row, so the list creates and clears rows at full speed. One
  *   mark per list; `fn` never runs for a removed row.
  * - A map's elements must be in it before their key is selected.
+ * - Keys compare with `===`, as `list` matches them, so a NaN key marks nothing.
  *
  * The returned function stops marking.
  */
@@ -263,18 +264,15 @@ export const mark = <K, N extends ChildNode>(
   nodes: List<NoInfer<K>, N> | { get(key: NoInfer<K>): N | undefined },
   fn: (node: N, on: boolean) => void,
 ): (() => void) => {
-  // The value the sink has seen, which in a batch can differ from `source.v`
-  let shown = source.v;
+  // The value the sink has seen, which in a batch can differ from `source.v`.
+  // A private symbol until the sink's first call, which then marks at once
+  let shown: unknown = ROWS;
   let lit: N | undefined;
   let find: (key: K) => N | undefined;
-  let attach: Attach<K, N> | undefined;
-  if (ROWS in nodes) {
-    attach = nodes[ROWS];
+  const attach = (nodes as Partial<List<K, N>>)[ROWS];
+  if (attach) {
     const [key, items, rows] = attach((k, row) => {
-      if (Object.is(k, shown)) {
-        lit = row;
-        fn(row, true);
-      }
+      if (k === shown) fn((lit = row), true);
     });
     // A lookup scans the rows until the list has gone SCANS lookups without
     // changing; then a key map, built once, serves the rest until it changes.
@@ -301,15 +299,12 @@ export const mark = <K, N extends ChildNode>(
       return all[i];
     };
   } else {
-    find = (k) => nodes.get(k);
+    find = (k) => (nodes as { get: (key: K) => N | undefined }).get(k);
   }
-  lit = find(shown);
-  if (lit) fn(lit, true);
   const unsubscribe = sub(source, (k) => {
-    if (Object.is(k, shown)) return;
-    shown = k;
+    if (k === shown) return;
     const old = lit;
-    lit = find(k);
+    lit = find((shown = k));
     // A row the list removed has no parent; a map's elements are always unmarked
     if (old && (!attach || old.parentNode)) fn(old, false);
     // `lit`, not a local: if that call changed the selection again, this
