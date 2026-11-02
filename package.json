@@ -80,7 +80,7 @@
     "oxfmt": "0.74.0",
     "oxlint": "1.89.0",
     "oxlint-tsgolint": "7.0.2005",
-    "rollup": "4.64.12",
+    "rollup": "4.65.0",
     "terser": "5.51.2",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.0"
