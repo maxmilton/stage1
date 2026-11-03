@@ -55,22 +55,18 @@ const markLIS = (a: Int32Array): void => {
   for (let i = 0; i < length; i++) {
     const k = a[i];
     if (!k) continue;
-    if (top < 0 || a[tails[top]] < k) {
-      parent[i] = tails[top];
-      tails[++top] = i;
-      continue;
-    }
+    // Values are distinct, so the search lands on a tail above k unless all are below
     let lo = 0;
     let hi = top;
+    if (top < 0 || a[tails[top]] < k) lo = top + 1;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
       if (a[tails[mid]] < k) lo = mid + 1;
       else hi = mid;
     }
-    if (k < a[tails[lo]]) {
-      if (lo) parent[i] = tails[lo - 1];
-      tails[lo] = i;
-    }
+    if (lo) parent[i] = tails[lo - 1];
+    tails[lo] = i;
+    if (lo > top) top = lo;
   }
   for (let j = tails[top]; top-- >= 0; j = parent[j]) a[j] = -1;
 };
