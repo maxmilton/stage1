@@ -397,6 +397,34 @@ describe("list", () => {
     expect(updates).toBe(0);
   });
 
+  test("drops the trailing rows when the new items are the old ones' start", () => {
+    expect.assertions(2);
+    const [parent, items] = render(ITEMS);
+    const kept = [...parent.children].slice(0, 2);
+    set(items, ITEMS.slice(0, 2));
+    expect(itemOrder(parent)).toEqual(["a", "b"]);
+    expect([...parent.children].every((node, index) => node === kept[index])).toBe(true);
+  });
+
+  test("keeps every row and updates only new items when each key stays in place", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    const items = signal(ITEMS);
+    const updated: string[] = [];
+    list(parent, items, "id", createItemNode, (node, item) => {
+      updated.push(item.id);
+      updateItemNode(node, item);
+    });
+    const before = [...parent.children];
+    set(
+      items,
+      ITEMS.map((item) => (item.id === "a" || item.id === "c" ? { ...item, label: "new" } : item)),
+    );
+    expect(updated).toEqual(["a", "c"]);
+    expect([...parent.children].every((node, index) => node === before[index])).toBe(true);
+    expect([...parent.children].map((node) => node.textContent)).toEqual(["new", "B", "new", "D"]);
+  });
+
   test("runs a row's cleanups when the row is removed", () => {
     expect.assertions(1);
     const parent = document.createElement("div");
@@ -758,6 +786,26 @@ describe("mark", () => {
     // More selections than mark answers by scanning, while the list stays the same
     for (const id of "bcdefghijklm") set(selected, id);
     set(items, [...items.v.filter((item) => item.id !== "c"), ...lettered("q")]);
+    set(selected, "q");
+    expect(markedIds(parent.children)).toEqual(["q"]);
+  });
+
+  test("marks the right row after many selections, an update that keeps every row, and a reorder", () => {
+    expect.assertions(2);
+    const [parent, items, rows] = render(lettered("abcdefghijklmnop"));
+    const selected = signal("a");
+    const [, fn] = recorder();
+    mark(selected, rows, fn);
+    // More selections than mark answers by scanning, while the list stays the same
+    for (const id of "bcdefghijklm") set(selected, id);
+    // A new array with every key in place, one item replaced: the rows stay
+    set(
+      items,
+      items.v.map((item) => (item.id === "d" ? { ...item, label: "D" } : item)),
+    );
+    set(selected, "d");
+    expect(markedIds(parent.children)).toEqual(["d"]);
+    set(items, [...items.v.filter((item) => item.id !== "e").toReversed(), ...lettered("q")]);
     set(selected, "q");
     expect(markedIds(parent.children)).toEqual(["q"]);
   });

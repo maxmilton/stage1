@@ -14,11 +14,10 @@ import { noop } from "./utils.ts";
 
 /** Cleanups a row registered with `own`, kept on its node. */
 const CLEANUPS = Symbol();
-
-type Row = ChildNode & { [CLEANUPS]?: (() => void)[] };
-
 /** What `mark` reaches a list through, kept on the list's dispose function. */
 const ROWS = Symbol();
+
+type Row = ChildNode & { [CLEANUPS]?: (() => void)[] };
 
 /**
  * Sets the list's one callback for new rows and returns its items' key and
@@ -47,7 +46,7 @@ const own = (dispose: () => void): void => {
  * Marks with -1 the entries of `a` in its longest increasing subsequence,
  * ignoring zeros. https://en.wikipedia.org/wiki/Longest_increasing_subsequence
  */
-const markLIS = (a: Int32Array): void => {
+const markLIS = /*@__NOINLINE__*/ (a: Int32Array): void => {
   const length = a.length;
   const parent = new Int32Array(length);
   const tails = new Int32Array(length);
@@ -129,7 +128,7 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
   };
 
   // Measured faster: built off-document, the rows cost no per-insert work
-  const build = (next: readonly T[]): N[] => {
+  const build = /*@__NOINLINE__*/ (next: readonly T[]): N[] => {
     const host = next.length > 0 && parent.isConnected ? parent.parentNode : null;
     const after = parent.nextSibling;
     if (host) parent.remove();
@@ -148,17 +147,27 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
   };
 
   // oxlint-disable-next-line complexity
-  const reconcile = (next: readonly T[]): N[] => {
+  const reconcile = /*@__NOINLINE__*/ (next: readonly T[]): N[] => {
     const length = next.length;
     let aEnd = data.length - 1;
     if (!length || aEnd < 0) return rebuild(next);
 
-    const result = new Array<N>(length);
     let aStart = 0;
-    let bStart = 0;
     let bEnd = length - 1;
     let a: T;
     let b: T;
+
+    // Rows kept in place at the start, identity first so unchanged items skip the key reads
+    const min = length <= aEnd ? length : aEnd + 1;
+    while (aStart < min && ((a = data[aStart]) === (b = next[aStart]) || a[key] === b[key])) {
+      if (a !== b) update(rows[aStart], b);
+      aStart++;
+    }
+    // Every row kept in place: the list keeps its array, which `mark` relies on
+    if (aStart === length && aStart > aEnd) return rows;
+    const result = new Array<N>(length);
+    for (let i = 0; i < aStart; i++) result[i] = rows[i];
+    let bStart = aStart;
 
     // Match rows at both ends, identity first so unchanged items skip the key
     // reads; a row that crossed to the other end is moved there directly
@@ -271,16 +280,18 @@ export const mark = <K, N extends ChildNode>(
       if (k === shown) fn((lit = row), true);
     });
     // A lookup scans the rows until the list has gone SCANS lookups without
-    // changing; then a key map, built once, serves the rest until it changes.
-    // Measured in Chromium, building a map costs as much as 5 to 56 scans.
+    // changing its rows; then a key map, built once, serves the rest until it does.
+    // Measured in Chromium at 100 to 1000 rows, building a map costs as much as
+    // 6.5 to 7 scans with string keys and 9.5 to 12 with number keys.
     let seen: unknown;
     let scans = 0;
     let map: Map<unknown, N> | undefined;
     find = (k) => {
       const data = items();
       const all = rows();
-      if (data !== seen) {
-        seen = data;
+      // Rows matched by key keep it, so the map holds while the rows array does
+      if (all !== seen) {
+        seen = all;
         scans = 0;
         map = undefined;
       }
