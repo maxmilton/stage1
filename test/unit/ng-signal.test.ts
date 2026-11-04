@@ -12,13 +12,42 @@ import {
   signal,
   type Signal,
   sub,
+  untracked,
 } from "../../src/ng/signal.ts";
+import { buildSignal } from "./ng-build.ts";
 
 type Api = typeof graphApi;
 
-// A separate module instance on which only signal, get, set and sub ever run.
+// A separate module instance on which only tier 1 ever runs: no computed or effect installs the graph.
 const aloneSpecifier = "../../src/ng/signal.ts?alone";
 const aloneApi = (await import(aloneSpecifier)) as Api;
+
+// Two more, on each of which a batch runs before any computed or effect installs the graph.
+const earlyBatchSpecifier1 = "../../src/ng/signal.ts?early-batch-1";
+const earlyBatchApi1 = (await import(earlyBatchSpecifier1)) as Api;
+const earlyBatchSpecifier2 = "../../src/ng/signal.ts?early-batch-2";
+const earlyBatchApi2 = (await import(earlyBatchSpecifier2)) as Api;
+
+// Bundles of this module with the tier fixed by a Bun feature flag.
+const liteApi = await buildSignal(["STAGE1_SIGNAL_LITE"]);
+const graphBuildApi = await buildSignal(["STAGE1_SIGNAL_GRAPH"]);
+
+/** Runs a batched write with a sink on `ng` before the graph installs, then adds an effect. */
+const afterEarlyBatch = (ng: Api) => {
+  const s = ng.signal(0);
+  const seen: string[] = [];
+  ng.sub(s, (v) => {
+    seen.push(`sink ${v}`);
+  });
+  ng.batch(() => {
+    ng.set(s, 1);
+  });
+  ng.effect(() => {
+    seen.push(`effect ${ng.get(s)}`);
+  });
+  seen.length = 0;
+  return { s, seen };
+};
 
 beforeAll(() => {
   // Fixture: an effect has run on this instance before any test, whatever the test order
@@ -82,6 +111,8 @@ describe("sub", () => {
 describe.each([
   ["without the graph", aloneApi],
   ["with the graph", graphApi],
+  ["built with STAGE1_SIGNAL_LITE", liteApi],
+  ["built with STAGE1_SIGNAL_GRAPH", graphBuildApi],
 ])("signal and sub, %s", (_, ng: Api) => {
   test("get returns the initial value", () => {
     expect.assertions(1);
@@ -134,7 +165,8 @@ describe.each([
     expect(seen).toEqual([1]);
   });
 
-  test("treats NaN as unchanged", () => {
+  // Values compare with ===, as in alien-signals (was Object.is until 2026-11)
+  test("treats NaN as a change", () => {
     expect.assertions(1);
     const s = ng.signal(Number.NaN);
     let calls = 0;
@@ -142,10 +174,10 @@ describe.each([
       calls++;
     });
     ng.set(s, Number.NaN);
-    expect(calls).toBe(1);
+    expect(calls).toBe(2);
   });
 
-  test("treats -0 as a change from 0", () => {
+  test("treats -0 as unchanged from 0", () => {
     expect.assertions(1);
     const s = ng.signal(0);
     let calls = 0;
@@ -153,7 +185,7 @@ describe.each([
       calls++;
     });
     ng.set(s, -0);
-    expect(calls).toBe(2);
+    expect(calls).toBe(1);
   });
 
   test("does not call a disposed sink", () => {
@@ -383,13 +415,72 @@ describe.each([
   });
 });
 
+describe("untracked", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf(untracked).not.toBeAny();
+    expectTypeOf(untracked).toBeFunction();
+    // Erased: `T` -> `unknown`.
+    expectTypeOf(untracked).parameters.toEqualTypeOf<[fn: () => unknown]>();
+    expectTypeOf(untracked<number>).parameters.toEqualTypeOf<[fn: () => number]>();
+    expectTypeOf(untracked<number>).returns.toEqualTypeOf<number>();
+  });
+
+  test("returns fn's value", () => {
+    expect.assertions(1);
+    expect(untracked(() => 1)).toBe(1);
+  });
+
+  test("returns fn's value in a STAGE1_SIGNAL_LITE build", () => {
+    expect.assertions(1);
+    expect(liteApi.untracked(() => 1)).toBe(1);
+  });
+
+  test("reads inside it do not subscribe the effect running it", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      untracked(() => get(s));
+    });
+    set(s, 1);
+    expect(runs).toBe(1);
+  });
+
+  test("an effect subscribes what it reads after an untracked fn throws", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      try {
+        untracked(() => {
+          throw new Error("fn failed");
+        });
+      } catch {
+        // the effect carries on
+      }
+      get(s);
+    });
+    set(s, 1);
+    expect(runs).toBe(2);
+  });
+});
+
 describe("effect", () => {
   test("types", () => {
     expect.assertions(0);
     expectTypeOf(effect).not.toBeAny();
     expectTypeOf(effect).toBeFunction();
-    expectTypeOf(effect).parameters.toEqualTypeOf<[fn: () => void]>();
+    // oxlint-disable-next-line typescript/no-invalid-void-type
+    expectTypeOf(effect).parameters.toEqualTypeOf<[fn: () => (() => void) | void]>();
     expectTypeOf(effect).returns.toEqualTypeOf<() => void>();
+  });
+
+  test("throws in a STAGE1_SIGNAL_LITE build, naming the flag", () => {
+    expect.assertions(1);
+    expect(() => liteApi.effect(() => {})).toThrow("STAGE1_SIGNAL_LITE");
   });
 
   test("runs at once", () => {
@@ -439,6 +530,49 @@ describe("effect", () => {
     dispose();
     set(s, 2);
     expect(runs).toBe(1);
+  });
+
+  test("calls the cleanup its last run returned before re-running", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      const value = get(s);
+      log.push(`run ${value}`);
+      return () => {
+        log.push(`cleanup ${value}`);
+      };
+    });
+    set(s, 1);
+    expect(log).toEqual(["run 0", "cleanup 0", "run 1"]);
+  });
+
+  test("calls the cleanup once when disposed twice", () => {
+    expect.assertions(1);
+    let cleanups = 0;
+    const dispose = effect(() => () => {
+      cleanups++;
+    });
+    dispose();
+    dispose();
+    expect(cleanups).toBe(1);
+  });
+
+  test("a cleanup's reads do not subscribe the effect disposing it", () => {
+    expect.assertions(1);
+    const other = signal(0);
+    const stop = signal(false);
+    const dispose = effect(() => () => {
+      get(other);
+    });
+    let runs = 0;
+    effect(() => {
+      runs++;
+      if (get(stop)) dispose();
+    });
+    set(stop, true);
+    set(other, 1);
+    expect(runs).toBe(2);
   });
 
   test("does not re-run for a value read through v", () => {
@@ -781,6 +915,383 @@ describe("effect", () => {
     expect(runs).toBe(1);
     expect(s.v).toBe(1);
   });
+
+  // Conservative stack scanning can keep the odd one alive; a leak keeps all of them.
+  test("Regression: a re-run releases the signal's previous value", async () => {
+    expect.assertions(3);
+    const live: Signal<() => number>[] = [];
+    let runs = 0;
+    const kept = await survivors(() => {
+      const previous = () => 0;
+      const s = signal(previous);
+      effect(() => {
+        runs++;
+        get(s);
+      });
+      set(s, () => 1);
+      live.push(s);
+      return previous;
+    });
+    expect(kept).toBeLessThan(10);
+    expect(runs).toBe(40); // each effect re-ran, so the graph saw the write
+    // Keeps each signal and its effect alive past the collection
+    expect(live.map((s) => s.v())).toEqual(Array.from({ length: 20 }, () => 1));
+  });
+
+  describe.each([
+    ["with the graph", graphApi],
+    ["built with STAGE1_SIGNAL_GRAPH", graphBuildApi],
+  ])("%s", (_, ng: Api) => {
+    // Conservative stack scanning can keep the odd one alive; a leak keeps all of them.
+    test("Regression: a re-run that stops reading a written signal releases its previous value", async () => {
+      expect.assertions(3);
+      const live: Signal<() => number>[] = [];
+      let runs = 0;
+      const kept = await survivors(() => {
+        const previous = () => 0;
+        const s = ng.signal(previous);
+        const read = ng.signal(true);
+        // Reads `read` first, so the re-run is decided before `s` is checked
+        ng.effect(() => {
+          runs++;
+          if (ng.get(read)) ng.get(s);
+        });
+        ng.batch(() => {
+          ng.set(s, () => 1);
+          ng.set(read, false);
+        });
+        live.push(s);
+        return previous;
+      });
+      expect(kept).toBeLessThan(10);
+      expect(runs).toBe(40); // each effect re-ran without reading `s`
+      // Keeps each signal alive past the collection
+      expect(live.map((s) => s.v())).toEqual(Array.from({ length: 20 }, () => 1));
+    });
+
+    // Conservative stack scanning can keep the odd one alive; a leak keeps all of them.
+    test("Regression: a cleanup that throws releases its effect", async () => {
+      expect.assertions(3);
+      const live: Signal<number>[] = [];
+      let errors = 0;
+      const kept = await survivors(() => {
+        const s = ng.signal(0);
+        const fn = () => {
+          ng.get(s);
+          return () => {
+            throw new Error("cleanup failed");
+          };
+        };
+        ng.effect(fn);
+        try {
+          ng.set(s, 1);
+        } catch {
+          errors++;
+        }
+        live.push(s);
+        return fn;
+      });
+      expect(kept).toBeLessThan(10);
+      expect(errors).toBe(20); // each cleanup threw
+      expect(live).toHaveLength(20); // keeps each signal alive past the collection
+    });
+
+    test("Regression: a child's throwing cleanup does not stop its parent re-running", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      let runs = 0;
+      ng.effect(() => {
+        runs++;
+        ng.get(s);
+        ng.effect(() => () => {
+          throw new Error("cleanup failed");
+        });
+      });
+      expect(() => {
+        ng.set(s, 1);
+      }).toThrow("cleanup failed");
+      expect(runs).toBe(2);
+    });
+
+    test("Regression: disposing an effect disposes every child when one's cleanup throws", () => {
+      expect.assertions(2);
+      let cleanups = 0;
+      const dispose = ng.effect(() => {
+        ng.effect(() => () => {
+          throw new Error("cleanup failed");
+        });
+        ng.effect(() => () => {
+          cleanups++;
+        });
+      });
+      expect(dispose).toThrow("cleanup failed");
+      expect(cleanups).toBe(1);
+    });
+
+    test("disposing during a write that already caught an error does not throw that error", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      // Subscribed first, so it throws before the effect below disposes
+      ng.effect(() => {
+        if (ng.get(s)) throw new Error("effect failed");
+      });
+      const dispose = ng.effect(() => {});
+      let threw: unknown = "nothing";
+      ng.effect(() => {
+        if (!ng.get(s)) return;
+        try {
+          dispose();
+        } catch (error) {
+          threw = error;
+        }
+      });
+      expect(() => {
+        ng.set(s, 1);
+      }).toThrow("effect failed");
+      expect(threw).toBe("nothing");
+    });
+
+    test("Regression: calls the cleanup returned by the run that disposed the effect", () => {
+      expect.assertions(1);
+      const s = ng.signal(0);
+      const log: string[] = [];
+      const dispose = ng.effect(() => {
+        const value = ng.get(s);
+        if (value) dispose();
+        return () => {
+          log.push(`cleanup ${value}`);
+        };
+      });
+      ng.set(s, 1);
+      expect(log).toEqual(["cleanup 0", "cleanup 1"]);
+    });
+
+    test("Regression: a child created after its effect disposed itself is disposed with it", () => {
+      expect.assertions(1);
+      const stop = ng.signal(false);
+      const s = ng.signal(0);
+      let runs = 0;
+      const dispose = ng.effect(() => {
+        if (!ng.get(stop)) return;
+        dispose();
+        ng.effect(() => {
+          runs++;
+          ng.get(s);
+        });
+      });
+      ng.set(stop, true);
+      ng.set(s, 1);
+      expect(runs).toBe(1);
+    });
+
+    // Conservative stack scanning can keep the odd one alive; a leak keeps all of them.
+    test("Regression: an effect that disposes itself is released by what it reads afterwards", async () => {
+      expect.assertions(2);
+      const live: Signal<number>[] = [];
+      const kept = await survivors(() => {
+        const stop = ng.signal(false);
+        const s = ng.signal(0);
+        let dispose = (): void => {};
+        const fn = () => {
+          if (ng.get(stop)) dispose();
+          ng.get(s);
+        };
+        dispose = ng.effect(fn);
+        ng.set(stop, true);
+        live.push(s);
+        return fn;
+      });
+      expect(kept).toBeLessThan(10);
+      expect(live).toHaveLength(20); // keeps each signal alive past the collection
+    });
+
+    // Reads only the computed, so it throws while the effect is checked, before the effect runs
+    test("Regression: an effect re-runs once a computed that threw while it was checked recovers", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      const c = ng.computed(() => {
+        if (ng.get(s) === 1) throw new Error("computed failed");
+        return ng.get(s);
+      });
+      const seen: number[] = [];
+      ng.effect(() => {
+        seen.push(c());
+      });
+      expect(() => {
+        ng.set(s, 1);
+      }).toThrow("computed failed");
+      ng.set(s, 2);
+      expect(seen).toEqual([0, 2]);
+    });
+
+    test("Regression: an effect re-runs once a computed between it and one that threw recovers", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      const inner = ng.computed(() => {
+        if (ng.get(s) === 1) throw new Error("computed failed");
+        return ng.get(s);
+      });
+      const outer = ng.computed(() => inner() * 10);
+      const seen: number[] = [];
+      ng.effect(() => {
+        seen.push(outer());
+      });
+      expect(() => {
+        ng.set(s, 1);
+      }).toThrow("computed failed");
+      ng.set(s, 2);
+      expect(seen).toEqual([0, 20]);
+    });
+
+    test("Regression: an effect re-runs once two computeds that threw while it was checked recover", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      const a = ng.computed(() => {
+        if (ng.get(s) === 1) throw new Error("computed failed");
+        return ng.get(s);
+      });
+      const b = ng.computed(() => {
+        if (ng.get(s) === 1) throw new Error("computed failed");
+        return ng.get(s) * 10;
+      });
+      const seen: number[] = [];
+      ng.effect(() => {
+        seen.push(a() + b());
+      });
+      expect(() => {
+        ng.set(s, 1);
+      }).toThrow("computed failed");
+      ng.set(s, 2);
+      expect(seen).toEqual([0, 22]);
+    });
+
+    // Reads t first, so t's change runs the effect, and the run reads the computed as it throws
+    test("Regression: an effect stays subscribed to a computed that threw while it ran", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      const t = ng.signal(0);
+      const c = ng.computed(() => {
+        if (ng.get(s) === 1) throw new Error("computed failed");
+        return ng.get(s);
+      });
+      const seen: number[] = [];
+      ng.effect(() => {
+        seen.push(ng.get(t) + c());
+      });
+      expect(() => {
+        ng.batch(() => {
+          ng.set(t, 1);
+          ng.set(s, 1);
+        });
+      }).toThrow("computed failed");
+      ng.set(s, 2);
+      expect(seen).toEqual([0, 3]);
+    });
+
+    test("Regression: an effect stays subscribed to a computed whose first evaluation threw", () => {
+      expect.assertions(1);
+      const s = ng.signal(0);
+      const c = ng.computed(() => {
+        if (ng.get(s) === 0) throw new Error("computed failed");
+        return ng.get(s);
+      });
+      const seen: (number | string)[] = [];
+      ng.effect(() => {
+        try {
+          seen.push(c());
+        } catch (error) {
+          seen.push((error as Error).message);
+        }
+      });
+      ng.set(s, 1);
+      expect(seen).toEqual(["computed failed", 1]);
+    });
+
+    test("Regression: an effect whose first run throws is disposed, with its children", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      let runs = 0;
+      let childRuns = 0;
+      expect(() => {
+        ng.effect(() => {
+          runs++;
+          ng.effect(() => {
+            childRuns++;
+            ng.get(s);
+          });
+          if (!ng.get(s)) throw new Error("effect failed");
+        });
+      }).toThrow("effect failed");
+      ng.set(s, 1);
+      expect([runs, childRuns]).toEqual([1, 1]);
+    });
+
+    test("a write throws a failed first run's error, not its children's cleanup errors", () => {
+      expect.assertions(1);
+      const s = ng.signal(0);
+      // Re-runs on the write and creates an effect whose first run fails after creating a child
+      ng.effect(() => {
+        if (!ng.get(s)) return;
+        ng.effect(() => {
+          ng.effect(() => () => {
+            throw new Error("cleanup failed");
+          });
+          throw new Error("first run failed");
+        });
+      });
+      expect(() => {
+        ng.set(s, 1);
+      }).toThrow("first run failed");
+    });
+
+    test("Regression: an effect that queues its own child as a batch ends keeps running", () => {
+      expect.assertions(1);
+      const x = ng.signal(0);
+      const y = ng.signal(0);
+      const trigger = ng.signal(0);
+      let runs = 0;
+      ng.effect(() => {
+        runs++;
+        const value = ng.get(x);
+        ng.effect(() => {
+          ng.get(y);
+        });
+        // y has no sinks, so this write queues the child, and this effect with it, without a flush
+        if (value) ng.set(y, value);
+      });
+      // x has sinks, so the batch end's write to it notifies and flushes at once
+      ng.sub(x, () => {});
+      ng.sub(trigger, (value) => {
+        if (value) ng.set(x, 1);
+      });
+      ng.batch(() => {
+        ng.set(trigger, 1);
+      });
+      ng.set(x, 2);
+      expect(runs).toBe(3);
+    });
+
+    test("Regression: an effect re-runs and gets the error when a computed it reads starts throwing", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      const c = ng.computed(() => {
+        if (ng.get(s) === 1) throw new Error("computed failed");
+        return ng.get(s);
+      });
+      const seen: (number | string)[] = [];
+      ng.effect(() => {
+        try {
+          seen.push(c());
+        } catch (error) {
+          seen.push((error as Error).message);
+        }
+      });
+      expect(() => {
+        ng.set(s, 1);
+      }).not.toThrow(); // the effect handles it
+      expect(seen).toEqual([0, "computed failed"]);
+    });
+  });
 });
 
 describe("computed", () => {
@@ -794,6 +1305,11 @@ describe("computed", () => {
     expectTypeOf(computed<number>).parameters.toEqualTypeOf<[fn: () => number]>();
     expectTypeOf(computed<number>).returns.toEqualTypeOf<() => number>();
     expectTypeOf(computed(() => "")).toEqualTypeOf<() => string>();
+  });
+
+  test("throws in a STAGE1_SIGNAL_LITE build, naming the flag", () => {
+    expect.assertions(1);
+    expect(() => liteApi.computed(() => 1)).toThrow("STAGE1_SIGNAL_LITE");
   });
 
   test("returns its getter's value", () => {
@@ -907,7 +1423,8 @@ describe("computed", () => {
     expect(runs).toBe(1);
   });
 
-  test("a NaN result again does not re-run its effect", () => {
+  // Values compare with ===, as in alien-signals (was Object.is until 2026-11)
+  test("a NaN result again re-runs its effect", () => {
     expect.assertions(1);
     const s = signal(1);
     const nan = computed(() => get(s) * Number.NaN);
@@ -917,7 +1434,7 @@ describe("computed", () => {
       nan();
     });
     set(s, 2);
-    expect(runs).toBe(1);
+    expect(runs).toBe(2);
   });
 
   // Conservative stack scanning can keep the odd one alive; a leak keeps all of them.
@@ -991,9 +1508,109 @@ describe("computed", () => {
     set(s, 1);
     expect(seen).toBe(100_001);
   });
+
+  describe.each([
+    ["with the graph", graphApi],
+    ["built with STAGE1_SIGNAL_GRAPH", graphBuildApi],
+  ])("%s", (_, ng: Api) => {
+    // Reads t first, so t's change re-evaluates it, and that evaluation reads the other as it throws
+    test("Regression: a computed stays subscribed to a computed that threw while it evaluated", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      const t = ng.signal(0);
+      const inner = ng.computed(() => {
+        if (ng.get(s) === 1) throw new Error("computed failed");
+        return ng.get(s);
+      });
+      const outer = ng.computed(() => ng.get(t) + inner());
+      const seen: number[] = [];
+      ng.effect(() => {
+        seen.push(outer());
+      });
+      expect(() => {
+        ng.batch(() => {
+          ng.set(t, 1);
+          ng.set(s, 1);
+        });
+      }).toThrow("computed failed");
+      ng.set(s, 2);
+      expect(seen).toEqual([0, 3]);
+    });
+
+    test("a computed that writes its own source and throws does not re-evaluate in a loop", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      const count = ng.signal(0);
+      const c = ng.computed(() => {
+        const n = ng.get(count);
+        // Throws only below the cap, so a loop ends there instead of hanging
+        if (ng.get(s) === 1 && n < 50) {
+          ng.set(count, n + 1);
+          throw new Error("computed failed");
+        }
+        return ng.get(s);
+      });
+      ng.effect(() => {
+        c();
+      });
+      expect(() => {
+        ng.set(s, 1);
+      }).toThrow("computed failed");
+      expect(ng.get(count)).toBeLessThan(50);
+    });
+
+    test("Regression: reading a computed that threw rethrows its error without evaluating it again", () => {
+      expect.assertions(2);
+      const s = ng.signal(0);
+      let evaluations = 0;
+      const c = ng.computed(() => {
+        evaluations++;
+        if (ng.get(s) === 1) throw new Error("computed failed");
+        return ng.get(s);
+      });
+      // Reads s first, so it runs and catches the throw itself, and keeps c watched
+      ng.effect(() => {
+        ng.get(s);
+        try {
+          c();
+        } catch {
+          // ignored: this effect only keeps c watched
+        }
+      });
+      ng.set(s, 1);
+      const after = evaluations;
+      // A block body: Bun's toThrow also passes when the function returns an Error
+      expect(() => {
+        c();
+      }).toThrow("computed failed");
+      expect(evaluations).toBe(after);
+    });
+  });
 });
 
 describe("batch", () => {
+  test("bundles without the graph when nothing else uses it", async () => {
+    expect.assertions(1);
+    const entry = "/virtual/entry.ts";
+    const source = JSON.stringify(`${import.meta.dir}/../../src/ng/signal.ts`);
+    const out = await Bun.build({
+      entrypoints: [entry],
+      files: { [entry]: `export { batch, get, set, signal, sub, untracked } from ${source};` },
+      minify: true,
+      target: "browser",
+    });
+    const code = await out.outputs[0].text();
+    // Tier 1 with batch is about 1 KB; the graph adds over 2 KB
+    expect(code.length).toBeLessThan(1500);
+  });
+
+  test("throws in a STAGE1_SIGNAL_LITE build, naming the flag", () => {
+    expect.assertions(1);
+    expect(() => {
+      liteApi.batch(() => {});
+    }).toThrow("STAGE1_SIGNAL_LITE");
+  });
+
   test("types", () => {
     expect.assertions(0);
     expectTypeOf(batch).not.toBeAny();
@@ -1018,62 +1635,6 @@ describe("batch", () => {
     expect(runs).toBe(2);
   });
 
-  test("defers sinks until it ends", () => {
-    expect.assertions(2);
-    const s = signal(0);
-    let calls = 0;
-    sub(s, () => {
-      calls++;
-    });
-    batch(() => {
-      set(s, 1);
-      expect(calls).toBe(1);
-    });
-    expect(calls).toBe(2);
-  });
-
-  test("calls a sink once with the final value", () => {
-    expect.assertions(1);
-    const s = signal(0);
-    const seen: number[] = [];
-    sub(s, (value) => {
-      seen.push(value);
-    });
-    batch(() => {
-      set(s, 1);
-      set(s, 2);
-    });
-    expect(seen).toEqual([0, 2]);
-  });
-
-  test("Regression: a sink subscribed during it after a write is called once for that value", () => {
-    expect.assertions(1);
-    const s = signal(0);
-    const seen: number[] = [];
-    batch(() => {
-      set(s, 1);
-      sub(s, (value) => {
-        seen.push(value);
-      });
-    });
-    expect(seen).toEqual([1]);
-  });
-
-  test("Regression: a sink subscribed during it after a write learns when it restores the value", () => {
-    expect.assertions(1);
-    const s = signal(0);
-    sub(s, () => {});
-    const seen: number[] = [];
-    batch(() => {
-      set(s, 1);
-      sub(s, (value) => {
-        seen.push(value);
-      });
-      set(s, 0);
-    });
-    expect(seen).toEqual([1, 0]);
-  });
-
   test("rethrows an effect's error when it ends", () => {
     expect.assertions(1);
     const s = signal(0);
@@ -1087,176 +1648,30 @@ describe("batch", () => {
     }).toThrow("effect failed");
   });
 
-  test("a batch started by a sink as it ends notifies each write once", () => {
-    expect.assertions(1);
-    const a = signal(0);
-    const b = signal(0);
-    sub(a, (value) => {
-      if (value) {
-        batch(() => {
-          set(b, value);
+  describe.each([
+    ["with the graph", graphApi],
+    ["built with STAGE1_SIGNAL_GRAPH", graphBuildApi],
+  ])("%s", (_, ng: Api) => {
+    test("rethrows a cleanup's error raised inside it when it ends", () => {
+      expect.assertions(1);
+      const s = ng.signal(0);
+      // Each evaluation replaces the child effect, disposing the last one
+      const c = ng.computed(() => {
+        ng.effect(() => () => {
+          throw new Error("cleanup failed");
         });
-      }
-    });
-    const seen: number[] = [];
-    sub(b, (value) => {
-      seen.push(value);
-    });
-    batch(() => {
-      set(a, 1);
-    });
-    expect(seen).toEqual([0, 1]);
-  });
-
-  test("a sink's write as it ends is not delivered again by the batch", () => {
-    expect.assertions(1);
-    const a = signal(0);
-    const b = signal(0);
-    sub(a, (value) => {
-      if (value) set(b, 2);
-    });
-    const seen: number[] = [];
-    sub(b, (value) => {
-      seen.push(value);
-    });
-    batch(() => {
-      set(b, 1);
-      set(a, 1);
-    });
-    expect(seen).toEqual([0, 2]);
-  });
-
-  test("skips a sink when a sink restores the value as it ends", () => {
-    expect.assertions(1);
-    const a = signal(0);
-    const b = signal(0);
-    sub(a, (value) => {
-      if (value) set(b, 0);
-    });
-    const seen: number[] = [];
-    sub(b, (value) => {
-      seen.push(value);
-    });
-    batch(() => {
-      set(b, 1);
-      set(a, 1);
-    });
-    expect(seen).toEqual([0]);
-  });
-
-  test("a write in a batch a sink starts as it ends is not delivered twice", () => {
-    expect.assertions(1);
-    const a = signal(0);
-    const b = signal(0);
-    sub(a, (value) => {
-      if (value) {
-        batch(() => {
-          set(b, 2);
+        return ng.get(s);
+      });
+      ng.effect(() => {
+        c();
+      });
+      expect(() => {
+        ng.batch(() => {
+          ng.set(s, 1);
+          c();
         });
-      }
+      }).toThrow("cleanup failed");
     });
-    const seen: number[] = [];
-    sub(b, (value) => {
-      seen.push(value);
-    });
-    batch(() => {
-      set(b, 1);
-      set(a, 1);
-    });
-    expect(seen).toEqual([0, 2]);
-  });
-
-  test("a write by the sink of a signal a nested batch wrote is not delivered twice", () => {
-    expect.assertions(1);
-    const a = signal(0);
-    const b = signal(0);
-    const c = signal(0);
-    sub(a, (value) => {
-      if (value) {
-        batch(() => {
-          set(c, 1);
-        });
-      }
-    });
-    sub(c, (value) => {
-      if (value) set(b, 2);
-    });
-    const seen: number[] = [];
-    sub(b, (value) => {
-      seen.push(value);
-    });
-    batch(() => {
-      set(a, 1);
-      set(b, 1);
-    });
-    expect(seen).toEqual([0, 1, 2]);
-  });
-
-  test("a batch a sink starts as it ends notifies when the outermost ends", () => {
-    expect.assertions(2);
-    const a = signal(0);
-    const c = signal(0);
-    const seen: number[] = [];
-    sub(c, (value) => {
-      seen.push(value);
-    });
-    let seenOnReturn: number[] = [];
-    sub(a, (value) => {
-      if (value) {
-        batch(() => {
-          set(c, 1);
-        });
-        seenOnReturn = [...seen];
-      }
-    });
-    batch(() => {
-      set(a, 1);
-    });
-    expect(seenOnReturn).toEqual([0]);
-    expect(seen).toEqual([0, 1]);
-  });
-
-  test("a sink's write to a signal the batch end already notified is delivered at once", () => {
-    expect.assertions(1);
-    const a = signal(0);
-    const b = signal(0);
-    const seen: number[] = [];
-    sub(b, (value) => {
-      seen.push(value);
-    });
-    let seenBySink: number[] = [];
-    sub(a, (value) => {
-      if (value) {
-        set(b, 2);
-        seenBySink = [...seen];
-      }
-    });
-    batch(() => {
-      set(a, 1);
-      set(b, 1);
-    });
-    expect(seenBySink).toEqual([0, 1, 2]);
-  });
-
-  test("a sink subscribed as it ends learns when a sink then restores the value", () => {
-    expect.assertions(1);
-    const a = signal(0);
-    const b = signal(0);
-    const seen: number[] = [];
-    sub(a, (value) => {
-      if (value) {
-        sub(b, (next) => {
-          seen.push(next);
-        });
-        set(b, 0);
-      }
-    });
-    sub(b, () => {});
-    batch(() => {
-      set(a, 1);
-      set(b, 1);
-    });
-    expect(seen).toEqual([1, 0]);
   });
 
   test("a computed read inside it leaves each sink one notification", () => {
@@ -1294,20 +1709,6 @@ describe("batch", () => {
       set(s, 2);
     });
     expect(seen).toEqual([0, 2]);
-  });
-
-  test("skips a sink when the batch restores the value", () => {
-    expect.assertions(1);
-    const s = signal(0);
-    let calls = 0;
-    sub(s, () => {
-      calls++;
-    });
-    batch(() => {
-      set(s, 1);
-      set(s, 0);
-    });
-    expect(calls).toBe(1);
   });
 
   test("skips an effect when the batch restores the value", () => {
@@ -1375,15 +1776,6 @@ describe("batch", () => {
     expect(seen).toEqual([1, 0]);
   });
 
-  test("get inside it returns the last value set", () => {
-    expect.assertions(1);
-    const s = signal(0);
-    batch(() => {
-      set(s, 1);
-      expect(get(s)).toBe(1);
-    });
-  });
-
   test("a computed read inside it reflects the writes so far", () => {
     expect.assertions(1);
     const s = signal(1);
@@ -1429,31 +1821,6 @@ describe("batch", () => {
     expect(runs).toBe(2);
   });
 
-  test("a throwing sink does not stop the other deferred sinks", () => {
-    expect.assertions(2);
-    const a = signal(0);
-    const b = signal(0);
-    const called: string[] = [];
-    // Both throw, since the notification order is unspecified
-    for (const [name, s] of [
-      ["a", a],
-      ["b", b],
-    ] as const) {
-      sub(s, (value) => {
-        if (!value) return;
-        called.push(name);
-        throw new Error(`${name} failed`);
-      });
-    }
-    expect(() => {
-      batch(() => {
-        set(a, 1);
-        set(b, 1);
-      });
-    }).toThrow();
-    expect(called.toSorted((x, y) => x.localeCompare(y))).toEqual(["a", "b"]);
-  });
-
   test("a deferred sink's reads do not subscribe the effect whose batch ended", () => {
     expect.assertions(1);
     const trigger = signal(0);
@@ -1473,5 +1840,355 @@ describe("batch", () => {
     set(trigger, 1);
     set(other, 1);
     expect(runs).toBe(2);
+  });
+
+  test("defers sinks and effects to its end after one ran before the graph installed", () => {
+    expect.assertions(2);
+    const { s, seen } = afterEarlyBatch(earlyBatchApi1);
+    earlyBatchApi1.batch(() => {
+      earlyBatchApi1.set(s, 2);
+      expect(seen).toEqual([]);
+    });
+    expect(seen).toEqual(["sink 2", "effect 2"]);
+  });
+
+  test("leaves unbatched writes running effects after it ran before the graph installed", () => {
+    expect.assertions(1);
+    const { s, seen } = afterEarlyBatch(earlyBatchApi2);
+    earlyBatchApi2.set(s, 3);
+    expect(seen).toEqual(["sink 3", "effect 3"]);
+  });
+});
+
+describe.each([
+  ["without the graph", aloneApi],
+  ["with the graph", graphApi],
+  ["built with STAGE1_SIGNAL_GRAPH", graphBuildApi],
+])("batch with sinks, %s", (_, ng: Api) => {
+  test("defers sinks until it ends", () => {
+    expect.assertions(2);
+    const s = ng.signal(0);
+    let calls = 0;
+    ng.sub(s, () => {
+      calls++;
+    });
+    ng.batch(() => {
+      ng.set(s, 1);
+      expect(calls).toBe(1);
+    });
+    expect(calls).toBe(2);
+  });
+
+  test("calls a sink once with the final value", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    const seen: number[] = [];
+    ng.sub(s, (value) => {
+      seen.push(value);
+    });
+    ng.batch(() => {
+      ng.set(s, 1);
+      ng.set(s, 2);
+    });
+    expect(seen).toEqual([0, 2]);
+  });
+
+  test("Regression: a sink subscribed during it after a write is called once for that value", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    const seen: number[] = [];
+    ng.batch(() => {
+      ng.set(s, 1);
+      ng.sub(s, (value) => {
+        seen.push(value);
+      });
+    });
+    expect(seen).toEqual([1]);
+  });
+
+  test("Regression: a sink subscribed during it after a write learns when it restores the value", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    ng.sub(s, () => {});
+    const seen: number[] = [];
+    ng.batch(() => {
+      ng.set(s, 1);
+      ng.sub(s, (value) => {
+        seen.push(value);
+      });
+      ng.set(s, 0);
+    });
+    expect(seen).toEqual([1, 0]);
+  });
+
+  test("a batch started by a sink as it ends notifies each write once", () => {
+    expect.assertions(1);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    ng.sub(a, (value) => {
+      if (value) {
+        ng.batch(() => {
+          ng.set(b, value);
+        });
+      }
+    });
+    const seen: number[] = [];
+    ng.sub(b, (value) => {
+      seen.push(value);
+    });
+    ng.batch(() => {
+      ng.set(a, 1);
+    });
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test("a sink's write as it ends is not delivered again by the batch", () => {
+    expect.assertions(1);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    ng.sub(a, (value) => {
+      if (value) ng.set(b, 2);
+    });
+    const seen: number[] = [];
+    ng.sub(b, (value) => {
+      seen.push(value);
+    });
+    ng.batch(() => {
+      ng.set(b, 1);
+      ng.set(a, 1);
+    });
+    expect(seen).toEqual([0, 2]);
+  });
+
+  test("skips a sink when a sink restores the value as it ends", () => {
+    expect.assertions(1);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    ng.sub(a, (value) => {
+      if (value) ng.set(b, 0);
+    });
+    const seen: number[] = [];
+    ng.sub(b, (value) => {
+      seen.push(value);
+    });
+    ng.batch(() => {
+      ng.set(b, 1);
+      ng.set(a, 1);
+    });
+    expect(seen).toEqual([0]);
+  });
+
+  test("a write in a batch a sink starts as it ends is not delivered twice", () => {
+    expect.assertions(1);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    ng.sub(a, (value) => {
+      if (value) {
+        ng.batch(() => {
+          ng.set(b, 2);
+        });
+      }
+    });
+    const seen: number[] = [];
+    ng.sub(b, (value) => {
+      seen.push(value);
+    });
+    ng.batch(() => {
+      ng.set(b, 1);
+      ng.set(a, 1);
+    });
+    expect(seen).toEqual([0, 2]);
+  });
+
+  test("a write by the sink of a signal a nested batch wrote is not delivered twice", () => {
+    expect.assertions(1);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    const c = ng.signal(0);
+    ng.sub(a, (value) => {
+      if (value) {
+        ng.batch(() => {
+          ng.set(c, 1);
+        });
+      }
+    });
+    ng.sub(c, (value) => {
+      if (value) ng.set(b, 2);
+    });
+    const seen: number[] = [];
+    ng.sub(b, (value) => {
+      seen.push(value);
+    });
+    ng.batch(() => {
+      ng.set(a, 1);
+      ng.set(b, 1);
+    });
+    expect(seen).toEqual([0, 1, 2]);
+  });
+
+  test("a batch a sink starts as it ends notifies when the outermost ends", () => {
+    expect.assertions(2);
+    const a = ng.signal(0);
+    const c = ng.signal(0);
+    const seen: number[] = [];
+    ng.sub(c, (value) => {
+      seen.push(value);
+    });
+    let seenOnReturn: number[] = [];
+    ng.sub(a, (value) => {
+      if (value) {
+        ng.batch(() => {
+          ng.set(c, 1);
+        });
+        seenOnReturn = [...seen];
+      }
+    });
+    ng.batch(() => {
+      ng.set(a, 1);
+    });
+    expect(seenOnReturn).toEqual([0]);
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test("a sink's write to a signal the batch end already notified is delivered at once", () => {
+    expect.assertions(1);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    const seen: number[] = [];
+    ng.sub(b, (value) => {
+      seen.push(value);
+    });
+    let seenBySink: number[] = [];
+    ng.sub(a, (value) => {
+      if (value) {
+        ng.set(b, 2);
+        seenBySink = [...seen];
+      }
+    });
+    ng.batch(() => {
+      ng.set(a, 1);
+      ng.set(b, 1);
+    });
+    expect(seenBySink).toEqual([0, 1, 2]);
+  });
+
+  test("a sink subscribed as it ends learns when a sink then restores the value", () => {
+    expect.assertions(1);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    const seen: number[] = [];
+    ng.sub(a, (value) => {
+      if (value) {
+        ng.sub(b, (next) => {
+          seen.push(next);
+        });
+        ng.set(b, 0);
+      }
+    });
+    ng.sub(b, () => {});
+    ng.batch(() => {
+      ng.set(a, 1);
+      ng.set(b, 1);
+    });
+    expect(seen).toEqual([1, 0]);
+  });
+
+  test("skips a sink when the batch restores the value", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    let calls = 0;
+    ng.sub(s, () => {
+      calls++;
+    });
+    ng.batch(() => {
+      ng.set(s, 1);
+      ng.set(s, 0);
+    });
+    expect(calls).toBe(1);
+  });
+
+  test("get inside it returns the last value set", () => {
+    expect.assertions(1);
+    const s = ng.signal(0);
+    ng.batch(() => {
+      ng.set(s, 1);
+      expect(ng.get(s)).toBe(1);
+    });
+  });
+
+  test("a throwing sink does not stop the other deferred sinks", () => {
+    expect.assertions(2);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    const called: string[] = [];
+    // Both throw, since the notification order is unspecified
+    for (const [name, s] of [
+      ["a", a],
+      ["b", b],
+    ] as const) {
+      ng.sub(s, (value) => {
+        if (!value) return;
+        called.push(name);
+        throw new Error(`${name} failed`);
+      });
+    }
+    expect(() => {
+      ng.batch(() => {
+        ng.set(a, 1);
+        ng.set(b, 1);
+      });
+    }).toThrow();
+    expect(called.toSorted((x, y) => x.localeCompare(y))).toEqual(["a", "b"]);
+  });
+
+  test("throws the first error when several deferred sinks throw", () => {
+    expect.assertions(1);
+    const a = ng.signal(0);
+    const b = ng.signal(0);
+    let calls = 0;
+    // Whichever sink runs first throws the first error: the order is unspecified
+    const fail = (value: number): void => {
+      if (value) throw new Error(calls++ ? "later sink failed" : "first sink failed");
+    };
+    ng.sub(a, fail);
+    ng.sub(b, fail);
+    expect(() => {
+      ng.batch(() => {
+        ng.set(a, 1);
+        ng.set(b, 1);
+      });
+    }).toThrow("first sink failed");
+  });
+
+  test("a throwing function does not leave later writes deferred", () => {
+    expect.assertions(2);
+    const s = ng.signal(0);
+    let calls = 0;
+    ng.sub(s, () => {
+      calls++;
+    });
+    expect(() => {
+      ng.batch(() => {
+        throw new Error("batch failed");
+      });
+    }).toThrow("batch failed");
+    ng.set(s, 1);
+    expect(calls).toBe(2);
+  });
+});
+
+describe("tier flags", () => {
+  test("a build with STAGE1_SIGNAL_LITE and STAGE1_SIGNAL_GRAPH throws as it loads", async () => {
+    expect.assertions(1);
+    // await expect(buildSignal(["STAGE1_SIGNAL_LITE", "STAGE1_SIGNAL_GRAPH"])).rejects.toThrow(
+    //   "set at most one",
+    // );
+    let error: unknown;
+    try {
+      await buildSignal(["STAGE1_SIGNAL_LITE", "STAGE1_SIGNAL_GRAPH"]);
+    } catch (error_) {
+      error = error_;
+    }
+    expect(String(error)).toContain("set at most one");
   });
 });

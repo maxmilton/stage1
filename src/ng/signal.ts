@@ -31,7 +31,7 @@
 // oxlint-disable id-length no-bitwise no-continue no-labels no-multi-assign oxclippy/never-loop
 // oxlint-disable no-param-reassign no-use-before-define typescript/no-non-null-assertion
 // oxlint-disable typescript/prefer-optional-chain max-depth oxclippy/excessive-nesting
-// oxlint-disable unicorn/explicit-length-check
+// oxlint-disable unicorn/explicit-length-check unicorn/number-literal-case
 // An effect returns nothing or a cleanup, typed as alien-signals and its conformance suite type it.
 // oxlint-disable typescript/no-invalid-void-type
 
