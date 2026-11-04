@@ -13,9 +13,10 @@ interface Create {
 export const create: Create = (tagName: keyof HTMLElementTagNameMap | `${string}-${string}`) =>
   document.createElement(tagName);
 /** Clone a node, including all its descendants. */
-export const clone = <T extends Node>(node: T): T => node.cloneNode(true) as T;
+export const clone = /*@__INLINE__*/ <T extends Node>(node: T): T => node.cloneNode(true) as T;
 /** Append a node to the end of the parent node. */
-export const append = <T extends Node>(node: T, parent: Node): T => parent.appendChild(node);
+export const append = /*@__INLINE__*/ <T extends Node>(node: T, parent: Node): T =>
+  parent.appendChild(node);
 /** Prepend a node to the beginning of the parent node. */
 export const prepend = <T extends Node>(node: T, parent: Node): T =>
   parent.insertBefore(node, parent.firstChild);

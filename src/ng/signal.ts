@@ -5,11 +5,20 @@
 //     3.2.1 (https://github.com/stackblitz/alien-signals). Their first use installs
 //     `track` and `after` and replaces `hook`, so code using only tier 1 bundles none of it.
 //
+// A Bun build can fix the tier instead, with at most one feature flag:
+//  - STAGE1_SIGNAL_LITE: tier 1 without batch. Nodes drop the batch and graph fields, and
+//    batch, computed and effect throw.
+//  - STAGE1_SIGNAL_GRAPH: both tiers and batch, with the graph wired into get, set and batch.
+// Bun folds feature() only where it is the condition of an if or a ternary, so every site
+// spells its flag out.
+//
 // Values compare with ===, as in alien-signals, so writing NaN again counts as a change and
 // -0 equals 0. Differences from alien-signals: a computed read outside any effect does not
 // link to its sources (it revalidates against a global write count instead, so nothing keeps
-// it alive); and a throwing effect or sink does not stop the others, the first error is
-// rethrown once all have run.
+// it alive); a throwing effect or sink does not stop the others, the first error is rethrown
+// once all have run; and a watched computed keeps an error it throws as its value, as Preact
+// does: reads rethrow it, and what depends on it re-runs, until what it read changes.
+// alien-signals leaves an effect whose dependency check threw dead.
 //
 // Property names are short because minifiers keep them as written. Every node lists the
 // fields it shares with other kinds first, in one order, so a walk that meets several kinds
@@ -25,6 +34,8 @@
 // oxlint-disable unicorn/explicit-length-check
 // An effect returns nothing or a cleanup, typed as alien-signals and its conformance suite type it.
 // oxlint-disable typescript/no-invalid-void-type
+
+import { feature } from "bun:bundle";
 
 export interface Signal<T> {
   /** The current value; reading it does not subscribe anything. */
@@ -74,7 +85,7 @@ interface Node {
 
 interface SignalNode extends Node {
   v: unknown;
-  /** Value the graph last saw, while DIRTY; cleared when committed. */
+  /** Value the graph last saw, while DIRTY; cleared when committed or unwatched. */
   c: unknown;
   /** Sinks, head. */
   n: Sink | undefined;
@@ -107,6 +118,9 @@ const DIRTY = 16;
 const PENDING = 32;
 // Marks a parent effect whose dependencies include a child effect.
 const HAS_CHILD_EFFECT = 64;
+// Marks a computed whose value is the error its last evaluation threw. The graph treats it as
+// clean; reading it rethrows.
+const ERRORED = 128;
 // A signal is never a subscriber, so it reuses WATCHING's and RECURSED_CHECK's bits for
 // its sinks: QUEUED while in `pairs` for a batch end, and LATE once given a sink since,
 // so that end notifies whatever the value.
@@ -124,7 +138,7 @@ let after: (() => void) | undefined;
  * effect replaces it with the graph's write. Measured: in V8, once `set` has run `defer` a
  * few times before the graph installs, `write` there is a second target, and graph-app writes
  * to signals with only sinks run about 1.2× slower. Two slots avoid that but give up 5–23%
- * on writes and batches in the usual order.
+ * on writes and batches in the usual order. A STAGE1_SIGNAL_GRAPH build calls `write` itself.
  */
 let hook: ((s: SignalNode, prev: unknown) => void) | undefined;
 let track: ((s: SignalNode) => void) | undefined;
@@ -132,18 +146,25 @@ let track: ((s: SignalNode) => void) | undefined;
 // ── Tier 1 ──────────────────────────────────────────────────────────────────
 
 export const signal = <T>(value: T): Signal<T> =>
-  ({
-    f: MUTABLE,
-    s: undefined,
-    t: undefined,
-    v: value,
-    c: undefined,
-    n: undefined,
-  }) as SignalNode as Signal<T>;
+  // A LITE node needs no graph or batch fields
+  (feature("STAGE1_SIGNAL_LITE")
+    ? { v: value, n: undefined }
+    : {
+        f: MUTABLE,
+        s: undefined,
+        t: undefined,
+        v: value,
+        c: undefined,
+        n: undefined,
+      }) as SignalNode as Signal<T>;
 
 /** Reads a signal; inside a computed or effect, also subscribes it. */
 export const get = <T>(s: Signal<T>): T => {
-  if (activeSub !== undefined) track!(s as SignalNode);
+  // LITE has nothing to subscribe; GRAPH tracks directly
+  if (!feature("STAGE1_SIGNAL_LITE") && activeSub !== undefined) {
+    if (feature("STAGE1_SIGNAL_GRAPH")) trackSignal(s as SignalNode);
+    else track!(s as SignalNode);
+  }
   return s.v;
 };
 
@@ -151,7 +172,8 @@ export const set = <T>(s: Signal<T>, value: T): void => {
   const prev = s.v;
   if (prev === value) return;
   (s as SignalNode).v = value;
-  if (hook === undefined) notify(s as SignalNode);
+  if (feature("STAGE1_SIGNAL_GRAPH")) write(s as SignalNode, prev);
+  else if (feature("STAGE1_SIGNAL_LITE") || hook === undefined) notify(s as SignalNode);
   else hook(s as SignalNode, prev);
 };
 
@@ -169,7 +191,9 @@ export const sub = <T>(s: Signal<T>, fn: (value: T) => void): (() => void) => {
   (s as SignalNode).n = sink;
   // A sink subscribed after a batched write saw a value the others didn't, so the
   // batch notifies when it ends even if it restores the value
-  if ((s as SignalNode).f & QUEUED) (s as SignalNode).f |= LATE;
+  if (!feature("STAGE1_SIGNAL_LITE") && (s as SignalNode).f & QUEUED) {
+    (s as SignalNode).f |= LATE;
+  }
   const dispose = (): void => {
     if (sink.f === null) return;
     sink.f = null;
@@ -177,6 +201,16 @@ export const sub = <T>(s: Signal<T>, fn: (value: T) => void): (() => void) => {
     sink.p.n = sink.n;
     if (sink.n !== undefined) sink.n.p = sink.p;
   };
+  // Without the graph nothing subscribes; Bun keeps the unused locals a shared body would leave
+  if (feature("STAGE1_SIGNAL_LITE")) {
+    try {
+      fn(s.v);
+    } catch (error) {
+      dispose();
+      throw error;
+    }
+    return dispose;
+  }
   const prevSub = activeSub;
   activeSub = undefined;
   try {
@@ -222,11 +256,12 @@ const pairs: unknown[] = [];
 /** 1 while the outermost batch notifies `pairs`, which it does at depth 1. */
 let ending = 0;
 
-// An unbatched write, and the end of an outermost batch, is a pass: a sink or effect
-// that throws does not stop the others, and the pass throws the first error once all
-// have run. A pass inside a sink or effect keeps its errors apart from the enclosing one.
+// An unbatched write, the end of an outermost batch, and disposing an effect are each a pass:
+// a sink, effect or cleanup that throws does not stop the others, and the pass throws the first
+// error once all have run. A pass inside a sink or effect keeps its errors apart from the
+// enclosing one.
 
-/** The first error a sink or effect threw in the current pass, or NONE. */
+/** The first error a sink, effect or cleanup threw in the current pass, or NONE. */
 let thrown: unknown = NONE;
 
 const report = (error: unknown): void => {
@@ -241,6 +276,9 @@ const end = (outer: unknown): void => {
 };
 
 const install = (): void => {
+  if (feature("STAGE1_SIGNAL_LITE")) {
+    throw new Error("stage1: computed and effect are left out of a STAGE1_SIGNAL_LITE build");
+  }
   if (track === undefined) {
     hook = write;
     track = trackSignal;
@@ -305,8 +343,11 @@ const write = (s: SignalNode, prev: unknown): void => {
  * unspecified.
  */
 export const batch = (fn: () => void): void => {
+  if (feature("STAGE1_SIGNAL_LITE")) {
+    throw new Error("stage1: batch is left out of a STAGE1_SIGNAL_LITE build");
+  }
   // Never replaces the graph's write, which batches too
-  hook ??= defer;
+  if (!feature("STAGE1_SIGNAL_GRAPH")) hook ??= defer;
   ++batchDepth;
   try {
     fn();
@@ -337,15 +378,19 @@ export const batch = (fn: () => void): void => {
         batchDepth = ending = 0;
         activeSub = prevSub;
       }
-      if (after !== undefined) after();
+      if (feature("STAGE1_SIGNAL_GRAPH")) flush();
+      else if (after !== undefined) after();
       end(outer);
     }
   }
 };
 
-/** A cached derivation of other signals and computeds, re-run lazily. */
+/**
+ * A cached derivation of other signals and computeds, re-run lazily. While watched, an error
+ * `fn` throws is cached too: reading rethrows it until what `fn` read changes.
+ */
 export const computed = <T>(fn: () => T): (() => T) => {
-  install();
+  if (!feature("STAGE1_SIGNAL_GRAPH")) install();
   const c: ComputedNode = {
     f: 0,
     s: undefined,
@@ -361,10 +406,12 @@ export const computed = <T>(fn: () => T): (() => T) => {
 
 /**
  * Runs `fn` now and again whenever what it read changes, until disposed. A function
- * `fn` returns is called, outside any subscriber, before the next run and on disposal.
+ * `fn` returns is called, outside any subscriber, before the next run and on disposal;
+ * one that throws disposes its effect. If the first run throws, the effect is disposed, with
+ * any effects it created, and the error rethrown.
  */
 export const effect = (fn: () => (() => void) | void): (() => void) => {
-  install();
+  if (!feature("STAGE1_SIGNAL_GRAPH")) install();
   const e: EffectNode = {
     f: WATCHING | RECURSED_CHECK,
     s: undefined,
@@ -381,20 +428,35 @@ export const effect = (fn: () => (() => void) | void): (() => void) => {
     prevSub.f |= HAS_CHILD_EFFECT;
   }
   try {
-    ++runDepth;
-    e.c = fn();
-  } finally {
-    --runDepth;
-    activeSub = prevSub;
-    e.f &= ~RECURSED_CHECK;
-  }
-  return () => {
+    try {
+      ++runDepth;
+      e.c = fn();
+    } finally {
+      --runDepth;
+      activeSub = prevSub;
+      e.f &= ~RECURSED_CHECK;
+    }
+  } catch (error) {
+    // The caller never gets the disposer, so a failed first run leaves nothing behind. Errors
+    // its children's cleanups throw stay out of the enclosing pass: this error goes first.
+    const outer = thrown;
     disposeEffect(e);
+    thrown = outer;
+    throw error;
+  }
+  // A pass: throws the first error a cleanup threw. Measured: 22 B smaller than comparing
+  // `thrown` before and after, for V8 disposing 6% slower (Max's choice)
+  return () => {
+    const outer = thrown;
+    thrown = NONE;
+    disposeEffect(e);
+    end(outer);
   };
 };
 
 /** Calls `fn` outside any computed or effect, so its reads subscribe nothing. */
 export const untracked = <T>(fn: () => T): T => {
+  if (feature("STAGE1_SIGNAL_LITE")) return fn();
   const prevSub = activeSub;
   activeSub = undefined;
   try {
@@ -404,24 +466,26 @@ export const untracked = <T>(fn: () => T): T => {
   }
 };
 
+// Watched and clean is the hot read: one mask test, then link. Everything else is outlined in
+// `refresh`, which links and rethrows itself. Measured against the inline form: V8 write_graph
+// 0.71, kairo 0.99, JSC 0.96; sharing one `link` and ERRORED test between them lost most of it.
 const readComputed = (c: ComputedNode): unknown => {
   const subscriber = activeSub;
+  if ((c.f & (MUTABLE | DIRTY | PENDING | ERRORED)) !== MUTABLE) return refresh(c, subscriber);
+  if (subscriber !== undefined) link(c, subscriber, cycle);
+  return c.v;
+};
+
+const refresh = (c: ComputedNode, subscriber: Node | undefined): unknown => {
   const flags = c.f;
   if (flags & DIRTY || (flags & PENDING && checkDirty(c.d!, c))) {
     if (updateComputed(c)) shallowPropagate(c.s);
   } else if (flags & PENDING) {
     c.f = flags & ~PENDING;
   } else if (!flags) {
-    if (subscriber !== undefined) {
-      c.f = MUTABLE | RECURSED_CHECK;
-      activeSub = c;
-      try {
-        c.v = c.g();
-      } finally {
-        activeSub = subscriber;
-        c.f &= ~RECURSED_CHECK;
-      }
-    } else if (c.w !== writes) {
+    // First observed evaluation: updateComputed caches what it throws
+    if (subscriber !== undefined) updateComputed(c);
+    else if (c.w !== writes) {
       // Unobserved: evaluate without linking, so the sources keep no reference
       const at = writes;
       c.v = c.g();
@@ -429,6 +493,7 @@ const readComputed = (c: ComputedNode): unknown => {
     }
   }
   if (subscriber !== undefined) link(c, subscriber, cycle);
+  if (c.f & ERRORED) throw c.v;
   return c.v;
 };
 
@@ -441,6 +506,11 @@ const updateComputed = (c: ComputedNode): boolean => {
     cycle = (cycle + 1) & 0x3fffffff;
     const prev = c.v;
     return prev !== (c.v = c.g());
+  } catch (error) {
+    // The error becomes the value, and a change: a check never throws, and dependents re-run
+    c.v = error;
+    c.f |= ERRORED;
+    return true;
   } finally {
     activeSub = prevSub;
     c.f &= ~RECURSED_CHECK;
@@ -476,8 +546,14 @@ const run = (e: EffectNode): void => {
     } finally {
       --runDepth;
       activeSub = prevSub;
-      e.f &= ~RECURSED_CHECK;
-      purgeDeps(e);
+      // A live effect keeps WATCHING or RECURSED_CHECK through its run: a child it queues clears
+      // WATCHING. With neither, the run disposed the effect: drop what the rest of the run read
+      // and created, and call the cleanup it returned. Measured: reading e.f twice here costs V8
+      // 9% on effect re-runs.
+      const f = e.f;
+      e.f = f & ~RECURSED_CHECK;
+      if (f & (WATCHING | RECURSED_CHECK)) purgeDeps(e);
+      else disposeEffect(e);
     }
   } else if (e.d !== undefined) {
     e.f = WATCHING | (flags & HAS_CHILD_EFFECT);
@@ -513,11 +589,31 @@ const disposeEffect = (e: Node): void => {
   if ((e as EffectNode).c !== undefined) cleanup(e as EffectNode);
 };
 
-// Runs outside any subscriber, and at most once
+// Runs outside any subscriber, and at most once; one that throws disposes its effect
 const cleanup = (e: EffectNode): void => {
   const fn = e.c!;
   e.c = undefined;
-  untracked(fn);
+  try {
+    untracked(fn);
+  } catch (error) {
+    // A batch body is no pass. Its end reports the error: it notifies this stand-in signal,
+    // LATE so whatever its value, and the sink rethrows. Measured: tracking the error in
+    // `batch` costs it 21–28% on empty batches.
+    if (batchDepth > ending)
+      pairs.push(
+        {
+          f: LATE,
+          n: {
+            f: () => {
+              throw error;
+            },
+          },
+        },
+        0,
+      );
+    else report(error);
+    disposeEffect(e);
+  }
 };
 
 const disposeDeps = (subscriber: Node): void => {
@@ -549,15 +645,18 @@ const enqueue = (e: Node): void => {
   }
 };
 
-// A signal, never a subscriber, has no deps tail: it keeps its flags, since its sink bits
-// outlive its subscribers. A stale DIRTY is harmless: every tracked read commits a pending
-// value before linking.
+// A signal, never a subscriber, has no deps tail. It keeps MUTABLE and its sink bits, which
+// outlive its subscribers, but drops a pending previous value: no subscriber is left to see it.
 const unwatched = (node: Node): void => {
   if (!("v" in node)) disposeEffect(node);
   else if (node.e !== undefined) {
     node.f = 0;
     (node as ComputedNode).w = -1;
     disposeDeps(node);
+  } else if (node.f & DIRTY) {
+    // A signal: a computed with no deps tail has no source to dirty it
+    node.f &= ~DIRTY;
+    (node as SignalNode).c = undefined;
   }
 };
 
@@ -729,3 +828,8 @@ const isValidLink = (checkLink: Link, subscriber: Node): boolean => {
   }
   return false;
 };
+
+// At most one tier flag. Last, since a statement before the constants stops Bun inlining them
+if (feature("STAGE1_SIGNAL_LITE") && feature("STAGE1_SIGNAL_GRAPH")) {
+  throw new Error("stage1: set at most one of STAGE1_SIGNAL_LITE and STAGE1_SIGNAL_GRAPH");
+}

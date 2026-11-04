@@ -184,6 +184,7 @@ describe("ng", () => {
     ["set", "Function"],
     ["sub", "Function"],
     ["batch", "Function"],
+    ["untracked", "Function"],
     ["computed", "Function"],
     ["effect", "Function"],
     ["noop", "Function"],
