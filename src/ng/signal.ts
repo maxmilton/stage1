@@ -1,9 +1,10 @@
 // Reactivity in two tiers:
-//  1. signal, get, set, sub, untracked and batch: a value with direct sinks, no
+//  1. signal, get, set, sub, and batch: a value with direct sinks, no
 //     dependency tracking. A batch installs `hook`, which defers sinks only.
-//  2. computed and effect: a glitch-free push-pull graph, ported from alien-signals
-//     3.2.1 (https://github.com/stackblitz/alien-signals). Their first use installs
-//     `track` and `after` and replaces `hook`, so code using only tier 1 bundles none of it.
+//  2. computed, effect, and untracked: a glitch-free push-pull graph, ported from
+//     alien-signals 3.2.1 (https://github.com/stackblitz/alien-signals). Their first
+//     use installs `track` and `after` and replaces `hook`, so code using only tier
+//     1 bundles none of it.
 //
 // A Bun build can fix the tier instead, with at most one feature flag:
 //  - STAGE1_SIGNAL_LITE: tier 1 without batch. Nodes drop the batch and graph fields, and
