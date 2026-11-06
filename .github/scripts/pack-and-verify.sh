@@ -73,8 +73,8 @@ jq -e '
   index("src/utils.ts") != null
 ' "$PACK_JSON" \
   || fail "Required package files missing"
-jq -e '.[keys[0]].entryCount == 60' "$PACK_JSON" \
-  || fail "Expected 60 packed files"
+jq -e '.[keys[0]].entryCount == 52' "$PACK_JSON" \
+  || fail "Expected 52 packed files"
 filename="$(jq -er '.[keys[0]].filename' "$PACK_JSON")" \
   || fail "Package filename missing"
 mv -- "$filename" publish.tgz \
