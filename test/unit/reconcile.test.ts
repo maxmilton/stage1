@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, spyOn, test } from "bun:test";
 import { reconcile as reconcileKeyed } from "../../src/reconcile/keyed.ts";
 import { reconcile as reconcileNonKeyed } from "../../src/reconcile/non-keyed.ts";
+import { reconcile as reconcileReuseLite } from "../../src/reconcile/reuse-lite.ts";
 import { reconcile as reconcileReuseNodes } from "../../src/reconcile/reuse-nodes.ts";
 
 interface Item {
@@ -926,5 +927,177 @@ describe("reuse-nodes", () => {
     expect([...parent.children]).toEqual([before, after]);
     expect(before.parentNode).toBe(parent);
     expect(after.parentNode).toBe(parent);
+  });
+});
+
+describe("reuse-lite", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf(reconcileReuseLite).not.toBeAny();
+    expectTypeOf(reconcileReuseLite).toBeFunction();
+    expectTypeOf(reconcileReuseLite).parameters.toEqualTypeOf<
+      [
+        parent: Element,
+        data: readonly unknown[],
+        createFn: (itemData: unknown) => Node,
+        updateFn?: ((node: Node, itemData: unknown) => void) | undefined,
+      ]
+    >();
+    expectTypeOf(reconcileReuseLite).returns.not.toBeAny();
+    expectTypeOf(reconcileReuseLite).returns.toBeVoid();
+    expectTypeOf(reconcileReuseLite).returns.not.toBeUndefined();
+    // Erased above; instantiated to pin item and node types flowing through together.
+    expectTypeOf(reconcileReuseLite<Item, HTMLSpanElement>).parameters.toEqualTypeOf<
+      [
+        parent: Element,
+        data: readonly Item[],
+        createFn: (itemData: Item) => HTMLSpanElement,
+        updateFn?: ((node: HTMLSpanElement, itemData: Item) => void) | undefined,
+      ]
+    >();
+    expectTypeOf(reconcileReuseLite<Item, HTMLSpanElement>).returns.toBeVoid();
+    expectTypeOf(reconcileReuseLite<Item, HTMLSpanElement>).returns.not.toBeUndefined();
+    // Unannotated callbacks infer the item type from the data and the node type from createFn.
+    expectTypeOf((parent: Element, items: readonly Item[]) => {
+      reconcileReuseLite(
+        parent,
+        items,
+        (item) => {
+          expectTypeOf(item).toEqualTypeOf<Item>();
+          return document.createElement("span");
+        },
+        (node, item) => {
+          expectTypeOf(node).toEqualTypeOf<HTMLSpanElement>();
+          expectTypeOf(item).toEqualTypeOf<Item>();
+        },
+      );
+    }).toBeFunction();
+  });
+
+  test("is a function", () => {
+    expect.assertions(2);
+    expect(reconcileReuseLite).toBeFunction();
+    expect(reconcileReuseLite).not.toBeClass();
+  });
+
+  test("expects 4 parameters (1 optional)", () => {
+    expect.assertions(1);
+    expect(reconcileReuseLite).toHaveParameters(3, 1);
+  });
+
+  test("returns undefined", () => {
+    expect.assertions(1);
+    const parent = document.createElement("div");
+    const create = () => document.createElement("div");
+    // oxlint-disable-next-line typescript/no-confusing-void-expression
+    expect(reconcileReuseLite(parent, [], create)).toBeUndefined();
+  });
+
+  test("creates nodes for initial data", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    reconcileReuseLite(parent, ITEMS, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["a", "b", "c", "d"]);
+    expect(parent.textContent).toBe("ABCD");
+  });
+
+  test("updates existing nodes in place by position", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileReuseLite(parent, ITEMS, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    reconcileReuseLite(parent, REPLACEMENT_ITEMS, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["x", "y"]);
+    const [firstNode, secondNode] = [...parent.children];
+    expect(firstNode).toBe(nodes[0]);
+    expect(secondNode).toBe(nodes[1]);
+  });
+
+  test("updates same-length data without moving any nodes", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    reconcileReuseLite(parent, ITEMS, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    const observer = new MutationObserver(() => {});
+    observer.observe(parent, { childList: true });
+    reconcileReuseLite(parent, REORDERED_ITEMS, createItemNode, updateItemNode);
+    const records = observer.takeRecords();
+    observer.disconnect();
+    expect(records).toHaveLength(0);
+    expect([...parent.children]).toEqual(nodes);
+  });
+
+  test("preserves input arrays when shrinking", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    const renderedData = [
+      { id: "c", label: "C" },
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+    ] as const;
+    const data = [
+      { id: "b", label: "B" },
+      { id: "a", label: "A" },
+    ] as const;
+    const originalRenderedData = [...renderedData] as const;
+    const originalData = [...data] as const;
+    reconcileReuseLite(parent, renderedData, createItemNode, updateItemNode);
+    reconcileReuseLite(parent, data, createItemNode, updateItemNode);
+    expect(renderedData).toEqual(originalRenderedData);
+    expect(data).toEqual(originalData);
+  });
+
+  test("shrinks frozen arrays of frozen items", () => {
+    expect.assertions(2);
+    const parent = document.createElement("div");
+    const renderedData = Object.freeze([
+      Object.freeze({ id: "c", label: "C" }),
+      Object.freeze({ id: "a", label: "A" }),
+      Object.freeze({ id: "b", label: "B" }),
+    ]);
+    const data = Object.freeze([
+      Object.freeze({ id: "b", label: "Bee" }),
+      Object.freeze({ id: "a", label: "Aye" }),
+    ]);
+    reconcileReuseLite(parent, renderedData, createItemNode, updateItemNode);
+    reconcileReuseLite(parent, data, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["b", "a"]);
+    expect(parent.textContent).toBe("BeeAye");
+  });
+
+  test("removes surplus nodes", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileReuseLite(parent, ITEMS, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    reconcileReuseLite(parent, REPLACEMENT_ITEMS, createItemNode, updateItemNode);
+    expect(parent.children).toHaveLength(2);
+    expect(nodes[2].parentNode).toBeNull();
+    expect(nodes[3].parentNode).toBeNull();
+  });
+
+  test("appends nodes for added data", () => {
+    expect.assertions(4);
+    const parent = document.createElement("div");
+    reconcileReuseLite(parent, REPLACEMENT_ITEMS, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    const expanded = [...REPLACEMENT_ITEMS, { id: "z", label: "Z" }];
+    reconcileReuseLite(parent, expanded, createItemNode, updateItemNode);
+    expect(itemOrder(parent)).toEqual(["x", "y", "z"]);
+    const [firstNode, secondNode, thirdNode] = [...parent.children];
+    expect(firstNode).toBe(nodes[0]);
+    expect(secondNode).toBe(nodes[1]);
+    expect(thirdNode.textContent).toBe("Z");
+  });
+
+  test("clears all nodes when data is empty", () => {
+    expect.assertions(3);
+    const parent = document.createElement("div");
+    reconcileReuseLite(parent, ITEMS, createItemNode, updateItemNode);
+    const nodes = [...parent.children];
+    reconcileReuseLite(parent, [], createItemNode, updateItemNode);
+    expect(parent.childNodes).toHaveLength(0);
+    expect(nodes[0].parentNode).toBeNull();
+    expect(nodes[3].parentNode).toBeNull();
   });
 });

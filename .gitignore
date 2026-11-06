@@ -4,6 +4,7 @@
 *.lock
 *.tgz
 !/bun.lock
+/.claude/worktrees
 /coverage/
 /dist/
 /node_modules/

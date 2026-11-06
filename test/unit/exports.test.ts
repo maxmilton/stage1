@@ -5,6 +5,7 @@ import * as indexExports from "../../src/index.ts";
 import * as macroExports from "../../src/macro.ts";
 import * as keyedExports from "../../src/reconcile/keyed.ts";
 import * as nonKeyedExports from "../../src/reconcile/non-keyed.ts";
+import * as reuseLiteExports from "../../src/reconcile/reuse-lite.ts";
 import * as reuseNodesExports from "../../src/reconcile/reuse-nodes.ts";
 import type { FlatRefs, InferRefs, RefKeys, Refs } from "../../src/types.ts";
 
@@ -184,6 +185,7 @@ describe("macro", () => {
 const reconcilers = [
   ["keyed", keyedExports],
   ["non-keyed", nonKeyedExports],
+  ["reuse-lite", reuseLiteExports],
   ["reuse-nodes", reuseNodesExports],
 ] as const;
 
