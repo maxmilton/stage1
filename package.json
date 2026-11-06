@@ -26,32 +26,32 @@
       "macro": "./dist/macro.js"
     },
     "./macro": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/macro.d.ts",
       "default": "./dist/macro.js"
     },
     "./browser": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/browser.d.ts",
       "bun": "./src/browser/index.ts",
       "import": "./dist/browser.mjs",
       "require": "./dist/browser.js"
     },
     "./reconcile/keyed": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/reconcile/keyed.d.ts",
       "bun": "./src/reconcile/keyed.ts",
       "default": "./dist/reconcile/keyed.js"
     },
     "./reconcile/non-keyed": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/reconcile/non-keyed.d.ts",
       "bun": "./src/reconcile/non-keyed.ts",
       "default": "./dist/reconcile/non-keyed.js"
     },
     "./reconcile/reuse-nodes": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/reconcile/reuse-nodes.d.ts",
       "bun": "./src/reconcile/reuse-nodes.ts",
       "default": "./dist/reconcile/reuse-nodes.js"
     },
     "./reconcile/reuse-lite": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/reconcile/reuse-lite.d.ts",
       "bun": "./src/reconcile/reuse-lite.ts",
       "default": "./dist/reconcile/reuse-lite.js"
     },
@@ -74,14 +74,13 @@
     "@maxmilton/test-utils": "0.0.18",
     "@playwright/test": "1.64.1",
     "@types/bun": "1.4.4",
-    "dts-buddy": "0.8.3",
     "happy-dom": "21.0.4",
     "oxfmt": "0.75.0",
     "oxlint": "1.90.0",
     "oxlint-tsgolint": "7.0.2005",
     "reactive-framework-test-suite": "0.1.0",
-    "rollup": "4.66.0",
-    "terser": "5.51.2",
+    "rolldown": "1.2.16",
+    "rolldown-plugin-dts": "0.29.0",
     "typescript": "6.0.3"
   }
 }

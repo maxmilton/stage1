@@ -1,31 +1,47 @@
 import { describe, expect, test } from "bun:test";
 import pkg from "../../package.json" with { type: "json" };
 
-// The only test file that reads dist/, so run `bun run build` first.
+// Run `bun run build` before tests that read dist/.
 describe("dist files", () => {
   // TODO: Remove the MIME type checks? Bun infers them from the file extension, not the data.
   // Unknown types (e.g. symlinks, which Bun.file() doesn't follow) report application/octet-stream.
 
   const distFiles: [filename: string, type: string, minBytes?: number, maxBytes?: number][] = [
+    ["reconcile/keyed.d.ts", "text/javascript;charset=utf-8"],
+    ["reconcile/keyed.d.ts.map", "application/json;charset=utf-8"],
     ["reconcile/keyed.js", "text/javascript;charset=utf-8", 2000, 3500],
     ["reconcile/keyed.js.map", "application/json;charset=utf-8"],
+    ["reconcile/non-keyed.d.ts", "text/javascript;charset=utf-8"],
+    ["reconcile/non-keyed.d.ts.map", "application/json;charset=utf-8"],
     ["reconcile/non-keyed.js", "text/javascript;charset=utf-8", 2000, 3500],
     ["reconcile/non-keyed.js.map", "application/json;charset=utf-8"],
+    ["reconcile/reuse-nodes.d.ts", "text/javascript;charset=utf-8"],
+    ["reconcile/reuse-nodes.d.ts.map", "application/json;charset=utf-8"],
     ["reconcile/reuse-nodes.js", "text/javascript;charset=utf-8", 500, 1000],
     ["reconcile/reuse-nodes.js.map", "application/json;charset=utf-8"],
+    ["reconcile/reuse-lite.d.ts", "text/javascript;charset=utf-8"],
+    ["reconcile/reuse-lite.d.ts.map", "application/json;charset=utf-8"],
     ["reconcile/reuse-lite.js", "text/javascript;charset=utf-8", 250, 400],
     ["reconcile/reuse-lite.js.map", "application/json;charset=utf-8"],
+    ["browser.d.ts", "text/javascript;charset=utf-8"],
+    ["browser.d.ts.map", "application/json;charset=utf-8"],
     ["browser.js", "text/javascript;charset=utf-8", 1000, 1500],
     ["browser.js.map", "application/json;charset=utf-8"],
     ["browser.mjs", "text/javascript;charset=utf-8", 1000, 1500],
     ["browser.mjs.map", "application/json;charset=utf-8"],
-    ["index.d.ts", "text/javascript;charset=utf-8", 6000, 10_000],
+    ["index.d.ts", "text/javascript;charset=utf-8"],
     ["index.d.ts.map", "application/json;charset=utf-8"],
     ["index.js", "text/javascript;charset=utf-8", 1000, 1500],
     ["index.js.map", "application/json;charset=utf-8"],
+    ["macro.d.ts", "text/javascript;charset=utf-8"],
+    ["macro.d.ts.map", "application/json;charset=utf-8"],
     // Looser ceiling: macro.js runs in Bun at build time and never ships to a browser.
     ["macro.js", "text/javascript;charset=utf-8", 1000, 2000],
     ["macro.js.map", "application/json;charset=utf-8"],
+    ["types.d.ts", "text/javascript;charset=utf-8"],
+    ["types.d.ts.map", "application/json;charset=utf-8"],
+    ["utils.d.ts", "text/javascript;charset=utf-8"],
+    ["utils.d.ts.map", "application/json;charset=utf-8"],
   ];
 
   describe.each(distFiles)("%s", (filename, type, minBytes, maxBytes) => {
