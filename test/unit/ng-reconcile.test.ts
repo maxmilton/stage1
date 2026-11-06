@@ -4,6 +4,9 @@
 import { describe, expect, expectTypeOf, test } from "bun:test";
 import { type List, list, mark } from "../../src/ng/reconcile.ts";
 import { batch, set, signal, type Signal, sub } from "../../src/ng/signal.ts";
+import { buildNg } from "./ng-build.ts";
+
+const listLite = await buildNg(["STAGE1_LIST_LITE"]);
 
 interface Item {
   readonly id: string;
@@ -641,6 +644,59 @@ const recorder = (): [calls: [string, boolean][], fn: (node: HTMLElement, on: bo
     },
   ];
 };
+
+describe("list built with STAGE1_LIST_LITE", () => {
+  test("matches the items after a seeded sequence of edits", () => {
+    expect.assertions(3);
+    const next = random(48_271);
+    const fresh = freshItems();
+    const parent = document.createElement("div");
+    const items = listLite.signal<readonly Item[]>([]);
+    listLite.list(parent, items, "id", createItemNode, updateItemNode);
+    const wrongOrder: number[] = [];
+    const wrongText: number[] = [];
+    const replacedRows: number[] = [];
+    for (let round = 0; round < 300; round++) {
+      const before = new Map(
+        [...parent.children].map((node) => [(node as HTMLElement).dataset["id"], node]),
+      );
+      const data = editItems(next, items.v, fresh);
+      listLite.set(items, data);
+      if (itemOrder(parent).join(",") !== data.map((item) => item.id).join(","))
+        wrongOrder.push(round);
+      if (parent.textContent !== data.map((item) => item.label).join("")) wrongText.push(round);
+      for (const node of parent.children) {
+        const kept = before.get((node as HTMLElement).dataset["id"]);
+        if (kept && kept !== node) replacedRows.push(round);
+      }
+    }
+    expect(wrongOrder).toEqual([]);
+    expect(wrongText).toEqual([]);
+    expect(replacedRows).toEqual([]);
+  });
+
+  test("marks a row created while its key is selected", () => {
+    expect.assertions(1);
+    const items = listLite.signal<readonly Item[]>([]);
+    const rows = listLite.list(document.createElement("div"), items, "id", createItemNode);
+    const marked: string[] = [];
+    listLite.mark(listLite.signal("b"), rows, (node, on) => {
+      if (on) marked.push(node.dataset["id"] ?? "");
+    });
+    listLite.set(items, ITEMS);
+    expect(marked).toEqual(["b"]);
+  });
+
+  test("throws from own, naming the flag", () => {
+    expect.assertions(1);
+    expect(() =>
+      listLite.list(document.createElement("div"), listLite.signal(ITEMS), "id", (item, own) => {
+        own(() => {});
+        return createItemNode(item);
+      }),
+    ).toThrow("STAGE1_LIST_LITE");
+  });
+});
 
 /** A list of `items` in a new parent, for marks that need only its rows. */
 const rowsOf = (items: readonly Item[]): List<string, HTMLSpanElement> =>

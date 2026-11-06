@@ -6,9 +6,13 @@
 // placed right to left around the longest run of rows that kept their order,
 // so no row moves unless it has to. New rows with no others left to place go
 // in in order.
+//
+// A Bun build with the STAGE1_LIST_LITE feature flag leaves out `own`, and with
+// it the per-row bookkeeping for cleanups: calling `own` then throws, naming the flag.
 
 // oxlint-disable id-length no-bitwise no-continue oxclippy/excessive-nesting oxclippy/similar-names
 
+import { feature } from "bun:bundle";
 import { type Signal, sub } from "./signal.ts";
 import { noop } from "./utils.ts";
 
@@ -39,6 +43,9 @@ export type List<K, N> = (() => void) & { readonly [ROWS]: Attach<K, N> };
 let collected: (() => void)[] | undefined;
 
 const own = (dispose: () => void): void => {
+  if (feature("STAGE1_LIST_LITE")) {
+    throw new Error("stage1: own is left out of a STAGE1_LIST_LITE build");
+  }
   (collected ??= []).push(dispose);
 };
 
@@ -73,7 +80,8 @@ const markLIS = /*@__NOINLINE__*/ (a: Int32Array): void => {
 /**
  * Renders a row per item into `parent` and keeps the rows in step with
  * `items`, matching them by `key`. `update` runs on a kept row whose item is a
- * new object; `own` registers a cleanup to run when the row is removed. The
+ * new object; `own` registers a cleanup to run when the row is removed (not in a
+ * STAGE1_LIST_LITE build). The
  * returned function stops the list and runs every row's cleanups; pass it to
  * `mark` to highlight a row by key.
  */
@@ -93,38 +101,47 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
   // The mark's callback for new rows
   let created: ((key: T[K], row: N) => void) | undefined;
 
-  const make = (item: T): N => {
-    const outer = collected;
-    collected = undefined;
-    try {
-      const node = create(item, own);
-      // oxlint-disable-next-line typescript/no-unnecessary-condition
-      if (collected) {
-        (node as Row)[CLEANUPS] = collected;
-        owners++;
+  // A ternary, so Bun folds the flag and drops the other arrow whole
+  const make = feature("STAGE1_LIST_LITE")
+    ? (item: T): N => {
+        const node = create(item, own);
+        if (created) created(item[key], node);
+        return node;
       }
-      if (created) created(item[key], node);
-      return node;
-    } finally {
-      collected = outer;
-    }
-  };
+    : (item: T): N => {
+        const outer = collected;
+        collected = undefined;
+        try {
+          const node = create(item, own);
+          // oxlint-disable-next-line typescript/no-unnecessary-condition
+          if (collected) {
+            (node as Row)[CLEANUPS] = collected;
+            owners++;
+          }
+          if (created) created(item[key], node);
+          return node;
+        } finally {
+          collected = outer;
+        }
+      };
 
-  const release = (node: Row): void => {
-    const cleanups = node[CLEANUPS];
-    if (cleanups) {
-      owners--;
-      for (const cleanup of cleanups) cleanup();
-    }
-  };
+  const release = feature("STAGE1_LIST_LITE")
+    ? noop
+    : (node: Row): void => {
+        const cleanups = node[CLEANUPS];
+        if (cleanups) {
+          owners--;
+          for (const cleanup of cleanups) cleanup();
+        }
+      };
 
   const drop = (node: N): void => {
-    if (owners) release(node);
+    if (!feature("STAGE1_LIST_LITE") && owners) release(node);
     node.remove();
   };
 
   const releaseAll = (): void => {
-    if (owners) for (const node of rows) release(node);
+    if (!feature("STAGE1_LIST_LITE") && owners) for (const node of rows) release(node);
   };
 
   // Measured faster: built off-document, the rows cost no per-insert work
