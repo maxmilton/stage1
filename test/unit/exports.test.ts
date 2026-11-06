@@ -172,6 +172,7 @@ describe("ng", () => {
 
   const publicExports = [
     ["h", "Function"],
+    ["hh", "Function"],
     ["collect", "Function"],
     ["ONCLICK", "Symbol"],
     ["handleClick", "Function"],
@@ -196,6 +197,8 @@ describe("ng", () => {
     ["prepend", "Function"],
     ["insert", "Function"],
     ["replace", "Function"],
+    ["$", "Function"],
+    ["$$", "Function"],
   ] as const;
 
   test.each(publicExports)('exports public "%s" %s', (name, type) => {
