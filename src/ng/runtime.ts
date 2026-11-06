@@ -14,6 +14,12 @@ export const h = <T extends Node = Element>(html: string): ChildNode & T => {
   return template.content.firstChild as ChildNode & T;
 };
 
+export const hh = (html: string): DocumentFragment => {
+  // nosemgrep: insecure-document-method
+  template.innerHTML = html;
+  return template.content;
+};
+
 /**
  * Collects node refs from a compiled template.
  *

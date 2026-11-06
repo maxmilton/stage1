@@ -81,7 +81,7 @@
     "oxlint": "1.90.0",
     "oxlint-tsgolint": "7.0.2005",
     "reactive-framework-test-suite": "0.1.0",
-    "rollup": "4.65.1",
+    "rollup": "4.66.0",
     "terser": "5.51.2",
     "typescript": "6.0.3"
   }

@@ -28,3 +28,10 @@ export const insert = <T extends Node>(node: T, target: Node): T =>
 export const replace = <T extends Node>(node: T, target: Node): T =>
   // oxlint-disable-next-line no-sequences typescript/no-non-null-assertion
   (target.parentNode!.replaceChild(node, target), node);
+
+// oxlint-disable-next-line id-length
+export const $ = <T extends Element>(selector: string, parent: ParentNode = document): T | null =>
+  parent.querySelector<T>(selector);
+export const $$ = <T extends Element>(selector: string, parent: ParentNode = document): T[] => [
+  ...parent.querySelectorAll<T>(selector),
+];
