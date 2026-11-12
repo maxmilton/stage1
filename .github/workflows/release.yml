@@ -51,6 +51,7 @@ jobs:
       - run: bun run build
       - run: bun run lint
       - run: bun run test
+      - run: bun run test:prod
 
   release:
     needs: validate

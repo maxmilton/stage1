@@ -67,7 +67,8 @@
     "lint:ts": "tsc --noEmit",
     "test": "bun test --only-failures",
     "test:ci": "bun test --coverage --randomize --parallel --no-isolate --rerun-each=50",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:prod": "NODE_ENV=production bun test"
   },
   "devDependencies": {
     "@maxmilton/oxlint-config": "0.0.24",
