@@ -1,5 +1,5 @@
 // This file has the same tests as test/unit/runtime.test.ts and
-// test/unit/runtime-fast.test.ts — keep them in sync.
+// test/unit/legacy/runtime.test.ts — keep them in sync.
 
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";

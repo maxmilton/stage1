@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, spyOn, test } from "bun:test";
-import { reconcile as reconcileKeyed } from "../../src/reconcile/keyed.ts";
-import { reconcile as reconcileNonKeyed } from "../../src/reconcile/non-keyed.ts";
-import { reconcile as reconcileReuseLite } from "../../src/reconcile/reuse-lite.ts";
-import { reconcile as reconcileReuseNodes } from "../../src/reconcile/reuse-nodes.ts";
+import { reconcile as reconcileKeyed } from "../../../src/legacy/reconcile/keyed.ts";
+import { reconcile as reconcileNonKeyed } from "../../../src/legacy/reconcile/non-keyed.ts";
+import { reconcile as reconcileReuseLite } from "../../../src/legacy/reconcile/reuse-lite.ts";
+import { reconcile as reconcileReuseNodes } from "../../../src/legacy/reconcile/reuse-nodes.ts";
 
 interface Item {
   readonly id: string;

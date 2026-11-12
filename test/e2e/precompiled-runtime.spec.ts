@@ -1,10 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
+import type { Refs } from "../../src/legacy/types.ts";
 import { compile as compileInProcess, type CompileResult } from "../../src/macro.ts";
-import type { Refs } from "../../src/types.ts";
 
-const jsSrc = await readFile(new URL("../../dist/index.js", import.meta.url), "utf8");
+const jsSrc = await readFile(new URL("../../dist/legacy/index.js", import.meta.url), "utf8");
 
 // VS Code's Playwright extension runs Node, which lacks Bun's HTMLRewriter, so compile in a Bun child there.
 function compile<R extends Refs<R> = object>(template: string): CompileResult<R> {
@@ -29,7 +29,7 @@ function render<R extends Refs<R>>(
     async ({ src, meta: { html, k, d } }) => {
       const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
       // oxlint-disable-next-line typescript/consistent-type-imports
-      const runtime = (await import(url)) as typeof import("../../src/index.ts");
+      const runtime = (await import(url)) as typeof import("../../src/legacy/index.ts");
       const root = runtime.h(html);
       const refs = runtime.collect<Refs>(root, k, d as typeof meta.d);
 

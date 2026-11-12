@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, mock, test } from "bun:test";
 import { isProxy } from "node:util/types";
-import { store } from "../../src/store.ts";
+import { store } from "../../../src/legacy/store.ts";
 
 describe("store", () => {
   test("types", () => {

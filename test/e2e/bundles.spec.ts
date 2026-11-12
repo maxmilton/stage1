@@ -1,11 +1,25 @@
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 
+/** stage1 and stage1/lite ship as source: bundle one as an app's production build does. */
+function bundle(entry: string): string {
+  return execFileSync("bun", ["build", entry, "--production", "--target=browser"], {
+    cwd: path.resolve(import.meta.dirname, "../.."),
+    encoding: "utf8",
+    // An inherited NODE_ENV (other than "production") beats --production and keeps the dev checks.
+    // oxlint-disable-next-line node/no-process-env
+    env: { ...process.env, NODE_ENV: "production" },
+  });
+}
+
 const jsPath = path.resolve(import.meta.dirname, "../../dist/browser.js");
+const rootCode = bundle("src/index.ts");
+const liteCode = bundle("src/lite/index.ts");
 const [esmCode, precompiledCode] = await Promise.all([
   readFile(path.resolve(import.meta.dirname, "../../dist/browser.mjs"), "utf8"),
-  readFile(path.resolve(import.meta.dirname, "../../dist/index.js"), "utf8"),
+  readFile(path.resolve(import.meta.dirname, "../../dist/legacy/index.js"), "utf8"),
 ]);
 
 // Browser bundle is a deliberate subset to keep the bundle small.
@@ -20,6 +34,57 @@ const BROWSER_EXPORTS = [
   "html",
   "setupSyntheticClick",
   "text",
+];
+const DOM_EXPORTS = [
+  "$",
+  "$$",
+  "ONCLICK",
+  "append",
+  "clone",
+  "collect",
+  "create",
+  "fragment",
+  "h",
+  "handleClick",
+  "hh",
+  "insert",
+  "noop",
+  "prepend",
+  "removeSyntheticClick",
+  "replace",
+  "setupSyntheticClick",
+  "text",
+];
+const ROOT_EXPORTS = [
+  ...DOM_EXPORTS,
+  "batch",
+  "computed",
+  "defer",
+  "dispose",
+  "effect",
+  "get",
+  "holder",
+  "list",
+  "mark",
+  "own",
+  "owns",
+  "release",
+  "scope",
+  "set",
+  "signal",
+  "untracked",
+  "within",
+];
+const LITE_EXPORTS = [
+  ...DOM_EXPORTS,
+  "batch",
+  "dispose",
+  "get",
+  "list",
+  "mark",
+  "set",
+  "signal",
+  "sub",
 ];
 const PRECOMPILED_EXPORTS = [
   "ONCLICK",
@@ -89,7 +154,80 @@ test.describe("the ESM browser build", () => {
   });
 });
 
-test.describe("the precompiled build", () => {
+test.describe("a production build of stage1", () => {
+  test("exposes exactly the documented exports", async ({ page }) => {
+    const result = await page.evaluate(async (src) => {
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      return Object.keys((await import(url)) as object);
+    }, rootCode);
+
+    expect(result.toSorted(byCodeUnit)).toEqual(ROOT_EXPORTS.toSorted(byCodeUnit));
+  });
+
+  test("keeps a list's rows in step with its items", async ({ page }) => {
+    const result = await page.evaluate(async (src) => {
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      // oxlint-disable-next-line typescript/consistent-type-imports
+      const { h, list, set, signal } = (await import(url)) as typeof import("../../src/index.ts");
+      const parent = h(/* html */ "<ul></ul>");
+      const items = signal([
+        { id: 1, label: "a" },
+        { id: 2, label: "b" },
+      ]);
+      list(parent, items, "id", (item) => {
+        const row = h(/* html */ "<li></li>");
+        row.textContent = item.label;
+        return row;
+      });
+      set(items, [
+        { id: 2, label: "b" },
+        { id: 3, label: "c" },
+      ]);
+      return parent.textContent;
+    }, rootCode);
+
+    expect(result).toBe("bc");
+  });
+});
+
+test.describe("a production build of stage1/lite", () => {
+  test("exposes exactly the documented exports", async ({ page }) => {
+    const result = await page.evaluate(async (src) => {
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      return Object.keys((await import(url)) as object);
+    }, liteCode);
+
+    expect(result.toSorted(byCodeUnit)).toEqual(LITE_EXPORTS.toSorted(byCodeUnit));
+  });
+
+  test("keeps a list's rows in step with its items", async ({ page }) => {
+    const result = await page.evaluate(async (src) => {
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      // oxlint-disable-next-line typescript/consistent-type-imports
+      const lite = (await import(url)) as typeof import("../../src/lite/index.ts");
+      const { h, list, set, signal } = lite;
+      const parent = h(/* html */ "<ul></ul>");
+      const items = signal([
+        { id: 1, label: "a" },
+        { id: 2, label: "b" },
+      ]);
+      list(parent, items, "id", (item) => {
+        const row = h(/* html */ "<li></li>");
+        row.textContent = item.label;
+        return row;
+      });
+      set(items, [
+        { id: 2, label: "b" },
+        { id: 3, label: "c" },
+      ]);
+      return parent.textContent;
+    }, liteCode);
+
+    expect(result).toBe("bc");
+  });
+});
+
+test.describe("the legacy precompiled build", () => {
   test("exposes exactly the documented exports", async ({ page }) => {
     const result = await page.evaluate(async (src) => {
       const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
@@ -104,7 +242,7 @@ test.describe("the precompiled build", () => {
     const result = await page.evaluate(async (src) => {
       const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
       // oxlint-disable-next-line typescript/consistent-type-imports
-      const { h } = (await import(url)) as typeof import("../../src/index.ts");
+      const { h } = (await import(url)) as typeof import("../../src/legacy/index.ts");
       return h(/* html */ "<ul id=root><li>A</li></ul>").nodeName;
     }, precompiledCode);
 

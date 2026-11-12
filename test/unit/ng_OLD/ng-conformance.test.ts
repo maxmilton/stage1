@@ -5,7 +5,7 @@
 
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ReactiveFramework, setExpect, testSuite } from "reactive-framework-test-suite";
-import * as source from "../../src/ng/signal.ts";
+import * as source from "../../../src/ng_OLD/signal.ts";
 import { buildSignal } from "./ng-build.ts";
 
 const adapter = (api: typeof source): ReactiveFramework => ({

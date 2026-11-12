@@ -1,13 +1,13 @@
-// This file has the same tests as test/unit/runtime-fast.test.ts and
+// This file has the same tests as test/unit/runtime.test.ts and
 // test/unit/browser-runtime.test.ts — keep them in sync.
 
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
-import { compile } from "../../src/macro.ts" with { type: "macro" };
-import type { CompileResult } from "../../src/macro.ts";
-import { collect, h } from "../../src/runtime.ts";
-import type { InferRefs, Refs } from "../../src/types.ts";
-import { Test } from "../fixtures/TestComponent.ts";
+import { collect, h } from "../../../src/legacy/runtime.ts";
+import type { InferRefs, Refs } from "../../../src/legacy/types.ts";
+import { compile } from "../../../src/macro.ts" with { type: "macro" };
+import type { CompileResult } from "../../../src/macro.ts";
+import { Test } from "../../fixtures/TestComponent_legacy.ts";
 
 describe("h", () => {
   test("types", () => {

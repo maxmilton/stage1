@@ -21,9 +21,9 @@ const view = h<HTMLDivElement>(meta.html);
 
 export function Test(props: TestProps): TestComponent {
   const root = clone(view);
-  const refs = collect(root, meta.k, meta.d);
+  const refs = collect(root, meta.d);
 
-  refs.text.nodeValue = props.text;
+  refs[meta.ref.text].nodeValue = props.text;
 
   return root;
 }
