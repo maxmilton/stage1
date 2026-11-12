@@ -1,0 +1,52 @@
+import type { FlatRefs, InferRefs, Refs } from "./types.ts";
+import { create } from "./utils.ts";
+
+const template = create("template");
+
+/**
+ * Creates a DOM node from a compiled template.
+ *
+ * @param html - HTML string.
+ */
+export const h = <T extends Node = Element>(html: string): ChildNode & T => {
+  // nosemgrep: insecure-document-method
+  template.innerHTML = html;
+  return template.content.firstChild as ChildNode & T;
+};
+
+/**
+ * Collects node refs from a compiled template.
+ *
+ * @param root - Root node.
+ * @param d - Distances from previous ref node or root.
+ * @returns An array of ref nodes in template order.
+ */
+export const collect = /*@__NOINLINE__*/ <R extends Refs<R>>(
+  root: Node,
+  d: readonly number[] & InferRefs<R>,
+): FlatRefs<R> => {
+  const len = d.length;
+  const refs = new Array<Node>(len);
+  let index = 0;
+  let distance: number;
+  let current: Node;
+  let node: Node | null = root;
+
+  for (; index < len; ++index) {
+    distance = d[index];
+
+    while (distance--) {
+      current = node;
+      node = node.firstChild || node.nextSibling;
+
+      while (!node) {
+        // oxlint-disable-next-line typescript/no-non-null-assertion
+        current = current.parentNode!;
+        node = current.nextSibling;
+      }
+    }
+    refs[index] = node;
+  }
+
+  return refs as FlatRefs<R>;
+};
