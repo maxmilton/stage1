@@ -57,9 +57,9 @@
       },
     },
     {
-      "files": ["src/reconcile/*"],
+      "files": ["src/legacy/reconcile/*"],
       "rules": {
-        // TODO: The `src/reconcile/*.ts` files have a lot of rules disabled at
+        // TODO: The `src/legacy/reconcile/*.ts` files have a lot of rules disabled at
         // the top as a temporary measure. Much of the reconcile code comes
         // from the original stage0 project and needs to be rewritten anyway.
 

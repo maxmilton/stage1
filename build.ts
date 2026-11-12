@@ -46,8 +46,8 @@ await Bun.build({
 });
 
 await Bun.build({
-  entrypoints: ["src/index.ts"],
-  outdir: "dist",
+  entrypoints: ["src/legacy/index.ts"],
+  outdir: "dist/legacy",
   target: "browser",
   allowUnresolved: [],
   env: "disable",
@@ -67,12 +67,12 @@ await Bun.build({
 
 await Bun.build({
   entrypoints: [
-    "src/reconcile/keyed.ts",
-    "src/reconcile/non-keyed.ts",
-    "src/reconcile/reuse-nodes.ts",
-    "src/reconcile/reuse-lite.ts",
+    "src/legacy/reconcile/keyed.ts",
+    "src/legacy/reconcile/non-keyed.ts",
+    "src/legacy/reconcile/reuse-nodes.ts",
+    "src/legacy/reconcile/reuse-lite.ts",
   ],
-  outdir: "dist/reconcile",
+  outdir: "dist/legacy/reconcile",
   target: "browser",
   allowUnresolved: [],
   env: "disable",
@@ -85,13 +85,13 @@ console.time("dts");
 
 const declarations = await rolldown({
   input: {
-    index: "src/index.ts",
     browser: "src/browser/index.ts",
     macro: "src/macro.ts",
-    "reconcile/keyed": "src/reconcile/keyed.ts",
-    "reconcile/non-keyed": "src/reconcile/non-keyed.ts",
-    "reconcile/reuse-nodes": "src/reconcile/reuse-nodes.ts",
-    "reconcile/reuse-lite": "src/reconcile/reuse-lite.ts",
+    "legacy/index": "src/legacy/index.ts",
+    "legacy/reconcile/keyed": "src/legacy/reconcile/keyed.ts",
+    "legacy/reconcile/non-keyed": "src/legacy/reconcile/non-keyed.ts",
+    "legacy/reconcile/reuse-nodes": "src/legacy/reconcile/reuse-nodes.ts",
+    "legacy/reconcile/reuse-lite": "src/legacy/reconcile/reuse-lite.ts",
   },
   plugins: [dts({ emitDtsOnly: true, sourcemap: true })],
 });

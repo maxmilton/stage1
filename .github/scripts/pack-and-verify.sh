@@ -21,60 +21,66 @@ jq -e '
   .[keys[0]].files | map(.path) |
   index("LICENSE") != null and
   index("README.md") != null and
+  index("package.json") != null and
   index("dist/browser.d.ts") != null and
   index("dist/browser.d.ts.map") != null and
   index("dist/browser.js") != null and
   index("dist/browser.js.map") != null and
   index("dist/browser.mjs") != null and
   index("dist/browser.mjs.map") != null and
-  index("dist/index.d.ts") != null and
-  index("dist/index.d.ts.map") != null and
-  index("dist/index.js") != null and
-  index("dist/index.js.map") != null and
   index("dist/macro.d.ts") != null and
   index("dist/macro.d.ts.map") != null and
   index("dist/macro.js") != null and
   index("dist/macro.js.map") != null and
-  index("dist/reconcile/keyed.js") != null and
-  index("dist/reconcile/keyed.js.map") != null and
-  index("dist/reconcile/non-keyed.js") != null and
-  index("dist/reconcile/non-keyed.js.map") != null and
-  index("dist/reconcile/reuse-nodes.js") != null and
-  index("dist/reconcile/reuse-nodes.js.map") != null and
-  index("package.json") != null and
+  index("dist/legacy/index.d.ts") != null and
+  index("dist/legacy/index.d.ts.map") != null and
+  index("dist/legacy/index.js") != null and
+  index("dist/legacy/index.js.map") != null and
+  index("dist/legacy/reconcile/keyed.d.ts") != null and
+  index("dist/legacy/reconcile/keyed.d.ts.map") != null and
+  index("dist/legacy/reconcile/keyed.js") != null and
+  index("dist/legacy/reconcile/keyed.js.map") != null and
+  index("dist/legacy/reconcile/non-keyed.d.ts") != null and
+  index("dist/legacy/reconcile/non-keyed.d.ts.map") != null and
+  index("dist/legacy/reconcile/non-keyed.js") != null and
+  index("dist/legacy/reconcile/non-keyed.js.map") != null and
+  index("dist/legacy/reconcile/reuse-nodes.d.ts") != null and
+  index("dist/legacy/reconcile/reuse-nodes.d.ts.map") != null and
+  index("dist/legacy/reconcile/reuse-nodes.js") != null and
+  index("dist/legacy/reconcile/reuse-nodes.js.map") != null and
+  index("dist/legacy/reconcile/reuse-lite.d.ts") != null and
+  index("dist/legacy/reconcile/reuse-lite.d.ts.map") != null and
+  index("dist/legacy/reconcile/reuse-lite.js") != null and
+  index("dist/legacy/reconcile/reuse-lite.js.map") != null and
+  index("dist/types.d.ts") != null and
+  index("dist/types.d.ts.map") != null and
+  index("src/index.ts") != null and
+  index("src/runtime.ts") != null and
+  index("src/signal.ts") != null and
+  index("src/reconcile.ts") != null and
+  index("src/events.ts") != null and
+  index("src/utils.ts") != null and
+  index("src/types.ts") != null and
+  index("src/macro.ts") != null and
+  index("src/lite/index.ts") != null and
+  index("src/lite/signal.ts") != null and
+  index("src/lite/reconcile.ts") != null and
   index("src/browser/index.ts") != null and
   index("src/browser/runtime.ts") != null and
-  index("src/events.ts") != null and
-  index("src/fast/index.ts") != null and
-  index("src/fast/runtime.ts") != null and
-  index("dist/reconcile/keyed.d.ts") != null and
-  index("dist/reconcile/keyed.d.ts.map") != null and
-  index("src/reconcile/keyed.ts") != null and
-  index("dist/reconcile/non-keyed.d.ts") != null and
-  index("dist/reconcile/non-keyed.d.ts.map") != null and
-  index("src/reconcile/non-keyed.ts") != null and
-  index("dist/reconcile/reuse-nodes.d.ts") != null and
-  index("dist/reconcile/reuse-nodes.d.ts.map") != null and
-  index("src/reconcile/reuse-nodes.ts") != null and
-  index("dist/reconcile/reuse-lite.d.ts") != null and
-  index("dist/reconcile/reuse-lite.d.ts.map") != null and
-  index("dist/reconcile/reuse-lite.js") != null and
-  index("dist/reconcile/reuse-lite.js.map") != null and
-  index("src/reconcile/reuse-lite.ts") != null and
-  index("src/index.ts") != null and
-  index("src/macro.ts") != null and
-  index("src/runtime.ts") != null and
-  index("src/store.ts") != null and
-  index("dist/types.d.ts.map") != null and
-  index("dist/types.d.ts") != null and
-  index("src/types.ts") != null and
-  index("dist/utils.d.ts") != null and
-  index("dist/utils.d.ts.map") != null and
-  index("src/utils.ts") != null
+  index("src/legacy/index.ts") != null and
+  index("src/legacy/runtime.ts") != null and
+  index("src/legacy/events.ts") != null and
+  index("src/legacy/store.ts") != null and
+  index("src/legacy/types.ts") != null and
+  index("src/legacy/utils.ts") != null and
+  index("src/legacy/reconcile/keyed.ts") != null and
+  index("src/legacy/reconcile/non-keyed.ts") != null and
+  index("src/legacy/reconcile/reuse-nodes.ts") != null and
+  index("src/legacy/reconcile/reuse-lite.ts") != null
 ' "$PACK_JSON" \
   || fail "Required package files missing"
-jq -e '.[keys[0]].entryCount == 60' "$PACK_JSON" \
-  || fail "Expected 60 packed files"
+jq -e '.[keys[0]].entryCount == 58' "$PACK_JSON" \
+  || fail "Expected 58 packed files"
 filename="$(jq -er '.[keys[0]].filename' "$PACK_JSON")" \
   || fail "Package filename missing"
 mv -- "$filename" publish.tgz \

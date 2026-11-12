@@ -15,16 +15,12 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "main": "dist/index.js",
+  "main": "./src/index.ts",
   "browser": "dist/browser.js",
-  "types": "dist/index.d.ts",
+  "types": "src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "bun": "./src/index.ts",
-      "default": "./dist/index.js",
-      "macro": "./dist/macro.js"
-    },
+    ".": "./src/index.ts",
+    "./lite": "./src/lite/index.ts",
     "./macro": {
       "types": "./dist/macro.d.ts",
       "default": "./dist/macro.js"
@@ -35,28 +31,31 @@
       "import": "./dist/browser.mjs",
       "require": "./dist/browser.js"
     },
-    "./reconcile/keyed": {
-      "types": "./dist/reconcile/keyed.d.ts",
-      "bun": "./src/reconcile/keyed.ts",
-      "default": "./dist/reconcile/keyed.js"
+    "./legacy": {
+      "types": "./dist/legacy/index.d.ts",
+      "bun": "./src/legacy/index.ts",
+      "default": "./dist/legacy/index.js"
     },
-    "./reconcile/non-keyed": {
-      "types": "./dist/reconcile/non-keyed.d.ts",
-      "bun": "./src/reconcile/non-keyed.ts",
-      "default": "./dist/reconcile/non-keyed.js"
+    "./legacy/reconcile/keyed": {
+      "types": "./dist/legacy/reconcile/keyed.d.ts",
+      "bun": "./src/legacy/reconcile/keyed.ts",
+      "default": "./dist/legacy/reconcile/keyed.js"
     },
-    "./reconcile/reuse-nodes": {
-      "types": "./dist/reconcile/reuse-nodes.d.ts",
-      "bun": "./src/reconcile/reuse-nodes.ts",
-      "default": "./dist/reconcile/reuse-nodes.js"
+    "./legacy/reconcile/non-keyed": {
+      "types": "./dist/legacy/reconcile/non-keyed.d.ts",
+      "bun": "./src/legacy/reconcile/non-keyed.ts",
+      "default": "./dist/legacy/reconcile/non-keyed.js"
     },
-    "./reconcile/reuse-lite": {
-      "types": "./dist/reconcile/reuse-lite.d.ts",
-      "bun": "./src/reconcile/reuse-lite.ts",
-      "default": "./dist/reconcile/reuse-lite.js"
+    "./legacy/reconcile/reuse-nodes": {
+      "types": "./dist/legacy/reconcile/reuse-nodes.d.ts",
+      "bun": "./src/legacy/reconcile/reuse-nodes.ts",
+      "default": "./dist/legacy/reconcile/reuse-nodes.js"
     },
-    "./fast": "./src/fast/index.ts",
-    "./ng": "./src/ng/index.ts",
+    "./legacy/reconcile/reuse-lite": {
+      "types": "./dist/legacy/reconcile/reuse-lite.d.ts",
+      "bun": "./src/legacy/reconcile/reuse-lite.ts",
+      "default": "./dist/legacy/reconcile/reuse-lite.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
