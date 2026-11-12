@@ -18,7 +18,9 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": false, // covered by linters
     "noImplicitOverride": true,
+    "noImplicitReturns": false, // too pedantic; prefer explicit types
     "noPropertyAccessFromIndexSignature": true, // pedantic
+    "noUncheckedIndexedAccess": false, // too pedantic; prefer explicit types
     "noUncheckedSideEffectImports": true,
     "noUnusedLocals": false, // covered by linters
     "noUnusedParameters": false, // covered by linters
