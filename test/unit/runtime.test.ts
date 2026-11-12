@@ -1,13 +1,13 @@
-// This file has the same tests as test/unit/runtime-fast.test.ts and
+// This file has the same tests as test/unit/runtime.test.ts and
 // test/unit/browser-runtime.test.ts — keep them in sync.
 
 import { afterEach, describe, expect, expectTypeOf, test } from "bun:test";
 import { cleanup, render } from "@maxmilton/test-utils/dom";
+import { collect, h } from "../../src/fast/runtime.ts";
 import { compile } from "../../src/macro.ts" with { type: "macro" };
 import type { CompileResult } from "../../src/macro.ts";
-import { collect, h } from "../../src/runtime.ts";
-import type { InferRefs, Refs } from "../../src/types.ts";
-import { Test } from "../fixtures/TestComponent.ts";
+import type { FlatRefs, InferRefs, Refs } from "../../src/types.ts";
+import { Test } from "../fixtures/TestComponent_fast.ts";
 
 describe("h", () => {
   test("types", () => {
@@ -178,7 +178,8 @@ describe("h", () => {
 });
 
 // TODO: Once bun supports macros used as template literals tag functions, we
-// should consider adding a html function similar to the browser runtime.
+// should consider adding a html function similar to the browser runtime. See:
+// https://github.com/oven-sh/bun/pull/30545
 
 // oxlint-disable vitest/no-commented-out-tests
 
@@ -231,24 +232,14 @@ describe("collect", () => {
     expectTypeOf(collect).not.toBeAny();
     expectTypeOf(collect).toBeFunction();
     expectTypeOf(collect).parameters.toEqualTypeOf<
-      [root: Node, k: readonly string[], d: readonly number[] & InferRefs<Refs>]
+      [root: Node, d: readonly number[] & InferRefs<Refs>]
     >();
-    // Erased: `R` -> its constraint, never reaching `R`.
+    // Erased: `R` -> its constraint ∴ `FlatRefs<Refs>`, never reaching `R`.
     expectTypeOf(collect).returns.not.toBeAny();
     expectTypeOf(collect).returns.not.toBeNever();
-    expectTypeOf(collect).returns.toExtend<Refs>();
-    expectTypeOf(collect).returns.toEqualTypeOf<Refs>();
-    expectTypeOf(collect<{ foo: HTMLDivElement; bar: Text }>).returns.toEqualTypeOf<{
-      foo: HTMLDivElement;
-      bar: Text;
-    }>();
-
-    // Interfaces have no implicit index signature, so `R extends Refs` alone would reject them.
-    interface FooBar {
-      foo: HTMLDivElement;
-      bar: Text;
-    }
-    expectTypeOf(collect<FooBar>).returns.toEqualTypeOf<FooBar>();
+    expectTypeOf(collect).returns.toExtend<Node[]>();
+    expectTypeOf(collect).returns.items.toEqualTypeOf<Node>();
+    expectTypeOf(collect).returns.toEqualTypeOf<Node[] & Record<`@${string}`, Node>>();
     // @ts-expect-error - ref values must be Nodes
     expectTypeOf(collect<{ foo: string }>);
     // @ts-expect-error - ref names must be lowercase; browsers normalise attribute names
@@ -257,27 +248,63 @@ describe("collect", () => {
     expectTypeOf(collect<{ foo: Text; Foo: Comment }>);
     // @ts-expect-error - regression: ref names must be strings; numeric keys were dropped
     expectTypeOf(collect<{ 1: Text }>);
-    expectTypeOf(collect<FooBar>).parameters.toEqualTypeOf<
-      [root: Node, k: readonly string[], d: readonly number[] & InferRefs<FooBar>]
+
+    // Refs are keyed by name via compile()'s `ref`: `keyof R` order is a type ID in TS 6, alphabetical in TS 7.
+    interface FooBar {
+      foo: HTMLDivElement;
+      bar: Text;
+    }
+    type FooBarRefs = ReturnType<typeof collect<FooBar>>;
+    type FooBarRef = CompileResult<FooBar>["ref"];
+    expectTypeOf(collect<FooBar>).returns.toExtend<Node[]>();
+    expectTypeOf(collect<FooBar>).returns.toEqualTypeOf<
+      Node[] & { "@foo": HTMLDivElement; "@bar": Text }
     >();
-    expectTypeOf(collect<FooBar>).toBeCallableWith(document, ["foo", "bar"], [1, 1]);
+    expectTypeOf<FooBarRefs[FooBarRef["foo"]]>().toEqualTypeOf<HTMLDivElement>();
+    expectTypeOf<FooBarRefs[FooBarRef["bar"]]>().toEqualTypeOf<Text>();
+    expectTypeOf<FooBarRefs[0]>().toEqualTypeOf<Node>();
+    expectTypeOf(collect<FooBar>).parameters.toEqualTypeOf<
+      [root: Node, d: readonly number[] & InferRefs<FooBar>]
+    >();
+    expectTypeOf(collect<FooBar>).toBeCallableWith(document, [1, 1]);
 
     // `R` comes from compile()'s `meta.d`: inferred when omitted; an explicit `R` must be a supertype of it.
     expectTypeOf((meta: CompileResult<FooBar>) => {
-      expectTypeOf(collect(document, meta.k, meta.d)).toEqualTypeOf<FooBar>();
-      expectTypeOf(collect<FooBar>(document, meta.k, meta.d)).toEqualTypeOf<FooBar>();
-      expectTypeOf(collect<{ foo: HTMLDivElement }>(document, meta.k, meta.d)).toEqualTypeOf<{
-        foo: HTMLDivElement;
-      }>();
-      expectTypeOf(collect<{ foo: Element; bar: Node }>(document, meta.k, meta.d)).toEqualTypeOf<{
-        foo: Element;
-        bar: Node;
-      }>();
+      expectTypeOf(collect(document, meta.d)).toEqualTypeOf<FooBarRefs>();
+      expectTypeOf(collect<FooBar>(document, meta.d)).toEqualTypeOf<FooBarRefs>();
+      expectTypeOf(collect<{ foo: HTMLDivElement }>(document, meta.d)).toEqualTypeOf<
+        FlatRefs<{ foo: HTMLDivElement }>
+      >();
+      expectTypeOf(collect<{ foo: Element; bar: Node }>(document, meta.d)).toEqualTypeOf<
+        FlatRefs<{ foo: Element; bar: Node }>
+      >();
       // @ts-expect-error - node types differ from compile()'s Refs
-      collect<{ foo: HTMLInputElement; bar: Text }>(document, meta.k, meta.d);
+      collect<{ foo: HTMLInputElement; bar: Text }>(document, meta.d);
       // @ts-expect-error - collect() declares a ref compile() does not
-      collect<FooBar & { baz: Comment }>(document, meta.k, meta.d);
+      collect<FooBar & { baz: Comment }>(document, meta.d);
     }).toBeFunction();
+
+    // Interface key order differs from template order; ref types follow names, not positions.
+    interface OutOfOrder {
+      b: Comment;
+      c: HTMLDivElement;
+      a: Text;
+    }
+    expectTypeOf((meta: CompileResult<OutOfOrder>) => {
+      const refs = collect(document, meta.d);
+      expectTypeOf(refs[meta.ref.a]).toEqualTypeOf<Text>();
+      expectTypeOf(refs[meta.ref.b]).toEqualTypeOf<Comment>();
+      expectTypeOf(refs[meta.ref.c]).toEqualTypeOf<HTMLDivElement>();
+    }).toBeFunction();
+
+    // Regression: the former positional (UnionToTuple) types failed with TS2589 at 50 refs.
+    type Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+    interface ManyRefs extends Record<`k${Digit}${Digit}`, Text> {
+      last: HTMLDivElement;
+    }
+    expectTypeOf<
+      ReturnType<typeof collect<ManyRefs>>[CompileResult<ManyRefs>["ref"]["last"]]
+    >().toEqualTypeOf<HTMLDivElement>();
   });
 
   test("is a function", () => {
@@ -286,30 +313,24 @@ describe("collect", () => {
     expect(collect).not.toBeClass();
   });
 
-  test("expects 3 parameters", () => {
+  test("expects 2 parameters", () => {
     expect.assertions(1);
-    expect(collect).toHaveParameters(3, 0);
+    expect(collect).toHaveParameters(2, 0);
   });
 
-  test("resolves refs with frozen metadata arrays", () => {
+  test("resolves refs with a frozen distance array", () => {
     expect.assertions(2);
     const root = document.createElement("div");
     const first = document.createElement("span");
     const second = document.createElement("span");
     root.append(first, second);
-    const keys = Object.freeze(["first", "second"]);
     const distances = Object.freeze([1, 1]);
-    const refs = collect<{ first: HTMLSpanElement; second: HTMLSpanElement }>(
-      root,
-      keys,
-      distances,
-    );
-    expect(refs.first).toBe(first);
-    expect(refs.second).toBe(second);
+    const refs = collect<{ first: HTMLSpanElement; second: HTMLSpanElement }>(root, distances);
+    expect(refs[0]).toBe(first);
+    expect(refs[1]).toBe(second);
   });
 
-  // One test per ref so a wrong distance names its ref; nodeName, unlike
-  // instanceof HTMLElement, tells elements apart.
+  // One test per ref so a wrong distance names its ref; nodeName, unlike instanceof HTMLElement, tells elements apart.
   const DEEP_TREE = compile<Refs>(/* html */ `
     <div @a>
       <header @b>
@@ -339,43 +360,46 @@ describe("collect", () => {
   `);
 
   test.each([
-    ["a", "DIV"],
-    ["b", "HEADER"],
-    ["c", "NAV"],
-    ["d", "A"],
-    ["e", "A"],
-    ["f", "MAIN"],
-    ["g", "H1"],
-    ["h", "P"],
-    ["i", "B"],
-    ["j", "A"],
-    ["k", "OL"],
-    ["l", "LI"],
-    ["m", "LI"],
-    ["n", "FORM"],
-    ["o", "INPUT"],
-    ["p", "TEXTAREA"],
-    ["q", "BUTTON"],
-    ["r", "#comment"],
-    ["s", "FOOTER"],
-    ["t", "#text"],
-  ])('collects the "%s" ref as %s', (name, nodeName) => {
-    expect.assertions(2);
-    expect(DEEP_TREE.success).toBeTrue();
-    const view = h(DEEP_TREE.html);
-    const refs = collect(view, DEEP_TREE.k, DEEP_TREE.d);
-    expect(refs[name].nodeName).toBe(nodeName);
-  });
+    ["a", 0, "DIV"],
+    ["b", 1, "HEADER"],
+    ["c", 2, "NAV"],
+    ["d", 3, "A"],
+    ["e", 4, "A"],
+    ["f", 5, "MAIN"],
+    ["g", 6, "H1"],
+    ["h", 7, "P"],
+    ["i", 8, "B"],
+    ["j", 9, "A"],
+    ["k", 10, "OL"],
+    ["l", 11, "LI"],
+    ["m", 12, "LI"],
+    ["n", 13, "FORM"],
+    ["o", 14, "INPUT"],
+    ["p", 15, "TEXTAREA"],
+    ["q", 16, "BUTTON"],
+    ["r", 17, "#comment"],
+    ["s", 18, "FOOTER"],
+    ["t", 19, "#text"],
+  ] as [name: string, index: number, nodeName: string][])(
+    'collects the "%s" ref at index %i as %s',
+    (_name, index, nodeName) => {
+      expect.assertions(2);
+      expect(DEEP_TREE.success).toBeTrue();
+      const view = h(DEEP_TREE.html);
+      const refs = collect(view, DEEP_TREE.d);
+      expect(refs[index].nodeName).toBe(nodeName);
+    },
+  );
 
-  test("collects exactly the 20 marked refs in a deep tree", () => {
+  test("collects one node per ref in a deep tree", () => {
     expect.assertions(2);
     expect(DEEP_TREE.success).toBeTrue();
     const view = h(DEEP_TREE.html);
-    expect(Object.keys(collect(view, DEEP_TREE.k, DEEP_TREE.d))).toHaveLength(20);
+    expect(collect(view, DEEP_TREE.d)).toHaveLength(20);
   });
 
   test("collects ref at start of element attributes", () => {
-    expect.assertions(5);
+    expect.assertions(6);
     const meta = compile<{ search: HTMLInputElement }>(/* html */ `
       <div>
         <input @search id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off />
@@ -383,15 +407,16 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
-    expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.search.id).toBe("search");
-    expect(refs.search.name).toBe("q");
-    expect(Object.keys(refs)).toHaveLength(1);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
+    expect(refs[meta.ref.search].id).toBe("search");
+    expect(refs[meta.ref.search].name).toBe("q");
+    expect(refs).toHaveLength(1);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
   test("collects ref at end of element attributes", () => {
-    expect.assertions(5);
+    expect.assertions(6);
     const meta = compile<{ search: HTMLInputElement }>(/* html */ `
       <div>
         <input id=search name=q class="input search" type=search minlength=2 maxlength=40 placeholder="Search..." autofocus autocomplete=off @search />
@@ -399,15 +424,16 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
-    expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.search.id).toBe("search");
-    expect(refs.search.name).toBe("q");
-    expect(Object.keys(refs)).toHaveLength(1);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
+    expect(refs[meta.ref.search].id).toBe("search");
+    expect(refs[meta.ref.search].name).toBe("q");
+    expect(refs).toHaveLength(1);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
   test("collects ref in middle of element attributes", () => {
-    expect.assertions(5);
+    expect.assertions(6);
     const meta = compile<{ search: HTMLInputElement }>(/* html */ `
       <div>
         <input id=search name=q class="input search" type=search minlength=2 @search maxlength=40 placeholder="Search..." autofocus autocomplete=off />
@@ -415,27 +441,12 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
-    expect(refs.search).toBeInstanceOf(window.HTMLInputElement);
-    expect(refs.search.id).toBe("search");
-    expect(refs.search.name).toBe("q");
-    expect(Object.keys(refs)).toHaveLength(1);
-  });
-
-  // Accepted tradeoff: the walk is unchecked for speed, so a distance past the end of the tree throws.
-  test("throws when the walk distance overruns the tree", () => {
-    expect.assertions(1);
-    const view = h(/* html */ "<div><span></span></div>");
-    expect(() => collect(view, ["a"], [99])).toThrow(window.TypeError);
-  });
-
-  // Accepted tradeoff: the walk is unchecked for speed, so keys without a distance reuse the last node.
-  test("returns the same node for surplus ref keys", () => {
-    expect.assertions(2);
-    const view = h(/* html */ "<div><span></span></div>");
-    const refs = collect<{ a: Node; b: Node }>(view, ["a", "b"], [1]);
-    expect(refs.a.nodeName).toBe("SPAN");
-    expect(refs.b).toBe(refs.a);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.search]).toBeInstanceOf(window.HTMLInputElement);
+    expect(refs[meta.ref.search].id).toBe("search");
+    expect(refs[meta.ref.search].name).toBe("q");
+    expect(refs).toHaveLength(1);
+    expect(Object.keys(meta.ref)).toHaveLength(1);
   });
 
   test("collects ref from template with only text", () => {
@@ -443,9 +454,9 @@ describe("collect", () => {
     const meta = compile<{ a: Text }>(/* html */ "@a");
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
-    expect(refs.a.nodeName).toBe("#text");
-    expect(refs.a).toBeInstanceOf(window.Text);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.a].nodeName).toBe("#text");
+    expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
   });
 
   test("collects ref from template with only comment", () => {
@@ -453,9 +464,9 @@ describe("collect", () => {
     const meta = compile<{ a: Comment }>(/* html */ "<!-- @a -->");
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
-    expect(refs.a.nodeName).toBe("#comment");
-    expect(refs.a).toBeInstanceOf(window.Comment);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.a].nodeName).toBe("#comment");
+    expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
   });
 
   // Regression: compile() didn't count whitespace-only text kept in <pre>, so the walk stopped short.
@@ -464,9 +475,9 @@ describe("collect", () => {
     const meta = compile<{ a: Comment }>(/* html */ "<div><pre>   </pre><!-- @a --></div>");
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
-    expect(refs.a.nodeName).toBe("#comment");
-    expect(refs.a).toBeInstanceOf(window.Comment);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.a].nodeName).toBe("#comment");
+    expect(refs[meta.ref.a]).toBeInstanceOf(window.Comment);
   });
 
   // Regression: compile() counted each chunk of text split on a bare "<" as its own node.
@@ -475,9 +486,9 @@ describe("collect", () => {
     const meta = compile<{ x: Comment }>(/* html */ "<div>a < b<!-- @x --></div>");
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
-    expect(refs.x.nodeName).toBe("#comment");
-    expect(refs.x).toBeInstanceOf(window.Comment);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.x].nodeName).toBe("#comment");
+    expect(refs[meta.ref.x]).toBeInstanceOf(window.Comment);
   });
 
   test("collects refs from template with many comments", () => {
@@ -507,28 +518,49 @@ describe("collect", () => {
     `);
     expect(meta.success).toBeTrue();
     const view = h(meta.html);
-    const refs = collect(view, meta.k, meta.d);
-    expect(refs.a.nodeName).toBe("#text");
-    expect(refs.a).toBeInstanceOf(window.Text);
-    expect(refs.b.nodeName).toBe("#comment");
-    expect(refs.b).toBeInstanceOf(window.Comment);
-    expect(refs.c.nodeName).toBe("DIV");
-    expect(refs.c).toBeInstanceOf(window.HTMLDivElement);
-    expect(refs.d.nodeName).toBe("#text");
-    expect(refs.d).toBeInstanceOf(window.Text);
-    expect(refs.e.nodeName).toBe("#comment");
-    expect(refs.e).toBeInstanceOf(window.Comment);
-    expect(refs.f.nodeName).toBe("DIV");
-    expect(refs.f).toBeInstanceOf(window.HTMLDivElement);
-    expect(Object.keys(refs)).toHaveLength(6);
-    expect(meta.k).toHaveLength(6);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.a].nodeName).toBe("#text");
+    expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
+    expect(refs[meta.ref.b].nodeName).toBe("#comment");
+    expect(refs[meta.ref.b]).toBeInstanceOf(window.Comment);
+    expect(refs[meta.ref.c].nodeName).toBe("DIV");
+    expect(refs[meta.ref.c]).toBeInstanceOf(window.HTMLDivElement);
+    expect(refs[meta.ref.d].nodeName).toBe("#text");
+    expect(refs[meta.ref.d]).toBeInstanceOf(window.Text);
+    expect(refs[meta.ref.e].nodeName).toBe("#comment");
+    expect(refs[meta.ref.e]).toBeInstanceOf(window.Comment);
+    expect(refs[meta.ref.f].nodeName).toBe("DIV");
+    expect(refs[meta.ref.f]).toBeInstanceOf(window.HTMLDivElement);
+    expect(refs).toHaveLength(6);
+    expect(Object.keys(meta.ref)).toHaveLength(6);
     expect(meta.d).toHaveLength(6);
+  });
+
+  test("resolves refs by name when template order differs from Refs key order", () => {
+    expect.assertions(4);
+    interface TemplateRefs {
+      b: Comment;
+      c: HTMLDivElement;
+      a: Text;
+    }
+    const meta = compile<TemplateRefs>(/* html */ `
+      <div @c>
+        @a
+        <!-- @b -->
+      </div>
+    `);
+    expect(meta.success).toBeTrue();
+    const view = h(meta.html);
+    const refs = collect(view, meta.d);
+    expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
+    expect(refs[meta.ref.b]).toBeInstanceOf(window.Comment);
+    expect(refs[meta.ref.c]).toBeInstanceOf(window.HTMLDivElement);
   });
 
   // Spaced text beside tags is what keepSpaces changes; the html guard proves the option took effect.
   describe("keepSpaces option", () => {
     test("collects refs when option is default", () => {
-      expect.assertions(11);
+      expect.assertions(12);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
@@ -549,20 +581,21 @@ describe("collect", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toContain("<span>x</span>");
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
-      expect(refs.a.nodeName).toBe("#text");
-      expect(refs.a).toBeInstanceOf(window.Text);
-      expect(refs.b.nodeName).toBe("DIV");
-      expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs.c.nodeName).toBe("#text");
-      expect(refs.c).toBeInstanceOf(window.Text);
-      expect(refs.d.nodeName).toBe("DIV");
-      expect(refs.d).toBeInstanceOf(window.HTMLDivElement);
-      expect(Object.keys(refs)).toHaveLength(4);
+      const refs = collect(view, meta.d);
+      expect(refs[meta.ref.a].nodeName).toBe("#text");
+      expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.b].nodeName).toBe("DIV");
+      expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs[meta.ref.c].nodeName).toBe("#text");
+      expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.d].nodeName).toBe("DIV");
+      expect(refs[meta.ref.d]).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs).toHaveLength(4);
+      expect(Object.keys(meta.ref)).toHaveLength(4);
     });
 
     test("collects refs when option is true", () => {
-      expect.assertions(11);
+      expect.assertions(12);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
@@ -586,20 +619,21 @@ describe("collect", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toContain("<span> x </span>");
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
-      expect(refs.a.nodeName).toBe("#text");
-      expect(refs.a).toBeInstanceOf(window.Text);
-      expect(refs.b.nodeName).toBe("DIV");
-      expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs.c.nodeName).toBe("#text");
-      expect(refs.c).toBeInstanceOf(window.Text);
-      expect(refs.d.nodeName).toBe("DIV");
-      expect(refs.d).toBeInstanceOf(window.HTMLDivElement);
-      expect(Object.keys(refs)).toHaveLength(4);
+      const refs = collect(view, meta.d);
+      expect(refs[meta.ref.a].nodeName).toBe("#text");
+      expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.b].nodeName).toBe("DIV");
+      expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs[meta.ref.c].nodeName).toBe("#text");
+      expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.d].nodeName).toBe("DIV");
+      expect(refs[meta.ref.d]).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs).toHaveLength(4);
+      expect(Object.keys(meta.ref)).toHaveLength(4);
     });
 
     test("collects refs when option is false", () => {
-      expect.assertions(11);
+      expect.assertions(12);
       interface TemplateRefs {
         a: Text;
         b: HTMLDivElement;
@@ -623,16 +657,17 @@ describe("collect", () => {
       expect(meta.success).toBeTrue();
       expect(meta.html).toContain("<span>x</span>");
       const view = h(meta.html);
-      const refs = collect(view, meta.k, meta.d);
-      expect(refs.a.nodeName).toBe("#text");
-      expect(refs.a).toBeInstanceOf(window.Text);
-      expect(refs.b.nodeName).toBe("DIV");
-      expect(refs.b).toBeInstanceOf(window.HTMLDivElement);
-      expect(refs.c.nodeName).toBe("#text");
-      expect(refs.c).toBeInstanceOf(window.Text);
-      expect(refs.d.nodeName).toBe("DIV");
-      expect(refs.d).toBeInstanceOf(window.HTMLDivElement);
-      expect(Object.keys(refs)).toHaveLength(4);
+      const refs = collect(view, meta.d);
+      expect(refs[meta.ref.a].nodeName).toBe("#text");
+      expect(refs[meta.ref.a]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.b].nodeName).toBe("DIV");
+      expect(refs[meta.ref.b]).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs[meta.ref.c].nodeName).toBe("#text");
+      expect(refs[meta.ref.c]).toBeInstanceOf(window.Text);
+      expect(refs[meta.ref.d].nodeName).toBe("DIV");
+      expect(refs[meta.ref.d]).toBeInstanceOf(window.HTMLDivElement);
+      expect(refs).toHaveLength(4);
+      expect(Object.keys(meta.ref)).toHaveLength(4);
     });
   });
 });
