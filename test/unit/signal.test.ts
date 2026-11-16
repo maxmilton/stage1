@@ -1,7 +1,7 @@
 // The signal core's contract: ordering, ownership, teardown order, keep-alive computeds,
-// consistency, batches, writes in effects, errors, disposal, depth, memory and dev checks. Run in
-// both modes: `bun test` (dev checks on) and `NODE_ENV=production bun test` (the dev checks group
-// skips; the cleanup-error tests expect each mode's own outcome).
+// consistency, batches, writes in effects, errors, disposal, subs, scope bodies, depth, memory and
+// dev checks. Run in both modes: `bun test` (dev checks on) and `NODE_ENV=production bun test` (the
+// dev checks group skips; the cleanup-error tests expect each mode's own outcome).
 // Callbacks under test branch on the value they receive.
 // oxlint-disable vitest/no-conditional-in-test
 
@@ -20,6 +20,7 @@ import {
   set,
   type Signal,
   signal,
+  sub,
   untracked,
 } from "../../src/signal.ts";
 
@@ -99,8 +100,24 @@ const warnings = (fn: () => void): number => {
   return warn.mock.calls.length;
 };
 
+/** What `fn` threw, or undefined. */
+const thrownBy = (fn: () => void): unknown => {
+  try {
+    fn();
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+};
+
+/** Sibling order is unspecified: tests whose outcome hinges on queue order run both write orders. */
+const ORDERS = [
+  ["the sub's signal written first", true],
+  ["the child's signal written first", false],
+] as const;
+
 /** The effect a user writes for a static subscription: the callback runs untracked (but owned). */
-const sub = <T>(source: Signal<T> | Computed<T>, fn: (value: T) => void): Effect =>
+const userSub = <T>(source: Signal<T> | Computed<T>, fn: (value: T) => void): Effect =>
   effect(() => {
     const value = get(source);
     untracked(() => {
@@ -129,7 +146,7 @@ describe("ordering", () => {
     expect.assertions(1);
     const source = signal(1);
     const seen: number[] = [];
-    const handle = sub<number>(source, (value) => {
+    const handle = userSub<number>(source, (value) => {
       seen.push(value);
     });
     set(source, 2);
@@ -325,7 +342,7 @@ describe("ownership", () => {
     const source = signal(0);
     const other = signal(0);
     let runs = 0;
-    const handle = sub(source, () => {
+    const handle = userSub(source, () => {
       effect(() => {
         get(other);
         runs++;
@@ -383,6 +400,21 @@ describe("ownership", () => {
     set(source, 1);
     dispose(handle);
     expect(calls).toBe(1);
+  });
+
+  test("a scope made in an effect's run subscribes that effect to nothing its fn reads", () => {
+    expect.assertions(1);
+    const source = signal(0);
+    let runs = 0;
+    const handle = effect(() => {
+      runs++;
+      scope(() => {
+        get(source);
+      });
+    });
+    set(source, 1);
+    dispose(handle);
+    expect(runs).toBe(1);
   });
 
   test("disposing a scope stops the effects of the scopes nested in it", () => {
@@ -1239,7 +1271,7 @@ describe("consistency", () => {
     const source = signal(1);
     const parity = computed(() => get<number>(source) % 2);
     const seen: number[] = [];
-    const handle = sub<number>(parity, (value) => {
+    const handle = userSub<number>(parity, (value) => {
       seen.push(value);
     });
     set(source, 3);
@@ -1257,7 +1289,7 @@ describe("consistency", () => {
     const keep = effect(() => {
       get(double);
     });
-    const handle = sub(source, () => {
+    const handle = userSub(source, () => {
       seen.push(get(double));
     });
     set(source, 2);
@@ -1271,7 +1303,7 @@ describe("consistency", () => {
     const source = signal(1);
     const other = signal(1);
     let calls = 0;
-    const handle = sub(source, () => {
+    const handle = userSub(source, () => {
       get(other);
       calls++;
     });
@@ -1334,7 +1366,7 @@ describe("consistency", () => {
     expect.assertions(1);
     const source = signal(0);
     let calls = 0;
-    const handle = sub(source, () => {
+    const handle = userSub(source, () => {
       calls++;
     });
     set(source, -0);
@@ -1346,7 +1378,7 @@ describe("consistency", () => {
     expect.assertions(1);
     const source = signal(Number.NaN);
     let calls = 0;
-    const handle = sub(source, () => {
+    const handle = userSub(source, () => {
       calls++;
     });
     set(source, Number.NaN);
@@ -1381,6 +1413,30 @@ describe("consistency", () => {
     dispose(handle);
     expect(runs).toBe(1);
   });
+
+  test("a computed first read by a later effect in the same flush subscribes that effect only", () => {
+    expect.assertions(3);
+    const s = signal(0);
+    const u = signal(0);
+    const c = computed(() => get(s) + get(u));
+    let firstRuns = 0;
+    let secondRuns = 0;
+    effect(() => {
+      get(s);
+      firstRuns++;
+    });
+    effect(() => {
+      if (get(s) === 1) get(c);
+      secondRuns++;
+    });
+    set(s, 1);
+    firstRuns = 0;
+    secondRuns = 0;
+    set(u, 1);
+    expect(firstRuns).toBe(0);
+    expect(secondRuns).toBe(1);
+    expect(get(c)).toBe(2);
+  });
 });
 
 describe("batch", () => {
@@ -1392,7 +1448,7 @@ describe("batch", () => {
     const reader = effect(() => {
       seen.push(`effect ${get<number>(left) + get<number>(right)}`);
     });
-    const listener = sub<number>(left, (value) => {
+    const listener = userSub<number>(left, (value) => {
       seen.push(`sub ${value}`);
     });
     batch(() => {
@@ -1410,7 +1466,7 @@ describe("batch", () => {
     expect.assertions(1);
     const source = signal(0);
     const seen: string[] = [];
-    const handle = sub<number>(source, (value) => {
+    const handle = userSub<number>(source, (value) => {
       seen.push(`sub ${value}`);
     });
     batch(() => {
@@ -1429,7 +1485,7 @@ describe("batch", () => {
       get(source);
       calls++;
     });
-    const listener = sub(source, () => {
+    const listener = userSub(source, () => {
       calls++;
     });
     batch(() => {
@@ -1462,7 +1518,7 @@ describe("batch", () => {
     expect.assertions(1);
     const source = signal(0);
     const seen: string[] = [];
-    const handle = sub<number>(source, (value) => {
+    const handle = userSub<number>(source, (value) => {
       seen.push(`sub ${value}`);
     });
     batch(() => {
@@ -1479,7 +1535,7 @@ describe("batch", () => {
     expect.assertions(2);
     const source = signal(0);
     const seen: number[] = [];
-    const handle = sub<number>(source, (value) => {
+    const handle = userSub<number>(source, (value) => {
       seen.push(value);
     });
     expect(() => {
@@ -1530,7 +1586,7 @@ describe("batch", () => {
     let handle!: Effect;
     batch(() => {
       set(source, 1);
-      handle = sub<number>(source, (value) => {
+      handle = userSub<number>(source, (value) => {
         seen.push(value);
       });
       set(source, 0);
@@ -1542,12 +1598,12 @@ describe("batch", () => {
   test("a userland sub made in a batch on a signal others watch learns when the batch restores it", () => {
     expect.assertions(1);
     const source = signal(0);
-    const watcher = sub(source, () => {});
+    const watcher = userSub(source, () => {});
     const seen: number[] = [];
     let handle!: Effect;
     batch(() => {
       set(source, 1);
-      handle = sub<number>(source, (value) => {
+      handle = userSub<number>(source, (value) => {
         seen.push(value);
       });
       set(source, 0);
@@ -1592,13 +1648,13 @@ describe("writes in effects", () => {
     const source = signal(0);
     const firstSeen: number[] = [];
     const lastSeen: number[] = [];
-    const first = sub<number>(source, (value) => {
+    const first = userSub<number>(source, (value) => {
       firstSeen.push(value);
     });
-    const writer = sub<number>(source, (value) => {
+    const writer = userSub<number>(source, (value) => {
       if (value === 1) set(source, 2);
     });
-    const last = sub<number>(source, (value) => {
+    const last = userSub<number>(source, (value) => {
       lastSeen.push(value);
     });
     set(source, 1);
@@ -1694,6 +1750,139 @@ describe("writes in effects", () => {
       dispose(handle);
       expect(runs).toBeLessThan(1000);
     }
+  });
+
+  test("an effect whose child scope increments its source in its first run terminates", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const tick = bound();
+    let runs = 0;
+    effect(() => {
+      tick();
+      runs++;
+      get(s);
+      scope(() => {
+        set(s, untracked(() => get(s)) + 1);
+      });
+    });
+    set(s, 10);
+    expect([runs, s.v]).toEqual([2, 11]);
+  });
+
+  test("an effect whose cleanup writes its own source re-runs once per outside write", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      get(s);
+      get(t);
+      return () => {
+        set(s, untracked(() => get(s)) + 1);
+      };
+    });
+    set(t, 1);
+    set(t, 2);
+    expect(runs).toBe(3);
+  });
+
+  test("a read after a child's first-run write re-runs the effect when the first value comes back", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[][] = [];
+    let once = true;
+    effect(() => {
+      const first = get(s);
+      if (once) {
+        once = false;
+        effect(() => {
+          set(s, 1);
+        });
+      }
+      seen.push([first, get(s)]);
+    });
+    set(s, 0);
+    expect(seen).toEqual([
+      [0, 1],
+      [0, 0],
+    ]);
+  });
+
+  test("a source read around a nested effect that reads it too: one re-run per write", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      get(s);
+      effect(() => {
+        get(s);
+      });
+      get(s);
+    });
+    set(s, 1);
+    set(s, 2);
+    expect(runs).toBe(3);
+  });
+
+  test("a computed re-evaluated inside a run that read it: the run sees and keeps the new value", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const c = computed(() => get(s) * 2);
+    const seen: number[][] = [];
+    effect(() => {
+      const before = get(c);
+      if (before === 0) set(s, 1);
+      seen.push([before, get(c)]);
+    });
+    set(s, 0);
+    expect(seen).toEqual([
+      [0, 2],
+      [0, 2],
+    ]);
+  });
+
+  test("a run reading a source after a child effect, a child sub and a computed read it is subscribed to it", () => {
+    expect.assertions(1);
+    const b = signal(0);
+    const c = computed(() => {
+      get(b);
+      return 0;
+    });
+    let runs = 0;
+    effect(() => {
+      runs++;
+      effect(() => {
+        get(b);
+      });
+      sub(signal(0), () => {
+        get(b);
+        get(c);
+      });
+      get(c);
+      get(b);
+    });
+    set(b, 1);
+    expect(runs).toBe(2);
+  });
+
+  test("a run that read a computed, wrote its source in a child's first run and read it again re-runs on restore", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const c = computed(() => get(s) * 2);
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(get(c));
+      if (seen.length === 1) {
+        effect(() => {
+          set(s, 1);
+        });
+        seen.push(get(c));
+      }
+    });
+    set(s, 0);
+    expect(seen).toEqual([0, 2, 0]);
   });
 });
 
@@ -1932,7 +2121,7 @@ describe("computeds that swap which reads the other", () => {
     const go = signal(0);
     const seen: number[] = [];
     keep(
-      sub<number>(go, (value) => {
+      userSub<number>(go, (value) => {
         tick();
         if (value === 1) {
           swap();
@@ -2026,6 +2215,23 @@ describe("errors", () => {
     dispose(worse);
     dispose(good);
     expect(seen).toEqual(["good 0", "good 1"]);
+  });
+
+  test("a write rethrows an effect's thrown undefined", () => {
+    expect.assertions(1);
+    const source = signal(0);
+    const handle = effect(() => {
+      // oxlint-disable-next-line no-throw-literal typescript/only-throw-error
+      if (get<number>(source) === 1) throw undefined;
+    });
+    let reached = false;
+    try {
+      set(source, 1);
+    } catch {
+      reached = true;
+    }
+    dispose(handle);
+    expect(reached).toBe(true);
   });
 
   test("effects queued on either side of a throwing effect run in that flush and after it", () => {
@@ -2127,7 +2333,7 @@ describe("errors", () => {
     const source = signal(0);
     let calls = 0;
     expect(() => {
-      sub(source, () => {
+      userSub(source, () => {
         calls++;
         throw new Error("call");
       });
@@ -2197,10 +2403,10 @@ describe("errors", () => {
     expect.assertions(2);
     const source = signal(0);
     const seen: number[] = [];
-    const bad = sub<number>(source, (value) => {
+    const bad = userSub<number>(source, (value) => {
       if (value === 1) throw new Error("sub");
     });
-    const good = sub<number>(source, (value) => {
+    const good = userSub<number>(source, (value) => {
       seen.push(value);
     });
     expect(() => {
@@ -2311,6 +2517,88 @@ describe("errors", () => {
       expect(seen).toEqual([0, 1, 2]);
     },
   );
+
+  test("a computed that throws while an effect validates it: the effect sees the value, the error, then the value", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const boom = new Error("E");
+    const c = computed(() => {
+      if (get(s) === 1) throw boom;
+      return get(s);
+    });
+    const seen: unknown[] = [];
+    effect(() => {
+      try {
+        seen.push(get(c));
+      } catch (error) {
+        seen.push(error);
+      }
+    });
+    set(s, 1);
+    set(s, 2);
+    expect(seen).toEqual([0, boom, 2]);
+  });
+
+  test("three effects, the middle throwing: the next write runs all three", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const runs = [0, 0, 0];
+    for (const i of [0, 1, 2]) {
+      effect(() => {
+        runs[i]++;
+        if (get(s) === 1 && i === 1) throw new Error("middle");
+      });
+    }
+    thrownBy(() => {
+      set(s, 1);
+    });
+    set(s, 2);
+    expect(runs).toEqual([3, 3, 3]);
+  });
+
+  test("a throwing re-run of an effect queued first leaves the next queued effect running", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      if (get(s) === 1) throw new Error("first");
+    });
+    effect(() => {
+      log.push(`second ${get(s)}`);
+    });
+    log.length = 0;
+    const thrown = thrownBy(() => {
+      set(s, 1);
+    });
+    set(s, 2);
+    expect([thrown instanceof Error, log]).toEqual([true, ["second 1", "second 2"]]);
+  });
+
+  test("an effect's re-run that throws after a nested run: top-level code after it is not owned or tracked", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    effect(() => {
+      if (get(s) === 1) {
+        effect(() => {
+          get(t);
+        });
+        throw new Error("after a nested run");
+      }
+    });
+    thrownBy(() => {
+      set(s, 1);
+    });
+    let runs = 0;
+    effect(() => {
+      get(t);
+      runs++;
+    });
+    get(computed(() => get(t)));
+    set(s, 2);
+    set(t, 1);
+    expect(runs).toBe(2);
+  });
 });
 
 describe("cleanup errors", () => {
@@ -2505,6 +2793,34 @@ describe("cleanup errors", () => {
       }).toThrow(DEV ? /^(?:run|cleanup)$/u : /^run$/u);
     },
   );
+
+  test.serial(
+    "a throwing child cleanup during dispose stops no other cleanup and wedges nothing",
+    () => {
+      expect.assertions(1);
+      const s = signal(0);
+      const log: string[] = [];
+      silenced(() => {
+        const handle = effect(() => {
+          defer(() => {
+            log.push("older");
+          });
+          effect(() => () => {
+            throw new Error("cleanup");
+          });
+          return () => {
+            log.push("parent");
+          };
+        });
+        dispose(handle);
+      });
+      effect(() => {
+        log.push(`after ${get(s)}`);
+      });
+      set(s, 1);
+      expect(log).toEqual(["older", "parent", "after 0", "after 1"]);
+    },
+  );
 });
 
 describe("disposal", () => {
@@ -2519,7 +2835,7 @@ describe("disposal", () => {
         dispose(handles[other]);
       }
     };
-    handles.push(sub(source, disposer(1)), sub(source, disposer(0)));
+    handles.push(userSub(source, disposer(1)), userSub(source, disposer(0)));
     set(source, 1);
     for (const handle of handles) dispose(handle);
     expect(seen).toHaveLength(1);
@@ -2586,6 +2902,2817 @@ describe("disposal", () => {
     set(source, 1);
     set(source, 2);
     expect(runs).toBe(1);
+  });
+
+  test("a scope disposed during its own body (its owner effect disposed from it in a re-run)", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const log: string[] = [];
+    const owner: Effect = effect(() => {
+      const value = get(a);
+      scope(() => {
+        if (value === 1) dispose(owner);
+        log.push(`body ${value}`);
+        defer(() => {
+          log.push(`defer ${value}`);
+        });
+        return () => {
+          log.push(`scope cleanup ${value}`);
+        };
+      });
+      log.push(`effect ${value}`);
+      return () => {
+        log.push(`effect cleanup ${value}`);
+      };
+    });
+    log.length = 0;
+    set(a, 1);
+    set(a, 2);
+    expect(log).toEqual([
+      "defer 0",
+      "scope cleanup 0",
+      "effect cleanup 0",
+      "body 1",
+      "defer 1",
+      "scope cleanup 1",
+      "effect 1",
+      "effect cleanup 1",
+    ]);
+  });
+
+  test("a body that disposes its owner effect: a cleanup it registers afterwards runs, and the owner stops", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    let runs = 0;
+    const owner: Effect = effect(() => {
+      runs++;
+      if (get(s) === 1) {
+        scope(() => {
+          dispose(owner);
+          defer(() => {
+            log.push("defer after dispose");
+          });
+        });
+      }
+    });
+    set(s, 1);
+    set(s, 2);
+    expect([runs, log]).toEqual([2, ["defer after dispose"]]);
+  });
+
+  test("the body's returned cleanup and a cleanup it registers after disposing its owner both run, the registered one first", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const owner: Effect = effect(() => {
+      if (get(s) === 1) {
+        scope(() => {
+          dispose(owner);
+          defer(() => {
+            log.push("defer");
+          });
+          return () => {
+            log.push("cleanup");
+          };
+        });
+      }
+    });
+    set(s, 1);
+    expect(log).toEqual(["defer", "cleanup"]);
+  });
+
+  test("siblings whose cleanups dispose each other both die at the first write", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handles: Effect[] = [];
+    for (const [i, label] of ["a", "b"].entries()) {
+      handles.push(
+        effect(() => {
+          get(s);
+          log.push(label);
+          return () => {
+            log.push(`cleanup ${label}`);
+            dispose(handles[1 - i]);
+          };
+        }),
+      );
+    }
+    log.length = 0;
+    set(s, 1);
+    set(s, 2);
+    expect(log.toSorted()).toEqual(["cleanup a", "cleanup b"]);
+  });
+
+  test("a cleanup registered after an owned computed reads it live at teardown, after a write to its source", () => {
+    expect.assertions(1);
+    const s = signal(1);
+    const seen: number[] = [];
+    const handle = scope(() => {
+      const c = computed(() => get(s) * 2);
+      get(c);
+      defer(() => {
+        seen.push(get(c));
+      });
+    });
+    set(s, 2);
+    dispose(handle);
+    expect(seen).toEqual([4]);
+  });
+
+  // The teardown in progress finishes, nothing under the root runs again, and the flush gives back
+  // the owner it found: none at top level, the scope whose body wrote
+  test.each(["top level", "a scope body"])(
+    "a re-run's cleanup disposing its root: nothing under it runs again, and the writer's context is clean (%s)",
+    (where) => {
+      expect.assertions(3);
+      const s = signal(0);
+      const y = signal(0);
+      let childRuns = 0;
+      const root: Scope = scope(() => {
+        effect(() => {
+          get(s);
+          return () => {
+            dispose(root);
+          };
+        });
+        effect(() => {
+          get(y);
+          childRuns++;
+        });
+      });
+      let laterRuns = 0;
+      const later = (): void => {
+        effect(() => {
+          get(y);
+          laterRuns++;
+        });
+      };
+      let writer: Scope | undefined;
+      if (where === "top level") {
+        set(s, 1);
+        later();
+      } else {
+        writer = scope(() => {
+          set(s, 1);
+          later();
+        });
+      }
+      childRuns = 0;
+      set(y, 1);
+      expect(childRuns).toBe(0);
+      expect(laterRuns).toBe(2);
+      if (writer !== undefined) dispose(writer);
+      set(y, 2);
+      // At top level `later` has no owner and lives; in a body it is the body's scope's
+      expect(laterRuns).toBe(where === "top level" ? 3 : 2);
+    },
+  );
+});
+
+describe("sub", () => {
+  test("calls fn at once with the signal's value", () => {
+    expect.assertions(1);
+    const seen: number[] = [];
+    sub(signal(1), (value) => {
+      seen.push(value);
+    });
+    expect(seen).toEqual([1]);
+  });
+
+  test("calls fn after each change with the new value, never for an equal one", () => {
+    expect.assertions(1);
+    const s = signal(1);
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+    });
+    set(s, 1);
+    set(s, 2);
+    set(s, 2);
+    set(s, 3);
+    expect(seen).toEqual([1, 2, 3]);
+  });
+
+  test("fn's reads subscribe neither the sub nor the effect that made it", () => {
+    expect.assertions(1);
+    const t = signal(0);
+    let runs = 0;
+    let calls = 0;
+    effect(() => {
+      runs++;
+      sub(signal(0), () => {
+        get(t);
+        calls++;
+      });
+    });
+    set(t, 1);
+    expect([runs, calls]).toEqual([1, 1]);
+  });
+
+  test("a sub made in an effect's run does not subscribe that effect to its signal", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    let runs = 0;
+    let calls = 0;
+    effect(() => {
+      runs++;
+      sub(s, () => {
+        calls++;
+      });
+    });
+    set(s, 1);
+    expect([runs, calls]).toEqual([1, 2]);
+  });
+
+  test("what fn creates lives on through later calls", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const runs: string[] = [];
+    sub(s, (value) => {
+      effect(() => {
+        runs.push(`${value}:${get(t)}`);
+      });
+    });
+    set(s, 1);
+    runs.length = 0;
+    set(t, 1);
+    expect(runs.toSorted()).toEqual(["0:1", "1:1"]);
+  });
+
+  test("what fn creates is disposed only with the sub, newest first", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handle = sub(s, (value) => {
+      defer(() => {
+        log.push(`cleanup ${value}`);
+      });
+    });
+    set(s, 1);
+    set(s, 2);
+    const before = [...log];
+    dispose(handle);
+    expect([before, log]).toEqual([[], ["cleanup 2", "cleanup 1", "cleanup 0"]]);
+  });
+
+  test("what fn creates over several calls is torn down newest first, children and cleanups interleaved", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handle = sub(s, (value) => {
+      defer(() => {
+        log.push(`defer ${value}`);
+      });
+      effect(() => () => {
+        log.push(`effect ${value}`);
+      });
+    });
+    set(s, 1);
+    set(s, 2);
+    dispose(handle);
+    expect(log).toEqual(["effect 2", "defer 2", "effect 1", "defer 1", "effect 0", "defer 0"]);
+  });
+
+  test("a disposed sub calls nothing more and its children's effects stop", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    let calls = 0;
+    let runs = 0;
+    const handle = sub(s, () => {
+      calls++;
+      effect(() => {
+        get(t);
+        runs++;
+      });
+    });
+    dispose(handle);
+    set(s, 1);
+    set(t, 1);
+    expect([calls, runs]).toEqual([1, 1]);
+  });
+
+  test("disposing a sub twice leaves a later sub on its signal following it", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const first = sub(s, () => {});
+    dispose(first);
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+    });
+    dispose(first);
+    set(s, 1);
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test("a sub disposed in a batch after its signal's write is not called", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    const handle = sub(s, (value) => {
+      seen.push(value);
+    });
+    batch(() => {
+      set(s, 1);
+      dispose(handle);
+    });
+    expect(seen).toEqual([0]);
+  });
+
+  test("in a batch, fn is called once, at its end, with the last value", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+    });
+    const inside: number[][] = [];
+    batch(() => {
+      set(s, 1);
+      set(s, 2);
+      inside.push([...seen]);
+    });
+    expect([inside, seen]).toEqual([[[0]], [0, 2]]);
+  });
+
+  test("a batch that restores the value calls nothing", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    let calls = 0;
+    sub(s, () => {
+      calls++;
+    });
+    batch(() => {
+      set(s, 1);
+      set(s, 0);
+    });
+    expect(calls).toBe(1);
+  });
+
+  test("a sub made in a batch is called at once, and at the batch end if the value moved since", () => {
+    expect.assertions(1);
+    const s = signal("a");
+    const seen: string[] = [];
+    batch(() => {
+      set(s, "b");
+      sub(s, (value) => {
+        seen.push(value);
+      });
+      set(s, "a");
+    });
+    expect(seen).toEqual(["b", "a"]);
+  });
+
+  test("a sub made in nested batches is called at once, then once at the outer end", () => {
+    expect.assertions(2);
+    const s = signal(0);
+    const seen: number[] = [];
+    batch(() => {
+      batch(() => {
+        sub(s, (value) => {
+          seen.push(value);
+        });
+        set(s, 1);
+      });
+      expect(seen).toEqual([0]);
+      set(s, 2);
+    });
+    expect(seen).toEqual([0, 2]);
+  });
+
+  test("a sub made in an effect's run is disposed, with what fn made, when the effect re-runs", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      const round = get(t);
+      sub(s, (value) => {
+        log.push(`${round}:${value}`);
+        defer(() => {
+          log.push(`cleanup ${round}:${value}`);
+        });
+      });
+    });
+    set(t, 1);
+    set(s, 1);
+    expect(log).toEqual(["0:0", "cleanup 0:0", "1:0", "1:1"]);
+  });
+
+  test("sub() in an effect's run gives back the effect's owner: what the run makes next is disposed at its re-run", () => {
+    expect.assertions(1);
+    const t = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      const round = get(t);
+      sub(signal(0), () => {});
+      defer(() => {
+        log.push(`cleanup ${round}`);
+      });
+    });
+    set(t, 1);
+    expect(log).toEqual(["cleanup 0"]);
+  });
+
+  test("sub() in an effect's run gives back its tracking: a read after it subscribes the effect", () => {
+    expect.assertions(1);
+    const t = signal(0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      sub(signal(0), () => {});
+      get(t);
+    });
+    set(t, 1);
+    expect(runs).toBe(2);
+  });
+
+  test("a top-level sub() leaves no owner: an effect made after it outlives the sub", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: number[] = [];
+    const handle = sub(signal(0), () => {});
+    effect(() => {
+      log.push(get(s));
+    });
+    dispose(handle);
+    set(s, 1);
+    expect(log).toEqual([0, 1]);
+  });
+
+  test("untracked inside fn keeps the sub as the owner", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handle = sub(s, () => {
+      untracked(() => {
+        defer(() => {
+          log.push("cleanup");
+        });
+      });
+    });
+    dispose(handle);
+    expect(log).toEqual(["cleanup"]);
+  });
+
+  test("a cleanup reads a computed fn made earlier as current at disposal, after a write to its source", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const a = signal(1);
+    const seen: number[] = [];
+    const handle = sub(s, () => {
+      const double = computed(() => get(a) * 2);
+      get(double);
+      defer(() => {
+        seen.push(get(double));
+      });
+    });
+    set(a, 5);
+    dispose(handle);
+    expect(seen).toEqual([10]);
+  });
+
+  // The source may be a computed, read as get reads it (src/signal.ts: unspecified)
+  test("Characterization: a sub on a computed gets each new value, and the computed's error reaches the writer", () => {
+    expect.assertions(1);
+    const s = signal(1);
+    const c = computed(() => {
+      if (get(s) === 2) throw new Error("c");
+      return get(s) * 10;
+    });
+    const seen: number[] = [];
+    sub(c, (value) => {
+      seen.push(value);
+    });
+    const thrown = thrownBy(() => {
+      set(s, 2);
+    });
+    set(s, 3);
+    expect([seen, (thrown as Error).message]).toEqual([[10, 30], "c"]);
+  });
+});
+
+describe("sub re-delivery and own writes", () => {
+  test("a write to the signal in fn calls fn again after it returns, with the latest value", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    let depth = 0;
+    sub(s, (value) => {
+      depth++;
+      log.push(`${value} at depth ${depth}`);
+      if (value === 1) {
+        set(s, 2);
+        set(s, 3);
+      }
+      depth--;
+    });
+    set(s, 1);
+    expect(log).toEqual(["0 at depth 1", "1 at depth 1", "3 at depth 1"]);
+  });
+
+  test("an fn that increments its signal up to a bound is called until the value is stable", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+      if (value < 3) set(s, value + 1);
+    });
+    expect([seen, s.v]).toEqual([[0, 1, 2, 3], 3]);
+  });
+
+  test("a write in fn that restores the value fn got calls nothing more", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+      if (value === 1) {
+        set(s, 5);
+        set(s, 1);
+      }
+    });
+    set(s, 1);
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test("a write to its signal in a nested batch inside fn calls fn again after fn returns, latest only", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: string[] = [];
+    sub(s, (value) => {
+      seen.push(`in ${value}`);
+      if (value === 1) {
+        batch(() => {
+          set(s, 2);
+          set(s, 3);
+        });
+        seen.push(`out ${value}`);
+      }
+    });
+    set(s, 1);
+    expect([seen, s.v]).toEqual([["in 0", "in 1", "out 1", "in 3"], 3]);
+  });
+
+  test("an effect made in fn whose first run writes the sub's signal is delivered after fn", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+      if (value === 1) {
+        effect(() => {
+          set(s, untracked(() => get(s)) + 10);
+        });
+      }
+    });
+    set(s, 1);
+    expect([seen, s.v]).toEqual([[0, 1, 11], 11]);
+  });
+
+  test("a write to the signal in a cleanup fn triggers calls fn again after it returns", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    let child!: Effect;
+    sub(s, (value) => {
+      seen.push(value);
+      if (value === 0) {
+        child = effect(() => () => {
+          set(s, 9);
+        });
+      }
+      if (value === 1) dispose(child);
+    });
+    set(s, 1);
+    expect(seen).toEqual([0, 1, 9]);
+  });
+
+  test("an effect does not re-run for the first-call write of a sub it made", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    let runs = 0;
+    effect(() => {
+      get(s);
+      runs++;
+      sub(t, () => {
+        set(s, untracked(() => get(s)) + 1);
+      });
+    });
+    expect([runs, s.v]).toEqual([1, 1]);
+  });
+
+  test("an effect re-runs for a later call's write of a sub it made, and that terminates", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const tick = bound();
+    let runs = 0;
+    effect(() => {
+      tick();
+      runs++;
+      get(s);
+      sub(t, () => {
+        set(s, untracked(() => get(s)) + 1);
+      });
+    });
+    set(t, 1);
+    expect([runs, s.v]).toEqual([2, 3]);
+  });
+
+  test("a child effect fn made does not re-run for its own first-run write", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const x = signal(0);
+    let runs = 0;
+    sub(s, () => {
+      effect(() => {
+        runs++;
+        set(x, get(x) + 1);
+      });
+    });
+    expect([runs, x.v]).toEqual([1, 1]);
+  });
+
+  test("a sub made in a re-run whose first call writes its signal is called again in that flush, and the re-run still tracks", () => {
+    expect.assertions(3);
+    const s = signal(0);
+    const x = signal(0);
+    const t = signal(0);
+    const calls: number[] = [];
+    let parentRuns = 0;
+    effect(() => {
+      get(s);
+      parentRuns++;
+      if (parentRuns === 2) {
+        sub(t, (value) => {
+          calls.push(value);
+          if (value === 0) set(t, 1);
+        });
+      }
+      get(x);
+    });
+    set(s, 1);
+    expect(calls).toEqual([0, 1]);
+    set(x, 1);
+    expect(parentRuns).toBe(3);
+    // The third run disposed the sub, a child of the second
+    set(t, 2);
+    expect(calls).toEqual([0, 1]);
+  });
+});
+
+describe("sub parent-first", () => {
+  test("an effect fn made re-runs after the sub when one write reaches both", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    sub(s, (value) => {
+      log.push(`sub ${value}`);
+      if (value === 0) {
+        effect(() => {
+          log.push(`child ${get(s)}`);
+        });
+      }
+    });
+    log.length = 0;
+    set(s, 1);
+    set(s, 2);
+    expect(log).toEqual(["sub 1", "child 1", "sub 2", "child 2"]);
+  });
+
+  // fn as a list and the scope as one of its rows
+  test.each(ORDERS)(
+    "an effect in a scope fn made does not run in the batch whose change makes fn dispose that scope (%s)",
+    (_label, subFirst) => {
+      expect.assertions(1);
+      const s = signal(0);
+      const t = signal(0);
+      const runs: string[] = [];
+      let page: Scope | undefined;
+      sub(s, (value) => {
+        if (page !== undefined) dispose(page);
+        page = scope(() => {
+          effect(() => {
+            runs.push(`${value} ${get(t)}`);
+          });
+        });
+      });
+      runs.length = 0;
+      batch(() => {
+        if (subFirst) set(s, 1);
+        set(t, 1);
+        if (!subFirst) set(s, 1);
+      });
+      expect(runs).toEqual(["1 1"]);
+    },
+  );
+
+  test.each(ORDERS)(
+    "a child effect does not run in a batch whose re-call of fn disposes it (%s)",
+    (_label, subFirst) => {
+      expect.assertions(1);
+      const s = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      let child!: Effect;
+      sub(s, (value) => {
+        log.push(`sub ${value}`);
+        if (value === 0) {
+          child = effect(() => {
+            log.push(`child ${get(t)}`);
+          });
+        }
+        if (value === 1) set(s, 2);
+        if (value === 2) dispose(child);
+      });
+      log.length = 0;
+      batch(() => {
+        if (subFirst) set(s, 1);
+        set(t, 1);
+        if (!subFirst) set(s, 1);
+      });
+      expect(log).toEqual(["sub 1", "sub 2"]);
+    },
+  );
+
+  test.each(ORDERS)(
+    "a row effect does not run in a batch whose re-call of fn disposes its row (%s)",
+    (_label, subFirst) => {
+      expect.assertions(1);
+      const items = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      let row!: Scope;
+      sub(items, (value) => {
+        if (value === 0) {
+          row = scope(() => {
+            effect(() => {
+              log.push(`row ${get(t)}`);
+            });
+          });
+        }
+        if (value === 1) set(items, 2);
+        if (value === 2) dispose(row);
+      });
+      log.length = 0;
+      batch(() => {
+        if (!subFirst) set(t, 1);
+        set(items, 1);
+        if (subFirst) set(t, 1);
+      });
+      expect(log).toEqual([]);
+    },
+  );
+
+  test.each([true, false])(
+    "a sub's call that writes its owner's source: the sub's child does not run (child's source first: %p)",
+    (childFirst) => {
+      expect.assertions(1);
+      const a = signal(0);
+      const s = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      effect(() => {
+        const round = get(a);
+        sub(s, (value) => {
+          if (value === 0) {
+            effect(() => {
+              log.push(`child ${round} ${get(t)}`);
+            });
+          } else set(a, value);
+        });
+      });
+      log.length = 0;
+      batch(() => {
+        if (childFirst) set(t, 1);
+        set(s, 1);
+        if (!childFirst) set(t, 1);
+      });
+      expect(log).toEqual([]);
+    },
+  );
+
+  test.each([true, false])(
+    "two subs deep: the inner sub's write to the outer's source runs the outer first (inner's source first: %p)",
+    (innerFirst) => {
+      expect.assertions(1);
+      const a = signal(0);
+      const s = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      sub(a, (round) => {
+        log.push(`outer ${round}`);
+        sub(s, (value) => {
+          if (value === 0) {
+            effect(() => {
+              log.push(`leaf ${round} ${get(t)}`);
+            });
+          } else set(a, value);
+        });
+      });
+      log.length = 0;
+      batch(() => {
+        if (innerFirst) set(t, 1);
+        set(s, 1);
+        if (!innerFirst) set(t, 1);
+      });
+      // The outer sub keeps its children: the leaf follows t after the outer got 1
+      expect(log).toEqual(["outer 1", "leaf 0 1"]);
+    },
+  );
+
+  test.each(["sub", "effect"] as const)(
+    "an inner sub's call that writes its outer %s's source while its child is queued: the outer runs before the child",
+    (outerKind) => {
+      expect.assertions(1);
+      const s1 = signal(0);
+      const s2 = signal(0);
+      const log: string[] = [];
+      const body = (v2: number): void => {
+        log.push(`outer ${v2}`);
+        sub(s1, (v1) => {
+          log.push(`inner ${v1}`);
+          if (v1 === 2) set(s2, 9);
+          if (v1 === 0) {
+            effect(() => {
+              log.push(`child ${get(s1)}`);
+            });
+          }
+        });
+      };
+      if (outerKind === "sub") {
+        sub(s2, (v2) => {
+          if (v2 === 0) body(v2);
+          else log.push(`outer ${v2}`);
+        });
+      } else {
+        effect(() => {
+          body(get(s2));
+        });
+      }
+      log.length = 0;
+      set(s1, 2);
+      // An effect outer disposes inner and child before they run; its new inner gets 2
+      expect(log).toEqual(
+        outerKind === "sub" ? ["inner 2", "outer 9", "child 2"] : ["inner 2", "outer 9", "inner 2"],
+      );
+    },
+  );
+
+  test("effect > sub > scope > effect: one batch reaching all three runs only the new leaf", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    const c = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      const va = get(a);
+      sub(b, (vb) => {
+        scope(() => {
+          effect(() => {
+            log.push(`leaf ${va} ${vb} ${get(c)}`);
+          });
+        });
+      });
+    });
+    log.length = 0;
+    batch(() => {
+      set(c, 1);
+      set(a, 1);
+      set(b, 1);
+    });
+    expect(log).toEqual(["leaf 1 1 1"]);
+  });
+
+  test.each(ORDERS)(
+    "a grandchild effect does not run in a batch where its parent sub's call makes the outer sub dispose it (%s)",
+    (_label, subFirst) => {
+      expect.assertions(1);
+      const a = signal(0);
+      const b = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      let inner!: Effect;
+      sub(a, (outer) => {
+        log.push(`outer ${outer}`);
+        if (outer === 0) {
+          inner = sub(b, (value) => {
+            log.push(`inner ${value}`);
+            if (value === 0) {
+              effect(() => {
+                log.push(`grandchild ${get(t)}`);
+              });
+            }
+            if (value === 1) set(a, 1);
+          });
+        }
+        if (outer === 1) dispose(inner);
+      });
+      log.length = 0;
+      batch(() => {
+        if (subFirst) set(b, 1);
+        set(t, 1);
+        if (!subFirst) set(b, 1);
+      });
+      expect(log).toEqual(["inner 1", "outer 1"]);
+    },
+  );
+
+  test.each(ORDERS)(
+    "a grandchild effect does not run in a batch whose change makes the outer sub dispose it (%s)",
+    (_label, subFirst) => {
+      expect.assertions(1);
+      const a = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      let inner!: Effect;
+      sub(a, (outer) => {
+        log.push(`outer ${outer}`);
+        if (outer === 0) {
+          inner = sub(signal(0), () => {
+            effect(() => {
+              log.push(`grandchild ${get(t)}`);
+            });
+          });
+        }
+        if (outer === 1) dispose(inner);
+      });
+      log.length = 0;
+      batch(() => {
+        if (subFirst) set(a, 1);
+        set(t, 1);
+        if (!subFirst) set(a, 1);
+      });
+      expect(log).toEqual(["outer 1"]);
+    },
+  );
+
+  test("nothing under a scope an outer sub's call disposes runs in that batch, through nested subs", () => {
+    expect.assertions(1);
+    const outer = signal(0);
+    const inner = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    let page: Scope | undefined;
+    sub(outer, (o) => {
+      if (page !== undefined) dispose(page);
+      page = scope(() => {
+        sub(inner, (i) => {
+          log.push(`inner ${o}:${i}`);
+          effect(() => {
+            log.push(`effect ${o}:${i}:${get(t)}`);
+          });
+        });
+      });
+    });
+    log.length = 0;
+    batch(() => {
+      set(t, 1);
+      set(inner, 1);
+      set(outer, 1);
+    });
+    expect(log).toEqual(["inner 1:1", "effect 1:1:1"]);
+  });
+
+  test("a child sub on its owner's signal, writing it, is not called again before the owner", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    let child!: Effect;
+    sub(s, (value) => {
+      log.push(`owner ${value}`);
+      if (value === 0) {
+        child = sub(s, (seen) => {
+          log.push(`child ${seen}`);
+          if (seen === 1) set(s, 2);
+        });
+      }
+      if (value === 2) dispose(child);
+    });
+    log.length = 0;
+    set(s, 1);
+    expect(log).toEqual(["owner 1", "child 1", "owner 2"]);
+  });
+
+  test("a sub's write to its own source that changes its owner effect's computed: the owner re-runs before fn is called again", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const big = computed(() => get(s) > 5);
+    const log: string[] = [];
+    effect(() => {
+      log.push(`owner ${get(big)}`);
+      sub(s, (value) => {
+        log.push(`sub ${value}`);
+        if (value === 1) set(s, 7);
+      });
+    });
+    log.length = 0;
+    set(s, 1);
+    expect(log).toEqual(["sub 1", "owner true", "sub 7"]);
+  });
+
+  test("a call that writes its signal and what its owner read: the owner re-runs before fn is called again", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const s = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      log.push(`owner ${get(a)}`);
+      sub(s, (value) => {
+        log.push(`sub ${value}`);
+        if (value === 1) {
+          set(a, 1);
+          set(s, 2);
+        }
+      });
+    });
+    log.length = 0;
+    batch(() => {
+      set(s, 1);
+    });
+    // The owner's re-run disposes the sub; the new sub's first call gets 2
+    expect(log).toEqual(["sub 1", "owner 1", "sub 2"]);
+  });
+
+  test("a call at depth 2 that writes its grandparent sub's signal and its own: the grandparent is called first", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const b = signal(0);
+    const c = signal(0);
+    const log: string[] = [];
+    let made = false;
+    sub(a, (va) => {
+      log.push(`a${va}`);
+      if (made) return;
+      made = true;
+      sub(b, (vb) => {
+        log.push(`b${vb}`);
+        sub(c, (vc) => {
+          log.push(`c${vc}`);
+          if (vc === 1) {
+            set(a, 5);
+            set(c, 2);
+          }
+        });
+      });
+    });
+    log.length = 0;
+    set(c, 1);
+    expect(log).toEqual(["c1", "a5", "c2"]);
+  });
+
+  test.each(ORDERS)(
+    "an effect's change that disposes a sub it made stops the old sub's call (%s)",
+    (_label, subFirst) => {
+      expect.assertions(1);
+      const s = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      effect(() => {
+        const round = get(t);
+        sub(s, (value) => {
+          log.push(`${round}:${value}`);
+        });
+      });
+      log.length = 0;
+      batch(() => {
+        if (subFirst) set(s, 1);
+        set(t, 1);
+        if (!subFirst) set(s, 1);
+      });
+      expect(log).toEqual(["1:1"]);
+    },
+  );
+
+  // Not a timing test: a delivery loop that linked its source once per call would be quadratic
+  test.each(ORDERS)(
+    "a child's climb settles a sub that writes its signal 100k times before the child runs (%s)",
+    (_label, subFirst) => {
+      expect.assertions(1);
+      const s = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      sub(s, (value) => {
+        if (value === 0) {
+          effect(() => {
+            log.push(`child ${get(t)} sees ${untracked(() => get(s))}`);
+          });
+        }
+        if (value > 0 && value < 100_000) set(s, value + 1);
+      });
+      log.length = 0;
+      batch(() => {
+        if (!subFirst) set(t, 1);
+        set(s, 1);
+        if (subFirst) set(t, 1);
+      });
+      expect(log).toEqual(["child 1 sees 100000"]);
+    },
+  );
+
+  test("an effect under a scope under a sub climbs to the sub, which runs first", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    sub(s, (value) => {
+      log.push(`sub ${value}`);
+      if (value === 0) {
+        scope(() => {
+          scope(() => {
+            effect(() => {
+              log.push(`child ${get(t)}`);
+            });
+          });
+        });
+      }
+    });
+    log.length = 0;
+    batch(() => {
+      set(t, 1);
+      set(s, 1);
+    });
+    expect(log).toEqual(["sub 1", "child 1"]);
+  });
+
+  test("an effect that owns a sub owning an effect: the owner's re-run disposes both before they run", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      log.push(`owner ${get(a)}`);
+      sub(s, (value) => {
+        log.push(`sub ${value}`);
+        effect(() => {
+          log.push(`child ${get(t)}`);
+        });
+      });
+    });
+    log.length = 0;
+    batch(() => {
+      set(t, 1);
+      set(s, 1);
+      set(a, 1);
+    });
+    expect(log).toEqual(["owner 1", "sub 1", "child 1"]);
+  });
+
+  const LEVELS = ["a", "b", "c", "d"] as const;
+  type Level = (typeof LEVELS)[number];
+  /** Every order of `items`. */
+  const permutations = <T>(items: readonly T[]): T[][] =>
+    items.length <= 1
+      ? [[...items]]
+      : items.flatMap((item, i) =>
+          permutations(items.toSpliced(i, 1)).map((rest) => rest.toSpliced(0, 0, item)),
+        );
+  test.each([
+    ["no call disposes", "none", ["a1", "b1", "c1", "d1"]],
+    ["a's call disposes b's sub", "a", ["a1"]],
+    ["b's call disposes c's sub", "b", ["a1", "b1"]],
+    ["c's call disposes the leaf", "c", ["a1", "b1", "c1"]],
+  ] as const)(
+    "three nested subs over an effect, %s: a batch writing all four signals runs owners first, in every write order",
+    (_label, kill, expected) => {
+      const orders = permutations(LEVELS);
+      expect.assertions(1);
+      const wrong: string[] = [];
+      for (const order of orders) {
+        const src: Record<Level, Signal<number>> = {
+          a: signal(0),
+          b: signal(0),
+          c: signal(0),
+          d: signal(0),
+        };
+        const log: string[] = [];
+        const h: { b?: Effect; c?: Effect; d?: Effect } = {};
+        const root = sub(src.a, (va) => {
+          log.push(`a${va}`);
+          if (h.b === undefined) {
+            h.b = sub(src.b, (vb) => {
+              log.push(`b${vb}`);
+              if (h.c === undefined) {
+                h.c = sub(src.c, (vc) => {
+                  log.push(`c${vc}`);
+                  if (h.d === undefined) {
+                    h.d = effect(() => {
+                      log.push(`d${get(src.d)}`);
+                    });
+                  } else if (vc === 1 && kill === "c") dispose(h.d);
+                });
+              } else if (vb === 1 && kill === "b") dispose(h.c);
+            });
+          } else if (va === 1 && kill === "a") dispose(h.b);
+        });
+        log.length = 0;
+        batch(() => {
+          for (const level of order) set(src[level], 1);
+        });
+        if (log.join(",") !== expected.join(",")) wrong.push(`${order.join("")}: ${log.join(",")}`);
+        dispose(root);
+      }
+      expect(wrong).toEqual([]);
+    },
+  );
+});
+
+describe("sub errors", () => {
+  test("a first call that throws disposes what it made, sub() rethrows, and later writes call nothing", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const error = new Error("first call");
+    const log: string[] = [];
+    let calls = 0;
+    const thrown = thrownBy(() => {
+      sub(s, () => {
+        calls++;
+        defer(() => {
+          log.push("cleanup");
+        });
+        throw error;
+      });
+    });
+    set(s, 1);
+    expect([thrown === error, log, calls]).toEqual([true, ["cleanup"], 1]);
+  });
+
+  test("a first call that throws disposes its children newest first", () => {
+    expect.assertions(1);
+    const log: string[] = [];
+    thrownBy(() => {
+      sub(signal(0), () => {
+        effect(() => () => {
+          log.push("child cleanup");
+        });
+        defer(() => {
+          log.push("defer");
+        });
+        throw new Error("first");
+      });
+    });
+    expect(log).toEqual(["defer", "child cleanup"]);
+  });
+
+  test("a first call that writes the sub's signal and then throws: disposed, rethrown, never called again", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    const thrown = thrownBy(() => {
+      sub(s, (value) => {
+        seen.push(value);
+        set(s, 1);
+        throw new Error("first");
+      });
+    });
+    set(s, 5);
+    expect([seen, (thrown as Error).message]).toEqual([[0], "first"]);
+  });
+
+  test("a later call that throws reaches the writer, and the sub keeps following", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const error = new Error("second call");
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+      if (value === 1) throw error;
+    });
+    const thrown = thrownBy(() => {
+      set(s, 1);
+    });
+    set(s, 2);
+    expect([thrown === error, seen]).toEqual([true, [0, 1, 2]]);
+  });
+
+  test("a later call that throws keeps what earlier calls and the failed call made", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    sub(s, (value) => {
+      effect(() => {
+        log.push(`${value}:${get(t)}`);
+      });
+      if (value === 1) throw new Error("call");
+    });
+    thrownBy(() => {
+      set(s, 1);
+    });
+    log.length = 0;
+    set(t, 1);
+    expect(log.toSorted()).toEqual(["0:1", "1:1"]);
+  });
+
+  test("three subs on one signal, the middle one throwing on 1: the next write calls all three", () => {
+    expect.assertions(2);
+    const s = signal(0);
+    const seen: string[] = [];
+    for (const label of ["a", "b", "c"]) {
+      sub(s, (value) => {
+        seen.push(`${label}${value}`);
+        if (label === "b" && value === 1) throw new Error("b");
+      });
+    }
+    expect(
+      (
+        thrownBy(() => {
+          set(s, 1);
+        }) as Error
+      ).message,
+    ).toBe("b");
+    set(s, 2);
+    expect(seen.toSorted()).toEqual(["a0", "a1", "a2", "b0", "b1", "b2", "c0", "c1", "c2"]);
+  });
+
+  test("fn reading a throwing computed: the throw reaches the writer and the sub keeps following", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const c = computed(() => {
+      if (get(s) === 1) throw new Error("computed");
+      return get(s) * 10;
+    });
+    const seen: number[] = [];
+    sub(s, () => {
+      seen.push(get(c));
+    });
+    const thrown = thrownBy(() => {
+      set(s, 1);
+    });
+    set(s, 2);
+    expect([thrown instanceof Error, seen]).toEqual([true, [0, 20]]);
+  });
+
+  /**
+   * A sub on `s` that made (directly, or through `via`) an effect on `t` and throws on 1; a batch
+   * writes both. A second reader of `t` keeps a later write from running the child alone.
+   */
+  const throwingOwner = (
+    subFirst: boolean,
+    via: "direct" | "scope" | "sub",
+  ): { log: string[]; t: Signal<number>; thrown: unknown } => {
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      get(t);
+    });
+    const child = (): void => {
+      effect(() => {
+        log.push(`child ${get(t)}`);
+      });
+    };
+    sub(s, (value) => {
+      if (value === 0) {
+        if (via === "direct") child();
+        else if (via === "scope") scope(child);
+        else sub(signal(0), child);
+      }
+      if (value === 1) throw new Error("sub threw");
+    });
+    log.length = 0;
+    const thrown = thrownBy(() => {
+      batch(() => {
+        if (!subFirst) set(t, 1);
+        set(s, 1);
+        if (subFirst) set(t, 1);
+      });
+    });
+    return { log, t, thrown };
+  };
+
+  describe.each(["direct", "scope", "sub"] as const)(
+    "a later call that throws, its child made %s",
+    (via) => {
+      test.each(ORDERS)("its child still runs in that flush (%s)", (_label, subFirst) => {
+        expect.assertions(1);
+        const { log, thrown } = throwingOwner(subFirst, via);
+        expect([log, (thrown as Error).message]).toEqual([["child 1"], "sub threw"]);
+      });
+
+      test.each(ORDERS)("its child follows its signal afterwards (%s)", (_label, subFirst) => {
+        expect.assertions(1);
+        const { log, t } = throwingOwner(subFirst, via);
+        log.length = 0;
+        set(t, 2);
+        set(t, 3);
+        expect(log).toEqual(["child 2", "child 3"]);
+      });
+    },
+  );
+
+  test("a sub's child queued before the sub's throwing call still runs in that flush and follows later writes", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const s = signal(0);
+    const error = new Error("sub call");
+    const log: string[] = [];
+    sub(s, (value) => {
+      if (value === 1) throw error;
+      effect(() => {
+        log.push(`child ${get(a)}`);
+      });
+    });
+    effect(() => {
+      get(a);
+    });
+    log.length = 0;
+    const thrown = thrownBy(() => {
+      batch(() => {
+        set(a, 1);
+        set(s, 1);
+      });
+    });
+    set(a, 2);
+    expect([thrown === error, log]).toEqual([true, ["child 1", "child 2"]]);
+  });
+
+  test.each(ORDERS)("a later call's error reaches the batch's caller (%s)", (_label, subFirst) => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const error = new Error("later call");
+    sub(s, (value) => {
+      if (value === 0) {
+        effect(() => {
+          get(t);
+        });
+      }
+      if (value === 1) throw error;
+    });
+    const thrown = thrownBy(() => {
+      batch(() => {
+        if (subFirst) set(s, 1);
+        set(t, 1);
+        if (!subFirst) set(s, 1);
+      });
+    });
+    expect(thrown).toBe(error);
+  });
+
+  test.each([true, false])(
+    "10k effects a throwing sub made all run once in the batch that makes it throw, and on the next write (children's source first: %p)",
+    (childFirst) => {
+      expect.assertions(1);
+      const s = signal(0);
+      const t = signal(0);
+      let runs = 0;
+      const child = (): void => {
+        get(t);
+        runs++;
+      };
+      sub(s, (value) => {
+        if (value !== 0) throw new Error("owner");
+        for (let i = 0; i < 10_000; i++) effect(child);
+      });
+      runs = 0;
+      const thrown = thrownBy(() => {
+        batch(() => {
+          if (childFirst) set(t, 1);
+          set(s, 1);
+          if (!childFirst) set(t, 1);
+        });
+      });
+      const once = runs;
+      set(t, 2);
+      expect([once, runs, (thrown as Error).message]).toEqual([10_000, 20_000, "owner"]);
+    },
+  );
+
+  test("a lone sub that a write calls, throwing after queuing work: the work runs and the writer gets the error", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const x = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      log.push(`x ${get(x)}`);
+    });
+    effect(() => {
+      log.push(`y ${get(x)}`);
+    });
+    sub(s, (value) => {
+      if (value === 1) {
+        set(x, 1);
+        throw new Error("sub");
+      }
+    });
+    log.length = 0;
+    const thrown = thrownBy(() => {
+      set(s, 1);
+    });
+    expect([log.toSorted(), (thrown as Error).message]).toEqual([["x 1", "y 1"], "sub"]);
+  });
+
+  test("after a lone sub's call throws, an effect made at top level is not the sub's", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    const handle = sub(s, (value) => {
+      if (value === 1) throw new Error("sub");
+    });
+    thrownBy(() => {
+      set(s, 1);
+    });
+    effect(() => {
+      log.push(`top ${get(t)}`);
+    });
+    dispose(handle);
+    set(t, 1);
+    expect(log).toEqual(["top 0", "top 1"]);
+  });
+
+  test("after a later call throws, a top-level read subscribes nothing", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const x = signal(0);
+    let calls = 0;
+    sub(s, (value) => {
+      calls++;
+      if (value === 1) throw new Error("last entry");
+    });
+    thrownBy(() => {
+      set(s, 1);
+    });
+    get(x);
+    set(x, 1);
+    expect(calls).toBe(2);
+  });
+
+  test.serial(
+    "a throwing cleanup stops neither the other cleanups nor the disposal, and the core still flushes",
+    () => {
+      expect.assertions(3);
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      const s = signal(0);
+      const log: string[] = [];
+      const handle = sub(s, (value) => {
+        defer(() => {
+          log.push(`older ${value}`);
+        });
+        defer(() => {
+          throw new Error("cleanup");
+        });
+        defer(() => {
+          log.push(`newer ${value}`);
+        });
+      });
+      set(s, 1);
+      const thrown = thrownBy(() => {
+        dispose(handle);
+      });
+      const errors = spy.mock.calls.length;
+      expect([thrown, log]).toEqual([undefined, ["newer 1", "older 1", "newer 0", "older 0"]]);
+      let runs = 0;
+      const t = signal(0);
+      effect(() => {
+        get(t);
+        runs++;
+      });
+      set(t, 1);
+      expect(runs).toBe(2);
+      // Dev builds log each dropped cleanup error; production drops it silently
+      expect(errors).toBe(DEV ? 2 : 0);
+    },
+  );
+
+  // src/signal.ts: unspecified (a throw is no return, so "again after fn returns" does not decide it)
+  test("Characterization: a later call that writes its signal, then throws, is called again in the same flush", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    sub(s, (value) => {
+      seen.push(value);
+      if (value === 1) {
+        set(s, 2);
+        throw new Error("after the write");
+      }
+    });
+    const thrown = thrownBy(() => {
+      set(s, 1);
+    });
+    const before = [...seen];
+    set(s, 3);
+    expect([before, seen, thrown instanceof Error]).toEqual([[0, 1, 2], [0, 1, 2, 3], true]);
+  });
+});
+
+describe("sub disposal and re-entrancy", () => {
+  test("a sub that disposes itself in fn, after writing its signal, is not called again", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: number[] = [];
+    const handle: Effect = sub(s, (value) => {
+      seen.push(value);
+      if (value === 1) {
+        set(s, 2);
+        dispose(handle);
+      }
+    });
+    set(s, 1);
+    set(s, 3);
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test("a sub whose fn disposes it stops, and what it made is disposed once", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handle: Effect = sub(s, (value) => {
+      log.push(`call ${value}`);
+      if (value === 0) {
+        defer(() => {
+          log.push("cleanup");
+        });
+      }
+      if (value === 1) dispose(handle);
+    });
+    set(s, 1);
+    set(s, 2);
+    dispose(handle);
+    expect(log).toEqual(["call 0", "call 1", "cleanup"]);
+  });
+
+  test("a sub disposing itself after creating children tears them down newest first, across calls", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handle: Effect = sub(s, (value) => {
+      effect(() => () => {
+        log.push(`effect ${value}`);
+      });
+      defer(() => {
+        log.push(`defer ${value}`);
+      });
+      if (value === 2) dispose(handle);
+    });
+    set(s, 1);
+    set(s, 2);
+    set(s, 3);
+    expect(log).toEqual(["defer 2", "effect 2", "defer 1", "effect 1", "defer 0", "effect 0"]);
+  });
+
+  test("a sub disposed by its child's first run is called no more; the child is torn down once", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    const handle: Effect = sub(s, (value) => {
+      log.push(`sub ${value}`);
+      if (value === 1) {
+        effect(() => {
+          log.push(`child ${get(t)}`);
+          dispose(handle);
+          return () => {
+            log.push("child cleanup");
+          };
+        });
+      }
+    });
+    set(s, 1);
+    set(s, 2);
+    set(t, 1);
+    expect(log).toEqual(["sub 0", "sub 1", "child 0", "child cleanup"]);
+  });
+
+  test("a sub whose fn disposes its owner effect: no further calls, each cleanup once", () => {
+    expect.assertions(1);
+    const a = signal(0);
+    const s = signal(0);
+    const log: string[] = [];
+    const owner: Effect = effect(() => {
+      get(a);
+      sub(s, (value) => {
+        log.push(`sub ${value}`);
+        defer(() => {
+          log.push(`defer ${value}`);
+        });
+        if (value === 1) {
+          set(s, 2);
+          dispose(owner);
+        }
+      });
+      return () => {
+        log.push("effect cleanup");
+      };
+    });
+    set(s, 1);
+    set(s, 3);
+    set(a, 1);
+    expect(log).toEqual(["sub 0", "sub 1", "defer 1", "defer 0", "effect cleanup"]);
+  });
+
+  test("a sub whose later call disposes its owner stops, with its children and the owner's cleanup", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const owner: Effect = effect(() => {
+      sub(s, (value) => {
+        log.push(`call ${value}`);
+        if (value === 0) {
+          effect(() => () => {
+            log.push("child");
+          });
+        }
+        if (value === 1) dispose(owner);
+      });
+      return () => {
+        log.push("owner");
+      };
+    });
+    set(s, 1);
+    set(s, 2);
+    expect(log).toEqual(["call 0", "call 1", "child", "owner"]);
+  });
+
+  test("of two subs that dispose each other when called, only the first called runs", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: string[] = [];
+    const handles: Effect[] = [
+      sub(s, (value) => {
+        seen.push(`a${value}`);
+        if (value === 1) dispose(handles[1]);
+      }),
+      sub(s, (value) => {
+        seen.push(`b${value}`);
+        if (value === 1) dispose(handles[0]);
+      }),
+    ];
+    set(s, 1);
+    // Sibling order is unspecified: whichever is called first disposes the other
+    expect(seen.length).toBe(3);
+  });
+
+  test("a child cleanup that disposes the sub during the sub's disposal finishes the teardown, each cleanup once", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handle: Effect = sub(s, (value) => {
+      effect(() => () => {
+        log.push(`older ${value}`);
+      });
+      effect(() => () => {
+        log.push(`disposer ${value}`);
+        dispose(handle);
+      });
+      defer(() => {
+        log.push(`defer ${value}`);
+      });
+    });
+    set(s, 1);
+    dispose(handle);
+    expect(log).toEqual(["defer 1", "disposer 1", "older 1", "defer 0", "disposer 0", "older 0"]);
+  });
+
+  test("a row cleanup that disposes the sub during fn's disposal of the row: no further calls", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    let row!: Scope;
+    const handle: Effect = sub(s, (value) => {
+      log.push(`call ${value}`);
+      if (value === 0) {
+        row = scope(() => () => {
+          log.push("row cleanup");
+          dispose(handle);
+        });
+      } else {
+        dispose(row);
+        log.push("after dispose(row)");
+        set(s, 9);
+      }
+    });
+    set(s, 1);
+    set(s, 2);
+    expect(log).toEqual(["call 0", "call 1", "row cleanup", "after dispose(row)"]);
+  });
+
+  // A list's reconcile cannot stop when a row's effect disposes its wiring: the rest of the call
+  // goes on, and the ends of the runs in progress dispose what it made (dev throws nothing)
+  test.each(["in a scope fn made", "in an effect's first run fn made", "directly in fn"] as const)(
+    "a sub disposed by a first run, then a creation %s: nothing throws, and nothing it made runs after",
+    (site) => {
+      expect.assertions(2);
+      const s = signal(0);
+      const t = signal(0);
+      let runs = 0;
+      const later = (): void => {
+        effect(() => {
+          get(t);
+          runs++;
+        });
+      };
+      const handle: Effect = sub(s, (value) => {
+        if (value !== 1) return;
+        const body = (): void => {
+          effect(() => {
+            dispose(handle);
+          });
+          if (site !== "in an effect's first run fn made") later();
+        };
+        if (site === "in a scope fn made") scope(body);
+        else if (site === "in an effect's first run fn made") {
+          effect(() => {
+            body();
+            later();
+          });
+        } else body();
+      });
+      expect(
+        thrownBy(() => {
+          set(s, 1);
+        }),
+      ).toBeUndefined();
+      runs = 0;
+      set(t, 1);
+      expect(runs).toBe(0);
+    },
+  );
+});
+
+describe("scope bodies (not batched)", () => {
+  test("a write in the body runs a dependent effect before scope() returns", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      log.push(`effect ${get(s)}`);
+    });
+    scope(() => {
+      set(s, 1);
+      log.push("body");
+    });
+    expect(log).toEqual(["effect 0", "effect 1", "body"]);
+  });
+
+  test("a body's write runs an effect the body made before the write returns", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    scope(() => {
+      effect(() => {
+        log.push(`effect ${get(s)}`);
+      });
+      set(s, 1);
+      log.push("after write");
+    });
+    expect(log).toEqual(["effect 0", "effect 1", "after write"]);
+  });
+
+  test("a write in a body inside a batch runs effects at the batch end", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: (number | string)[] = [];
+    effect(() => {
+      log.push(get(s));
+    });
+    batch(() => {
+      scope(() => {
+        set(s, 1);
+        log.push("body");
+      });
+      log.push("batch body");
+    });
+    expect(log).toEqual([0, "body", "batch body", 1]);
+  });
+
+  test("dispose(scope(fn)) is a root: fn's effects follow fn's writes, then stop", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: (number | string)[] = [];
+    dispose(
+      scope(() => {
+        effect(() => {
+          log.push(get(s));
+        });
+        set(s, 1);
+        log.push("body end");
+      }),
+    );
+    set(s, 2);
+    expect(log).toEqual([0, 1, "body end"]);
+  });
+
+  test.each([1, 2])(
+    "what the body creates after a write that ran effects is the scope's (%i effects read the signal)",
+    (readers) => {
+      expect.assertions(1);
+      const s = signal(0);
+      const t = signal(0);
+      for (let i = 0; i < readers; i++) {
+        effect(() => {
+          get(s);
+        });
+      }
+      let runs = 0;
+      const log: string[] = [];
+      const handle = scope(() => {
+        set(s, 1);
+        effect(() => {
+          get(t);
+          runs++;
+        });
+        defer(() => {
+          log.push("cleanup");
+        });
+      });
+      dispose(handle);
+      set(t, 1);
+      expect([runs, log]).toEqual([1, ["cleanup"]]);
+    },
+  );
+
+  test("the body subscribes nothing after a write that ran an effect", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const x = signal(0);
+    let runs = 0;
+    effect(() => {
+      get(s);
+      runs++;
+    });
+    scope(() => {
+      set(s, 1);
+      get(x);
+    });
+    set(x, 1);
+    expect(runs).toBe(2);
+  });
+
+  test("a body whose write re-ran an effect it made subscribes that effect to nothing it reads afterwards", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    let runs = 0;
+    scope(() => {
+      effect(() => {
+        get(s);
+        runs++;
+      });
+      set(s, 1);
+      get(t);
+    });
+    set(t, 1);
+    expect(runs).toBe(2);
+  });
+
+  // How a body's write can reach effects at top level: each must give the body back afterwards
+  test.each([
+    [
+      "set, one reader",
+      1,
+      (s: Signal<number>) => {
+        set(s, 1);
+      },
+    ],
+    [
+      "set, two readers",
+      2,
+      (s: Signal<number>) => {
+        set(s, 1);
+      },
+    ],
+    [
+      "batch end",
+      2,
+      (s: Signal<number>) => {
+        batch(() => {
+          set(s, 1);
+        });
+      },
+    ],
+    [
+      "nested batch end",
+      2,
+      (s: Signal<number>) => {
+        batch(() => {
+          batch(() => {
+            set(s, 1);
+          });
+        });
+      },
+    ],
+    [
+      "untracked set",
+      2,
+      (s: Signal<number>) => {
+        untracked(() => {
+          set(s, 1);
+        });
+      },
+    ],
+    [
+      "effect() whose first run writes",
+      2,
+      (s: Signal<number>) => {
+        effect(() => {
+          set(s, 1);
+        });
+      },
+    ],
+    [
+      "sub() whose first call writes",
+      2,
+      (s: Signal<number>, t: Signal<number>) => {
+        sub(t, () => {
+          set(s, 1);
+        });
+      },
+    ],
+    [
+      "dispose() whose cleanup writes",
+      2,
+      (_s: Signal<number>, _t: Signal<number>, writer: Effect) => {
+        dispose(writer);
+      },
+    ],
+    [
+      "scope() nested, its body writes",
+      2,
+      (s: Signal<number>) => {
+        scope(() => {
+          set(s, 1);
+        });
+      },
+    ],
+  ] as const)(
+    "a body's %s: the effects it reaches run before it returns, and the body still owns and tracks nothing",
+    (_kind, readers, write) => {
+      expect.assertions(5);
+      const s = signal(0);
+      const x = signal(0);
+      const t = signal(0);
+      let readerRuns = 0;
+      let otherRuns = 0;
+      effect(() => {
+        get(s);
+        readerRuns++;
+      });
+      if (readers === 2) {
+        effect(() => {
+          get(s);
+          otherRuns++;
+        });
+      }
+      const writer = effect(() => () => {
+        set(s, 1);
+      });
+      let ranBeforeReturn = 0;
+      let laterRuns = 0;
+      const root = scope(() => {
+        write(s, t, writer);
+        ranBeforeReturn = readerRuns;
+        effect(() => {
+          get(x);
+          laterRuns++;
+        });
+        // A leaked tracker (the last effect the flush ran) would subscribe here
+        get(x);
+        get(t);
+      });
+      expect(ranBeforeReturn).toBe(2);
+      expect(otherRuns).toBe(readers === 2 ? 2 : 0);
+      dispose(root);
+      readerRuns = 0;
+      otherRuns = 0;
+      set(x, 1);
+      set(t, 1);
+      expect(laterRuns).toBe(1);
+      expect(readerRuns).toBe(0);
+      expect(otherRuns).toBe(0);
+    },
+  );
+
+  test("a re-run in a flush a body started owns what it makes; the scope does not adopt it", () => {
+    expect.assertions(2);
+    const s = signal(0);
+    const y = signal(0);
+    let childRuns = 0;
+    const top = effect(() => {
+      if (get(s) === 1) {
+        effect(() => {
+          get(y);
+          childRuns++;
+        });
+      }
+    });
+    const root = scope(() => {
+      set(s, 1);
+    });
+    dispose(root);
+    set(y, 1);
+    // The child belongs to `top`, which lives on
+    expect(childRuns).toBe(2);
+    dispose(top);
+    set(y, 2);
+    expect(childRuns).toBe(2);
+  });
+
+  test("a body's write re-runs an effect it made at once; what that re-run makes belongs to it", () => {
+    expect.assertions(2);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    const handle = scope(() => {
+      effect(() => {
+        const v = get(s);
+        effect(() => {
+          log.push(`inner ${v} ${get(t)}`);
+        });
+      });
+      set(s, 1);
+    });
+    set(t, 1);
+    expect(log).toEqual(["inner 0 0", "inner 1 0", "inner 1 1"]);
+    dispose(handle);
+    set(t, 2);
+    expect(log).toHaveLength(3);
+  });
+
+  test("a body's write runs an effect that disposes another scope before the write returns", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    const outer = scope(() => {
+      defer(() => {
+        log.push("outer defer");
+      });
+    });
+    effect(() => {
+      if (get(s) === 1) dispose(outer);
+    });
+    scope(() => {
+      effect(() => {
+        log.push(`sibling ${get(t)}`);
+      });
+      set(s, 1);
+      log.push("after write");
+    });
+    expect(log).toEqual(["sibling 0", "outer defer", "after write"]);
+  });
+
+  test("a write in the body whose flush throws: the body catches it and stays the owner", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      if (get(s) === 1) throw new Error("x");
+    });
+    const handle = scope(() => {
+      log.push(
+        `caught ${
+          (
+            thrownBy(() => {
+              set(s, 1);
+            }) as Error
+          ).message
+        }`,
+      );
+      effect(() => {
+        log.push(`made ${get(s)}`);
+      });
+    });
+    dispose(handle);
+    set(s, 2);
+    expect(log).toEqual(["caught x", "made 1"]);
+  });
+
+  test("a body's write that runs a lone throwing effect leaves the body the owner, tracking nothing", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      if (get(s) === 1) throw new Error("lone");
+    });
+    const handle = scope(() => {
+      log.push(
+        `caught ${
+          (
+            thrownBy(() => {
+              set(s, 1);
+            }) as Error
+          ).message
+        }`,
+      );
+      // A leaked tracker would subscribe the thrower here: set(t) would then re-run it
+      get(t);
+      effect(() => {
+        log.push(`made ${get(t)}`);
+      });
+    });
+    const first = thrownBy(() => {
+      set(t, 1);
+    });
+    dispose(handle);
+    const second = thrownBy(() => {
+      set(t, 2);
+    });
+    expect([log, first, second]).toEqual([
+      ["caught lone", "made 0", "made 1"],
+      undefined,
+      undefined,
+    ]);
+  });
+
+  test("after a body caught a throwing flush, a top-level write runs effects at once", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    let runs = 0;
+    effect(() => {
+      if (get(s) === 1) throw new Error("effect");
+    });
+    scope(() => {
+      thrownBy(() => {
+        set(s, 1);
+      });
+    });
+    effect(() => {
+      get(t);
+      runs++;
+    });
+    set(t, 1);
+    expect(runs).toBe(2);
+  });
+
+  test("a re-run that throws in a flush a body started: the body gets the error and still owns", () => {
+    expect.assertions(2);
+    const s = signal(0);
+    const y = signal(0);
+    effect(() => {
+      if (get(s) === 1) throw new Error("re-run failed");
+    });
+    let laterRuns = 0;
+    let caught: unknown;
+    const root = scope(() => {
+      caught = thrownBy(() => {
+        set(s, 1);
+      });
+      effect(() => {
+        get(y);
+        laterRuns++;
+      });
+      get(y);
+    });
+    expect(String(caught)).toContain("re-run failed");
+    dispose(root);
+    set(y, 1);
+    expect(laterRuns).toBe(1);
+  });
+
+  test("an effect's first run that writes and throws inside a body: it is disposed, the body keeps owning", () => {
+    expect.assertions(3);
+    const s = signal(0);
+    const y = signal(0);
+    let readerRuns = 0;
+    effect(() => {
+      get(s);
+      readerRuns++;
+    });
+    let laterRuns = 0;
+    let caught: unknown;
+    const root = scope(() => {
+      caught = thrownBy(() => {
+        effect(() => {
+          set(s, 1);
+          throw new Error("first run failed");
+        });
+      });
+      effect(() => {
+        get(y);
+        laterRuns++;
+      });
+    });
+    expect(String(caught)).toContain("first run failed");
+    expect(readerRuns).toBe(2);
+    dispose(root);
+    set(y, 1);
+    expect(laterRuns).toBe(1);
+  });
+
+  test("a body that throws after its write ran effects: the scope and its effects are disposed, and top level is clean", () => {
+    expect.assertions(4);
+    const s = signal(0);
+    const y = signal(0);
+    let childRuns = 0;
+    let readerRuns = 0;
+    effect(() => {
+      get(s);
+      readerRuns++;
+    });
+    const error = thrownBy(() => {
+      scope(() => {
+        effect(() => {
+          get(y);
+          childRuns++;
+        });
+        set(s, 1);
+        throw new Error("body failed");
+      });
+    });
+    expect(String(error)).toContain("body failed");
+    // Top level after it: no owner (an effect lives on), no tracker (a read subscribes nothing)
+    let topRuns = 0;
+    effect(() => {
+      get(y);
+      topRuns++;
+    });
+    get(y);
+    readerRuns = 0;
+    set(y, 1);
+    expect(childRuns).toBe(1);
+    expect(topRuns).toBe(2);
+    expect(readerRuns).toBe(0);
+  });
+
+  test("nested bodies: after the inner body's write flushed, each body owns what it creates next", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    let runs = 0;
+    effect(() => {
+      get(s);
+    });
+    const handle = scope(() => {
+      scope(() => {
+        set(s, 1);
+        effect(() => {
+          get(t);
+          runs++;
+        });
+      });
+      set(s, 2);
+      effect(() => {
+        get(t);
+        runs++;
+      });
+    });
+    dispose(handle);
+    set(t, 1);
+    expect(runs).toBe(2);
+  });
+
+  test("after an inner body's write ran effects, the outer body owns what it creates next", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    effect(() => {
+      get(s);
+    });
+    let inner!: Scope;
+    let runs = 0;
+    const outer = scope(() => {
+      inner = scope(() => {
+        set(s, 1);
+      });
+      effect(() => {
+        get(t);
+        runs++;
+      });
+    });
+    dispose(inner);
+    set(t, 1);
+    const afterInner = runs;
+    dispose(outer);
+    set(t, 2);
+    expect([afterInner, runs]).toEqual([2, 2]);
+  });
+
+  test("untracked in a body keeps the scope the owner across a write that ran effects", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    effect(() => {
+      get(s);
+    });
+    let runs = 0;
+    const handle = scope(() => {
+      untracked(() => {
+        set(s, 1);
+        effect(() => {
+          get(t);
+          runs++;
+        });
+      });
+    });
+    dispose(handle);
+    set(t, 1);
+    expect(runs).toBe(1);
+  });
+
+  test("a sub made in a body follows the body's later write at once and dies with the scope", () => {
+    expect.assertions(2);
+    const s = signal(0);
+    const seen: string[] = [];
+    const handle = scope(() => {
+      sub(s, (value) => {
+        seen.push(`sub ${value}`);
+      });
+      set(s, 1);
+      seen.push("after write");
+    });
+    expect(seen).toEqual(["sub 0", "sub 1", "after write"]);
+    dispose(handle);
+    set(s, 2);
+    expect(seen).toHaveLength(3);
+  });
+
+  test("a sub made in the body after a flushing write belongs to the scope", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const t = signal(0);
+    const seen: number[] = [];
+    effect(() => {
+      get(s);
+    });
+    effect(() => {
+      get(s);
+    });
+    const handle = scope(() => {
+      set(s, 1);
+      sub(t, (value) => {
+        seen.push(value);
+      });
+    });
+    dispose(handle);
+    set(t, 1);
+    expect(seen).toEqual([0]);
+  });
+
+  test("100k effects a body made that throw on its write: the body catches, all ran, and it still owns", () => {
+    expect.assertions(4);
+    const s = signal(0);
+    const y = signal(0);
+    let calls = 0;
+    let laterRuns = 0;
+    let caught: unknown;
+    const thrower = (): void => {
+      calls++;
+      if (get(s) !== 0) throw new Error("boom");
+    };
+    const root = scope(() => {
+      for (let i = 0; i < 100_000; i++) effect(thrower);
+      calls = 0;
+      caught = thrownBy(() => {
+        set(s, 1);
+      });
+      effect(() => {
+        get(y);
+        laterRuns++;
+      });
+    });
+    expect(String(caught)).toContain("boom");
+    expect(calls).toBe(100_000);
+    calls = 0;
+    expect(
+      thrownBy(() => {
+        set(s, 2);
+      }),
+    ).toBeDefined();
+    dispose(root);
+    set(y, 1);
+    expect(calls + laterRuns).toBe(100_001);
+  });
+});
+
+describe("components and async callbacks", () => {
+  /** A component: a counter text node that `ticks` advances, removed by its owner's disposal. */
+  const counter = (parent: Element, ticks: (() => void)[]): void => {
+    const count = signal(0);
+    const double = computed(() => get(count) * 2);
+    const text = document.createTextNode("");
+    parent.append(text);
+    effect(() => {
+      text.data = String(get(double));
+    });
+    const tick = (): void => {
+      set(count, count.v + 1);
+    };
+    ticks.push(tick);
+    defer(() => {
+      ticks.splice(ticks.indexOf(tick), 1);
+      text.remove();
+    });
+  };
+  /** A component that renders a counter once `load` resolves, in a root scope of its own. */
+  const details = (parent: Element, load: () => Promise<string>, ticks: (() => void)[]): void => {
+    let alive = true;
+    let shown: Scope | undefined;
+    defer(() => {
+      alive = false;
+      if (shown) dispose(shown);
+    });
+    // oxlint-disable-next-line promise/prefer-await-to-then -- a callback nothing awaits
+    void load().then((tag) => {
+      if (alive) {
+        shown = scope(() => {
+          counter(parent.appendChild(document.createElement(tag)), ticks);
+        });
+      }
+    });
+  };
+
+  test("an async callback's root scope renders and follows its signals", async () => {
+    expect.assertions(1);
+    const ticks: (() => void)[] = [];
+    const body = document.createElement("div");
+    const app = scope(() => {
+      counter(body, ticks);
+      details(body, () => Promise.resolve("p"), ticks);
+    });
+    await Promise.resolve();
+    ticks[1]();
+    expect(body.innerHTML).toBe("0<p>2</p>");
+    dispose(app);
+  });
+
+  test("disposing the app disposes the async callback's root scope through its component's cleanup", async () => {
+    expect.assertions(2);
+    const ticks: (() => void)[] = [];
+    const body = document.createElement("div");
+    const app = scope(() => {
+      counter(body, ticks);
+      details(body, () => Promise.resolve("p"), ticks);
+    });
+    await Promise.resolve();
+    dispose(app);
+    // The <p> is the async callback's own DOM, not a component's: only the texts go
+    expect(body.innerHTML).toBe("<p></p>");
+    expect(ticks).toEqual([]);
+  });
+
+  test("an app disposed before the data arrives makes nothing later", async () => {
+    expect.assertions(1);
+    const body = document.createElement("div");
+    const data = Promise.withResolvers<string>();
+    const app = scope(() => {
+      details(body, () => data.promise, []);
+    });
+    dispose(app);
+    data.resolve("p");
+    await Promise.resolve();
+    expect(body.innerHTML).toBe("");
+  });
+});
+
+describe("first runs give back the context they found", () => {
+  test("nested in a re-run: the re-run still tracks and owns after it", () => {
+    expect.assertions(3);
+    const s = signal(0);
+    const x = signal(0);
+    const y = signal(0);
+    let parentRuns = 0;
+    let childRuns = 0;
+    let laterRuns = 0;
+    effect(() => {
+      get(s);
+      parentRuns++;
+      effect(() => {
+        get(y);
+        childRuns++;
+      });
+      effect(() => {
+        get(y);
+        laterRuns++;
+      });
+      get(x);
+    });
+    set(s, 1);
+    set(x, 1);
+    expect(parentRuns).toBe(3);
+    childRuns = 0;
+    laterRuns = 0;
+    set(y, 1);
+    // One live child each: the earlier runs' were disposed by the re-runs
+    expect(childRuns).toBe(1);
+    expect(laterRuns).toBe(1);
+  });
+
+  test("untracked in a re-run keeps the owner and gives tracking back", () => {
+    expect.assertions(2);
+    const s = signal(0);
+    const x = signal(0);
+    const y = signal(0);
+    let parentRuns = 0;
+    let childRuns = 0;
+    effect(() => {
+      get(s);
+      parentRuns++;
+      untracked(() => {
+        effect(() => {
+          get(y);
+          childRuns++;
+        });
+      });
+      get(x);
+    });
+    set(s, 1);
+    set(x, 1);
+    expect(parentRuns).toBe(3);
+    childRuns = 0;
+    set(y, 1);
+    expect(childRuns).toBe(1);
+  });
+
+  test("in a cleanup during a top-level dispose: what it makes has the disposer's owner (none: it lives)", () => {
+    expect.assertions(1);
+    const y = signal(0);
+    let madeRuns = 0;
+    const handle = effect(() => () => {
+      effect(() => {
+        get(y);
+        madeRuns++;
+      });
+    });
+    dispose(handle);
+    set(y, 1);
+    expect(madeRuns).toBe(2);
+  });
+
+  test("in a cleanup during a dispose a body runs: what it makes belongs to the body's scope", () => {
+    expect.assertions(1);
+    const y = signal(0);
+    let madeRuns = 0;
+    const handle = effect(() => () => {
+      effect(() => {
+        get(y);
+        madeRuns++;
+      });
+    });
+    const root = scope(() => {
+      dispose(handle);
+    });
+    dispose(root);
+    set(y, 1);
+    expect(madeRuns).toBe(1);
+  });
+});
+
+describe("a throwing owner strands no child", () => {
+  // An app's RangeError (an invalid Date's toISOString, toFixed(101)…) is an ordinary error, unlike
+  // a stack overflow's
+  describe.each([
+    ["an Error", Error],
+    ["an app's RangeError", RangeError],
+  ] as const)("throwing %s", (_kind, Thrown) => {
+    /**
+     * A sub G on `s` makes, on its first call, `middle` (a sub or an effect on `s`), which makes a
+     * child effect on `t`; one batch writes `s` and `t`, so G, the middle and the child are marked,
+     * and the child waits for both. `thrower` throws a `Thrown` on 1.
+     */
+    const build = (
+      middle: "sub" | "effect",
+      thrower: "top" | "middle",
+      sFirst: boolean,
+    ): { log: string[]; t: Signal<number>; thrown: unknown } => {
+      const s = signal(0);
+      const t = signal(0);
+      const log: string[] = [];
+      // A second reader of `t`: a later write to `t` does not run the child alone
+      effect(() => {
+        get(t);
+      });
+      const child = (): void => {
+        effect(() => {
+          log.push(`child ${get(t)}`);
+        });
+      };
+      const inner = (): void => {
+        if (middle === "sub") {
+          let made = false;
+          sub(s, (v) => {
+            if (!made) child();
+            made = true;
+            if (thrower === "middle" && v === 1) throw new Thrown("middle threw");
+          });
+        } else {
+          effect(() => {
+            child();
+            if (thrower === "middle" && get(s) === 1) throw new Thrown("middle threw");
+          });
+        }
+      };
+      let made = false;
+      sub(s, (value) => {
+        if (!made) {
+          made = true;
+          inner();
+        } else if (thrower === "top" && value === 1) throw new Thrown("top threw");
+      });
+      log.length = 0;
+      const thrown = thrownBy(() => {
+        batch(() => {
+          if (sFirst) set(s, 1);
+          set(t, 1);
+          if (!sFirst) set(s, 1);
+        });
+      });
+      return { log, t, thrown };
+    };
+    const CASES = [
+      ["sub", "top", true],
+      ["sub", "top", false],
+      ["sub", "middle", true],
+      ["sub", "middle", false],
+      ["effect", "top", true],
+      ["effect", "top", false],
+      ["effect", "middle", true],
+      ["effect", "middle", false],
+    ] as const;
+
+    test.each(CASES)(
+      "a middle %s, the %s throwing (s written first: %p): the child still runs in that flush",
+      (middle, thrower, sFirst) => {
+        expect.assertions(1);
+        const { log, thrown } = build(middle, thrower, sFirst);
+        expect([log, thrown instanceof Thrown && thrown.message]).toEqual([
+          ["child 1"],
+          `${thrower} threw`,
+        ]);
+      },
+    );
+
+    test.each(CASES)(
+      "a middle %s, the %s throwing (s written first: %p): the child follows t afterwards",
+      (middle, thrower, sFirst) => {
+        expect.assertions(1);
+        const { log, t } = build(middle, thrower, sFirst);
+        log.length = 0;
+        set(t, 2);
+        set(t, 3);
+        expect(log).toEqual(["child 2", "child 3"]);
+      },
+    );
+  });
+});
+
+describe("errors at scale", () => {
+  // A recursive error continuation overflowed the stack at about 27k throwing effects in Bun
+  test("100k effects that throw in one flush all run, all run again on the next write, and an error reaches the writer", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const error = new Error("thrower");
+    let runs = 0;
+    const thrower = (): void => {
+      if (get(s) !== 0) {
+        runs++;
+        throw error;
+      }
+    };
+    const root = scope(() => {
+      for (let i = 0; i < 100_000; i++) effect(thrower);
+    });
+    const writes = [1, 2].map((value) => {
+      runs = 0;
+      const thrown = thrownBy(() => {
+        set(s, value);
+      });
+      return [runs, thrown === error];
+    });
+    dispose(root);
+    expect(writes).toEqual([
+      [100_000, true],
+      [100_000, true],
+    ]);
+  });
+
+  test("100k subs that throw in one flush are all called, twice", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const error = new Error("thrower");
+    let calls = 0;
+    const thrower = (value: number): void => {
+      if (value !== 0) {
+        calls++;
+        throw error;
+      }
+    };
+    const root = scope(() => {
+      for (let i = 0; i < 100_000; i++) sub(s, thrower);
+    });
+    const writes = [1, 2].map((value) => {
+      calls = 0;
+      const thrown = thrownBy(() => {
+        set(s, value);
+      });
+      return [calls, thrown === error];
+    });
+    dispose(root);
+    expect(writes).toEqual([
+      [100_000, true],
+      [100_000, true],
+    ]);
   });
 });
 
@@ -2868,5 +5995,63 @@ describe.if(DEV)("dev checks", () => {
     });
     dispose(handle);
     expect(calls).toBeGreaterThan(0);
+  });
+
+  test("creating a sub inside a computed's getter throws on read", () => {
+    expect.assertions(1);
+    const node = computed(() => {
+      sub(signal(0), () => {});
+      return 0;
+    });
+    expect(() => get(node)).toThrow(/^stage1: /u);
+  });
+
+  test("a sub made inside untracked inside a computed's getter throws on read", () => {
+    expect.assertions(1);
+    const node = computed(() => {
+      untracked(() => sub(signal(0), () => {}));
+      return 0;
+    });
+    expect(() => get(node)).toThrow(/^stage1: /u);
+  });
+
+  test("a sub that writes a new value to its signal on every call throws instead of looping", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    let calls = 0;
+    expect(() =>
+      sub(s, (value) => {
+        // Above the dev bound: without it, the loop ends here with the wrong error, not a hang
+        if (++calls > 2_000_000) throw new Error("runaway");
+        set(s, value + 1);
+      }),
+    ).toThrow(/^stage1: /u);
+  });
+
+  test("after a write loop throws, a later write runs its effects again", () => {
+    expect.assertions(2);
+    const a = signal(0);
+    const b = signal(0);
+    const on = signal(false);
+    let runs = 0;
+    const root = scope(() => {
+      effect(() => {
+        // Once, above the dev bound: without it, the loop ends here with the wrong error
+        if (++runs === 2_000_000) throw new Error("runaway");
+        set(b, get(a));
+      });
+      effect(() => {
+        if (get(on)) set(a, get(b) + 1);
+      });
+    });
+    const error = thrownBy(() => {
+      set(on, true);
+    });
+    set(on, false);
+    set(a, 7);
+    const seen = get(b);
+    dispose(root);
+    expect(String(error)).toStartWith("Error: stage1: ");
+    expect(seen).toBe(7);
   });
 });

@@ -1,5 +1,5 @@
-import type { FlatRefs, InferRefs, Refs } from "./types.ts";
-import { create } from "./utils.ts";
+import type { FlatRefs, InferRefs, Refs } from "../types.ts";
+import { create } from "../utils.ts";
 
 const template = create("template");
 

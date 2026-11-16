@@ -1,62 +1,65 @@
-// Keyed list rendering driven by a signal, after ivi's keyed list update
-// (https://github.com/localvoid/ivi). Rows are tracked in an array rather than
-// read back from the DOM, so other nodes in the parent (such as whitespace from
-// markup) cannot be mistaken for rows. Rows matched at either end are kept, a
-// row that crossed to the other end is moved there directly, and the rest are
-// placed right to left around the longest run of rows that kept their order,
-// so no row moves unless it has to. New rows with no others left to place go
-// in in order.
+// Keyed list rendering, after ivi's keyed list update (https://github.com/localvoid/ivi). Rows are
+// tracked in an array rather than read back from the DOM, so other nodes in the parent (such as
+// whitespace from markup) cannot be mistaken for rows. Rows matched at either end are kept, a row
+// that crossed to the other end is moved there directly, and the rest are placed right to left
+// around the longest run of rows that kept their order, so no row moves unless it has to. New rows
+// with no others left to place go in in order.
 //
-// Owner-aware on ./signal.ts (the lite tier's owner-less list is ./lite/reconcile.ts):
-//  - A list is a holder (an owner that never runs) owned by whatever owner creates it, so it is
-//    disposed with it. Its oldest child is its subscription (an effect on `items` that owns
-//    nothing, so its re-runs tear nothing down); the holders of rows that own something are its
-//    newer children. Rows' holders climb to the subscription, so a queued row effect lets the
-//    list reconcile first (parent-first).
-//  - Rows own lazily: `create` runs untracked with the list's pending holder as owner. A row whose
-//    create made nothing costs nothing; once the pending holder owns something it becomes the
-//    row's holder (kept on the row, adopted by the list) and the list makes a new pending holder.
-//    So removing a row disposes what it owns, and when no row owns anything (the list owns only
-//    its subscription) clearing and removing touch no row.
-//  - `update` (and the mark's callback for new rows) runs untracked with the list's holder as
-//    owner: what it makes lives until the list is disposed, cleared or replaced (a dev build
-//    warns). Make a row's effects in `create`.
-//  - The list tells its mark when its rows change, so the mark keeps none of the old rows.
-//  - `dispose(list)` stops it and disposes what its rows own; the rows stay in the DOM ("who
-//    removes, disposes": the caller removes them).
-// `create` and `update` must not throw (unsupported: the rows no longer match the items, though a
-// connected parent is put back). A dev build says so, wrapping the error. What rows' cleanups throw
-// is dropped (dev: logged), as for any cleanup.
+// One module for both tiers, and it imports no signal module: `list` returns the rows function and
+// `mark` the show function, and the app wires both with either tier's sub:
+// `sub(items, rows)`, `sub(selected, mark(rows, fn))`. The list never touches owners: what `create`
+// and `update` make belongs to whatever calls the rows function (on the full tier, the sub, until
+// it is disposed). Rows that own effects opt in through `drop`, which runs for each row the list
+// removes, clears or replaces, while the row is still in the DOM.
+// `create`, `update` and `drop` must not throw (unsupported: the rows no longer match the items,
+// though a connected parent is put back); a dev build says so, wrapping the error. Calling the rows
+// function again while it reconciles (a lite sub calls back at once when create, update, drop or a
+// mark callback writes the items) is unsupported; a dev build throws. Dev builds also tell a full
+// core when a create or update runs (`told`), so it can warn about what rows make outside a scope.
+// Unspecified: duplicate keys; `drop`'s extra arguments on clear and replace; on the lite tier, a
+// show call made during a reconcile (it looks up the rows as they were before the reconcile).
 
-// oxlint-disable id-length no-bitwise no-continue oxclippy/excessive-nesting oxclippy/similar-names
-// oxlint-disable node/no-process-env no-console no-negated-condition unicorn/no-negated-condition
+// oxlint-disable id-length no-bitwise no-continue oxclippy/similar-names
+// oxlint-disable node/no-process-env no-negated-condition unicorn/no-negated-condition
 
-import {
-  dispose,
-  type Effect,
-  effect,
-  get,
-  type Holder,
-  holder,
-  own,
-  owns,
-  release,
-  type Signal,
-  within,
-} from "./signal.ts";
 import { noop } from "./utils.ts";
 
-/** A row's holder, on rows that own something. */
-const SCOPE = Symbol();
-/** What `mark` reaches a list through: the list holder's `g`. */
-const ROWS = Symbol();
-
-type Row = ChildNode & { [SCOPE]?: Holder };
+/**
+ * Dev builds only: the list's state, which a full core reads while a create or update runs to warn
+ * about what it makes outside a scope (`rowWarn` in ./signal.ts). `o` is this object until the core
+ * records the owner the call runs under, `u` says update, `w` holds the warnings given (1 create, 2
+ * update).
+ */
+interface Told {
+  o: unknown;
+  u: boolean;
+  w: number;
+}
 
 /**
- * Sets the list's one callback for new rows and returns its items' key and
- * getters for its items and rows, in the same order. The lookup lives in
- * `mark`, so a list without one ships none of it.
+ * Dev builds only: runs `fn` (a create or, with `u`, an update) with the registered global
+ * `Symbol.for("stage1.row")` set to `state`; a core without the check ignores it.
+ */
+const told = <R>(state: Told, u: boolean, fn: () => R): R => {
+  const global = globalThis as Record<symbol, unknown>;
+  const slot = Symbol.for("stage1.row");
+  const prev = global[slot];
+  state.o = state;
+  state.u = u;
+  global[slot] = state;
+  try {
+    return fn();
+  } finally {
+    global[slot] = prev;
+  }
+};
+
+/** Where `mark` reaches a list: a property of the rows function. */
+const ROWS = Symbol();
+
+/**
+ * Sets the list's one callback for new rows and returns its items' key and getters for its items
+ * and rows, in the same order. The lookup lives in `mark`, so a list without one ships none of it.
  */
 type Attach<K, N> = (
   created?: (key?: K, row?: N) => void,
@@ -66,8 +69,13 @@ type Attach<K, N> = (
   rows: () => readonly N[],
 ];
 
-/** A list's handle: `dispose` stops it; `mark` takes it to reach its rows. */
-export type List<K, N> = Effect & { readonly [ROWS]: Attach<K, N> };
+/** What `mark` takes from a list: rows of type `N` keyed by `K`. */
+export interface Marked<K, N> {
+  readonly [ROWS]: Attach<K, N>;
+}
+
+/** A list's rows function: call it with the items (a sub's callback) to reconcile its rows. */
+export type Rows<T, K, N> = ((items: readonly T[]) => void) & Marked<K, N>;
 
 /**
  * Marks with -1 the entries of `a` in its longest increasing subsequence,
@@ -98,82 +106,58 @@ const markLIS = /*@__NOINLINE__*/ (a: Int32Array): void => {
 };
 
 /**
- * Renders a row per item into `parent` and keeps the rows in step with
- * `items`, matching them by `key`. `update` runs on a kept row whose item is a
- * new object. Effects, computeds, scopes and cleanups that `create` makes belong
- * to the row: they are disposed when the row is removed (what `update` makes
- * belongs to the list). Both run untracked. The list belongs to the current
- * owner; `dispose` stops it early. Pass it to `mark` to highlight a row by key.
+ * Returns the rows function of a list in `parent`: called with items, it renders a row per item
+ * and keeps the rows in step with them, matching them by `key`. `update` runs on a kept row whose
+ * item is a new object. `drop` runs on each row the list removes (also when it clears or replaces
+ * them), before the row leaves the DOM; it must use only its first parameter (on clear and replace
+ * it is called as `rows.forEach(drop)`, so it also gets `(index, rows)`). A row that owns an
+ * effect keeps its handle (`tr.fx = effect(…)` in create, `(tr) => dispose(tr.fx)` as drop); one
+ * that owns several makes them in a scope of its own (`tr.s = scope(() => …)`) and drop disposes
+ * that. Pass the rows function to `mark` to highlight a row by key.
  */
 export const list = <T, K extends keyof T, N extends ChildNode>(
   parent: Element,
-  items: Signal<readonly T[]>,
   key: K,
   create: (item: T) => N,
   update: (node: N, item: T) => void = noop,
-): List<T[K], N> => {
+  drop?: (node: N) => void,
+): Rows<T, T[K], N> => {
+  // Dev builds only: a reconcile is running (a sub that calls a nested write back at once re-enters)
+  let busy = false;
+  if (process.env.NODE_ENV !== "production") {
+    // A list with a drop disposes what its rows own: the create warning is taken as given, so
+    // only the update warning (what update makes belongs to the wiring, never to the row) remains
+    const state: Told = { o: undefined, u: false, w: drop ? 1 : 0 };
+    const plainCreate = create;
+    const plainUpdate = update;
+    // oxlint-disable-next-line no-param-reassign
+    create = (item) => told(state, false, () => plainCreate(item));
+    // oxlint-disable-next-line no-param-reassign
+    update = (node, item) => {
+      told(state, true, () => {
+        plainUpdate(node, item);
+      });
+    };
+  }
   // An undefined reference node appends, as for null
   const insert = parent.insertBefore.bind(parent) as (node: N, before?: N) => N;
   let data: readonly T[] = [];
   let rows: N[] = [];
   // The mark's callback for new rows
   let created: ((key?: T[K], row?: N) => void) | undefined;
-  const attach: Attach<T[K], N> = (fn) => {
-    created = fn;
-    return [key, () => data as readonly Record<PropertyKey, unknown>[], () => rows];
-  };
-  // The list's holder; it owns the subscription (its oldest child, set by its first run), then the
-  // rows' holders and what `update` makes
-  const self = own(holder(undefined, attach));
-  let sub: Effect | undefined;
-  // The owner of the next create until it owns something (made by the subscription's first run)
-  let pending: Holder;
-
   const make = (item: T): N => {
-    const row = within(pending, create, item);
-    // The pending holder owns something: it becomes the row's, and the list's child (`make`
-    // runs within the list's holder); a new one climbs to the subscription like it
-    if (owns(pending)) {
-      (row as Row)[SCOPE] = own(pending);
-      pending = holder(undefined, undefined, sub);
-    }
+    const row = create(item);
     if (created) created(item[key], row);
     return row;
   };
 
-  // `update` runs untracked with the list's holder as owner: what it makes belongs to the list,
-  // not the row, so a dev build runs it within a holder of its own and warns if that owns anything
-  const change =
-    process.env.NODE_ENV !== "production"
-      ? (row: N, item: T): void => {
-          const h = holder();
-          within(h, update, row, item);
-          if (owns(h)) {
-            own(h);
-            console.warn(
-              "stage1: a list's update made an effect, computed, scope or cleanup: it belongs to the list, not the row (make it in create)",
-            );
-          }
-        }
-      : update;
-
-  // Rows' holders are the list's children newer than its subscription: none until a row owns
-  // something
-  const drop = (row: N): void => {
-    if (owns(self, sub)) {
-      const h = (row as Row)[SCOPE];
-      if (h !== undefined) dispose(h);
-    }
-    row.remove();
-  };
-
-  // Disposes the rows' holders (and what `update` made), newest first
-  const releaseAll = (): void => {
-    release(self, sub);
-  };
-
-  // Measured faster: built off-document, the rows cost no per-insert work
-  const build = /*@__NOINLINE__*/ (next: readonly T[]): N[] => {
+  // Every row goes, each dropped first, and the new rows are built off-document (measured
+  // faster: no per-insert work)
+  const rebuild = /*@__NOINLINE__*/ (next: readonly T[]): N[] => {
+    // drop gets (row, index, rows) here (documented in list's JSDoc)
+    // oxlint-disable-next-line unicorn/no-array-for-each unicorn/no-array-callback-reference
+    if (drop) rows.forEach(drop);
+    parent.textContent = "";
     const host = next.length > 0 && parent.isConnected ? parent.parentNode : null;
     const after = parent.nextSibling;
     if (host) parent.remove();
@@ -189,12 +173,6 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
     }
   };
 
-  const rebuild = (next: readonly T[]): N[] => {
-    releaseAll();
-    parent.textContent = "";
-    return build(next);
-  };
-
   // oxlint-disable-next-line complexity
   const reconcile = /*@__NOINLINE__*/ (next: readonly T[]): N[] => {
     const length = next.length;
@@ -203,35 +181,44 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
 
     let aStart = 0;
     let bEnd = length - 1;
-    let a: T;
-    let b: T;
 
     // Rows kept in place at the start, identity first so unchanged items skip the key reads
     const min = length <= aEnd ? length : aEnd + 1;
-    while (aStart < min && ((a = data[aStart]) === (b = next[aStart]) || a[key] === b[key])) {
-      if (a !== b) change(rows[aStart], b);
-      aStart++;
+    for (; aStart < min; aStart++) {
+      const a = data[aStart];
+      const b = next[aStart];
+      if (a !== b) {
+        if (a[key] !== b[key]) break;
+        update(rows[aStart], b);
+      }
     }
     // Every row kept in place: the list keeps its array, which `mark` relies on
     if (aStart === length && aStart > aEnd) return rows;
+    // Preallocated: rows are placed from both ends
     const result = new Array<N>(length);
     for (let i = 0; i < aStart; i++) result[i] = rows[i];
     let bStart = aStart;
 
-    // Match rows at both ends, identity first so unchanged items skip the key
-    // reads; a row that crossed to the other end is moved there directly
+    // Match rows at both ends, identity first so unchanged items skip the key reads; a row that
+    // crossed to the other end is moved there directly. Each end's item is read once per pass
     while (aStart <= aEnd && bStart <= bEnd) {
-      if ((a = data[aStart]) === (b = next[bStart]) || a[key] === b[key]) {
-        if (a !== b) change(rows[aStart], b);
+      const first = data[aStart];
+      const start = next[bStart];
+      if (first === start || first[key] === start[key]) {
+        if (first !== start) update(rows[aStart], start);
         result[bStart++] = rows[aStart++];
-      } else if ((a = data[aEnd]) === (b = next[bEnd]) || a[key] === b[key]) {
-        if (a !== b) change(rows[aEnd], b);
+        continue;
+      }
+      const final = data[aEnd];
+      const end = next[bEnd];
+      if (final === end || final[key] === end[key]) {
+        if (final !== end) update(rows[aEnd], end);
         result[bEnd--] = rows[aEnd--];
-      } else if ((a = data[aEnd])[key] === (b = next[bStart])[key]) {
-        if (a !== b) change(rows[aEnd], b);
+      } else if (final[key] === start[key]) {
+        if (final !== start) update(rows[aEnd], start);
         insert((result[bStart++] = rows[aEnd--]), rows[aStart]);
-      } else if ((a = data[aStart])[key] === (b = next[bEnd])[key]) {
-        if (a !== b) change(rows[aStart], b);
+      } else if (first[key] === end[key]) {
+        if (first !== end) update(rows[aStart], end);
         insert((result[bEnd] = rows[aStart++]), result[bEnd-- + 1]);
       } else break;
     }
@@ -240,10 +227,10 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
       // In order before one node, so an append inserts before no row: in Chromium,
       // inserting before a row makes `:nth-*` rules restyle every row
       for (let i = bStart; i <= bEnd; i++) insert((result[i] = make(next[i])), result[bEnd + 1]);
-    } else if (bStart > bEnd) {
-      for (let i = aStart; i <= aEnd; i++) drop(rows[i]);
     } else {
-      const index = new Map<T[keyof T], number>();
+      // Also when every new item matched at an end (the map is then empty, and the rows left are
+      // removed below): one removal site, so a list pays for one drop guard here and one on clear
+      const index = new Map<T[K], number>();
       for (let i = bStart; i <= bEnd; i++) index.set(next[i][key], i);
       // Nothing matched at either end and no key survives: replace everything
       if (!aStart && aEnd === data.length - 1) {
@@ -258,12 +245,14 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
       for (let i = aStart; i <= aEnd; i++) {
         const row = rows[i];
         const j = index.get(data[i][key]);
-        if (j === undefined) drop(row);
-        else {
+        if (j === undefined) {
+          if (drop) drop(row);
+          row.remove();
+        } else {
           if (j < last) moved = true;
           else last = j;
           sources[j - bStart] = i + 1;
-          if (data[i] !== next[j]) change(row, next[j]);
+          if (data[i] !== next[j]) update(row, next[j]);
           result[j] = row;
         }
       }
@@ -277,75 +266,66 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
     return result;
   };
 
-  const apply = (next: readonly T[]): void => {
+  const apply = ((next: readonly T[]): void => {
     const prev = rows;
     if (process.env.NODE_ENV !== "production") {
+      if (busy) {
+        throw new Error(
+          "stage1: a list's rows were called again during their reconcile (its items were written from create, update, drop or a mark callback under a sub that calls back at once, as stage1/lite's does), which would duplicate rows",
+        );
+      }
+      busy = true;
       try {
         rows = reconcile(next);
       } catch (error) {
         throw new Error(
-          "stage1: a list's create or update threw; its rows no longer match its items",
-          {
-            cause: error,
-          },
+          "stage1: a list's create, update or drop threw; its rows no longer match its items",
+          { cause: error },
         );
+      } finally {
+        busy = false;
       }
     } else rows = reconcile(next);
     data = next;
     // Tells the mark its map and marked row may be stale
     if (created && rows !== prev) created();
+  }) as Rows<T, T[K], N> & { [ROWS]: Attach<T[K], N> };
+  apply[ROWS] = (fn) => {
+    created = fn;
+    return [key, () => data as readonly Record<PropertyKey, unknown>[], () => rows];
   };
-
-  // The subscription: tracks `items` and applies them untracked, within the list's holder, so it
-  // owns nothing and its re-runs tear nothing down. Its first run makes the first pending holder,
-  // climbing to it (a queued row effect lets the list reconcile first); it must, as the flush
-  // ending `effect` may re-run it. A write to `items` during the reconcile (by create, update, a
-  // row's effect or cleanup) only queues this effect, which is running, so it reads `items` again
-  // after each reconcile (which also makes the next write re-run it). A dispose during the
-  // reconcile disposes the list's holder; disposing it again at the end releases what was
-  // adopted since (rows made after the disposal).
-  // `this` is the subscription (a run calls the effect's function as the node's method)
-  // oxlint-disable-next-line func-names
-  within(self, effect, function (this: Effect) {
-    // oxlint-disable-next-line typescript/no-this-alias unicorn/no-this-assignment
-    if (sub === undefined) pending = holder(undefined, undefined, (sub = this));
-    for (let next; (next = get(items)) !== data;) within(self, apply, next);
-    if (self.g === undefined) dispose(self);
-  });
-  return self as never;
+  return apply;
 };
 
 /** Lookups since a list last changed before `mark` builds a key map for the rest. */
 const SCANS = 8;
 
 /**
- * Marks the element whose key is `source`'s value: `fn(node, true)` marks it,
- * and when `source` changes, `fn(node, false)` unmarks it and the new key's
- * element is marked. `nodes` is a `list` or any map from key to element with
- * `get`, such as a `Map`.
+ * Returns a show function that marks the element whose key it was last called with:
+ * `fn(node, true)` marks it, and on a call with another key, `fn(node, false)` unmarks it and the
+ * new key's element is marked. `nodes` is a list's rows function or any map from key to element
+ * with `get`, such as a `Map`. Wire it to the selection: `sub(selected, mark(rows, fn))`.
  *
- * - A list's rows start unmarked, and a row created while its key is selected is marked as it is
+ * - A list's rows start unmarked, and a row created while its key is shown is marked as it is
  *   created. Nothing is registered per row, so the list creates and clears rows at full speed. One
- *   mark per list; `fn` never runs for a removed row.
- * - A map's elements must be in it before their key is selected.
+ *   mark per list (a later mark replaces it); `fn` never runs for a removed row.
+ * - A map's elements must be in it before their key is shown.
  * - Keys compare with `===`, as `list` matches them, so a NaN key marks nothing.
  *
- * The mark belongs to the current owner; `dispose` stops it early.
+ * The mark stays attached to its list when whatever calls it stops: rows created later with the
+ * key it showed last are still marked.
  */
 export const mark = <K, N extends ChildNode>(
-  source: Signal<K>,
-  // The keys' type comes from `source`, so a map may hold only some of them; a
-  // method, as on Map, so a map typed with fewer keys is still accepted
+  // A method, as on Map, so a map typed with fewer keys is still accepted
   // oxlint-disable-next-line typescript/method-signature-style
-  nodes: List<NoInfer<K>, N> | { get(key: NoInfer<K>): N | undefined },
+  nodes: Marked<K, N> | { get(key: K): N | undefined },
   fn: (node: N, on: boolean) => void,
-): Effect => {
-  // The value the run has seen, which in a batch can differ from `source.v`.
-  // A private symbol until the first run, which then marks at once
+): ((key: K) => void) => {
+  // The key last shown. A private symbol until the first call, which then marks at once
   let shown: unknown = ROWS;
   let lit: N | undefined;
   let find: (key: K) => N | undefined;
-  const attach = (nodes as unknown as Holder).g as Attach<K, N> | undefined;
+  const attach = (nodes as Partial<Marked<K, N>>)[ROWS];
   if (attach) {
     // A lookup scans the rows until the list has gone SCANS lookups without
     // changing its rows; then a key map, built once, serves the rest until it does.
@@ -378,7 +358,7 @@ export const mark = <K, N extends ChildNode>(
   } else {
     find = (k) => (nodes as { get: (key: K) => N | undefined }).get(k);
   }
-  const show = (k: K): void => {
+  return (k: K): void => {
     if (k === shown) return;
     const old = lit;
     lit = find((shown = k));
@@ -388,12 +368,4 @@ export const mark = <K, N extends ChildNode>(
     // re-marks the newest element rather than marking a stale one
     if (lit) fn(lit, true);
   };
-  // The mark's holder detaches it from its list when disposed. Its effect follows `source`; it
-  // reads it again after showing a key, as `fn` may have changed it (an effect's own write
-  // does not re-run it), which also makes its next check re-run it
-  const self = own(holder(attach && (() => attach())));
-  within(self, effect, () => {
-    for (let k; (k = get(source)) !== shown;) within(self, show, k);
-  });
-  return self;
 };

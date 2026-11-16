@@ -75,7 +75,8 @@ describe("dist files", () => {
 
 // stage1 and stage1/lite ship as source; the app's Bun build decides whether the dev checks stay.
 describe.each([
-  ["src/index.ts", 6500, 8000],
+  // Measured 6445 B (Bun 1.4.4); the previous signal core and lists made 7088 B
+  ["src/index.ts", 6000, 7500],
   ["src/lite/index.ts", 3500, 4800],
 ])("%s", (entry, minBytes, maxBytes) => {
   // Explicit define: without one, Bun.build substitutes the test process's NODE_ENV.

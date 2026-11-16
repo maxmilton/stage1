@@ -83,6 +83,7 @@ interface Node {
   p: Head | Node | undefined;
 }
 
+// TODO: Use noop from "../utils.ts"?
 /** A disposed sub's callback, and the "nothing thrown" sentinel (no user code can throw it). */
 // oxlint-disable-next-line no-empty-function
 const NOOP = (): void => {};

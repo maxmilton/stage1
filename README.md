@@ -14,13 +14,122 @@ High-performance JavaScript micro framework.
 
 - zero runtime dependencies
 
+## Signals and lists
+
+An app imports its signals from one of two tiers, each with its own core:
+
+<!-- prettier-ignore -->
+| import | available functions | for |
+| --- | --- | --- |
+| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked` | apps with computeds, effects and owners |
+| `stage1/lite` | `signal`, `get`, ` `, `sub`, `dispose`, `batch` | the smallest apps: subs, no owners      |
+
+Both export the same `list` and `mark`. They import no signals: wire them with the tier's `sub`.
+
+```ts
+import { list, mark, set, signal, sub } from "stage1"; // or "stage1/lite": the same code
+
+interface Item {
+  readonly id: number;
+  readonly label: string;
+}
+
+const items = signal<readonly Item[]>([]);
+const selected = signal(0);
+const tbody = document.createElement("tbody");
+
+const rows = list(
+  tbody,
+  "id",
+  (item: Item) => {
+    const tr = document.createElement("tr");
+    tr.textContent = item.label;
+    return tr;
+  },
+  (tr, item) => {
+    tr.textContent = item.label;
+  },
+);
+sub(items, rows);
+sub(
+  selected,
+  mark(rows, (tr, on) => {
+    tr.className = on ? "danger" : "";
+  }),
+);
+
+set(items, [
+  { id: 1, label: "one" },
+  { id: 2, label: "two" },
+]);
+set(selected, 2); // row 2 gets "danger"
+```
+
+- `list(parent, key, create, update?, drop?)` returns the rows function. Called with items, it keeps one row per item in `parent`, matched by `item[key]`, and moves as few rows as it can. `update` runs on a kept row whose item is a new object; `drop` runs on each row the list removes, clears or replaces, while the row is still in the DOM.
+- `mark(rows, fn)` returns the show function: shown a key, it calls `fn(row, true)` for that key's row and `fn(row, false)` for the row shown before. It also takes any map from key to element with `get`, such as a `Map`.
+- The sub is the handle: dispose it, or its owner, to stop following the signal. The rows stay in the DOM, and a mark stays attached to its list.
+- `stage1/lite` has no owners: a sub lives until it is disposed. Writing a list's items while it reconciles (from `create`, `update`, `drop`, or a mark callback the reconcile calls) is unsupported there: a development build throws.
+
+### Owners (`stage1`)
+
+An effect, sub or scope owns the effects, subs, computeds, scopes and `defer` cleanups its run creates; disposing it disposes them, newest first. An effect also disposes them before each re-run; a sub keeps them across calls. `scope(fn)` runs `fn` once, untracked, as an owner, and does not batch: at top level a write in `fn` runs the effects it reaches before `set` returns (`scope(() => batch(() => …))` runs them once, after the body). A scope made where nothing owns it is a root: keep it and dispose it.
+
+Rows own nothing: what `create` makes belongs to the sub that calls the rows function and lives until that sub is disposed (a development build warns once when the `create` of a list without `drop` makes an effect, sub, computed or cleanup outside a scope). A row opts in through `drop`:
+
+```ts
+import { dispose, type Effect, effect, get, list, signal, sub } from "stage1";
+
+type Row = HTMLTableRowElement & { fx: Effect };
+
+const theme = signal("light");
+const items = signal<readonly { readonly id: number; readonly label: string }[]>([]);
+
+const rows = list(
+  document.createElement("tbody"),
+  "id",
+  (item: { readonly id: number; readonly label: string }): Row => {
+    const tr = document.createElement("tr") as Row;
+    tr.textContent = item.label;
+    tr.fx = effect(() => {
+      tr.className = get(theme);
+    });
+    return tr;
+  },
+  undefined,
+  (tr) => {
+    dispose(tr.fx);
+  },
+);
+sub(items, rows);
+```
+
+A row that owns several things makes them in a scope of its own, `tr.s = scope(() => { … })`, and `drop` disposes `tr.s` (without that `drop` the scope lives until the sub is disposed, and nothing warns). Make row effects in `create`: what `update` makes belongs to the sub. On clear and replace the list calls `rows.forEach(drop)`, so write `drop` to use only its first parameter.
+
+### Migrating from the previous API
+
+<!-- prettier-ignore -->
+| before | now |
+| --- | --- |
+| `list(parent, items, key, create, update?)` | `const rows = list(parent, key, create, update?, drop?)`, then `sub(items, rows)` |
+| `mark(selected, list, fn)`, `mark(selected, map, fn)` | `sub(selected, mark(rows, fn))`, `sub(selected, mark(map, fn))` |
+| `dispose(list)`, `dispose(mark)` | dispose the sub, or its owner (`stage1`: a mark no longer detaches from its list) |
+| type `List` | `Rows` (the rows function), `Marked` (what `mark` takes) |
+| `stage1`: rows own what `create` makes | rows own nothing unless `drop` disposes it (see "Owners") |
+| `stage1`: `effect(() => { const v = get(s); untracked(() => fn(v)); })` | `sub(s, fn)`: batched, run after its owners; keeps what `fn` makes; a write to `s` in `fn` calls it again after `fn` |
+| `scope(fn)` batched its body | not batched: `scope(() => batch(() => …))` keeps the old timing |
+| `within(owner, fn)` (e.g. in an async callback) | removed: the callback makes a root `scope` and keeps it; the component disposes it from a `defer` |
+| `holder`, `own`, `owns`, type `Holder` | removed: create in place with `scope` and keep the handle (`Scope`, `Effect`) |
+| `release(h)` | `batch(() => { for (let i = hs.length; i--; ) dispose(hs[i]); })` over the kept handles |
+| sibling effects ran newest first | creation order (unspecified: do not rely on either) |
+
 ## TODO
 
 - Decide whether to keep multiple implementations
   - Browser "live" compile, browser runtime mode
   - Bun default precompiled mode
-  - Bun "fast" precompiled mode (use this as the default implementation and remove "normal" precompiled mode?)
-    - Downside is the API is different to the other modes (`collect` function return type)
+  - ~~Bun "fast" precompiled mode (use this as the default implementation and remove "normal" precompiled mode?)~~ — NOW THE DEFAULT
+    - ~~Downside is the API is different to the other modes (`collect` function return type)~~
+  - `stage1/legacy` which is the old default precompiled mode
 - Keep only the most used functionality in `stage1` and move less used but still useful functionality to `stage2`
   - Should the reactive store be in `stage1` or `stage2`?
   - Should less used DOM utilities be moved to `stage2`?
@@ -47,7 +156,7 @@ High-performance JavaScript micro framework.
     - `insert`
     - `replace`
     - `onRemove`
-  - New reactive store feature
+  - ~~New reactive store feature~~ — REPLACED BY SIGNALS (old implementation available via `stage1/legacy`)
   - Differences from the original `stage0` project:
     - There are now 3 runtime modes:
       - New precompiled runtime mode and a fast variant for ultimate performance. Compiles templates at build-time via a bun macro that minifies templates, generates metadata, and then includes minimal runtime code in your JS bundle. Currently only works with [Bun.build](https://bun.sh/docs/bundler).

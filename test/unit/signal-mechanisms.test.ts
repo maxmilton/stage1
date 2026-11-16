@@ -1,7 +1,8 @@
 // Mechanisms and regressions of the signal core (invariants I1-I9 in src/signal.ts's header):
 // value-recording links, keep-alive computeds, own writes, superseded reads, validation,
 // ownership, disposal during teardowns and runs, errors and dev checks; the "mechanisms" group reads
-// node and link fields (white-box). Run in both modes: `bun test` (dev checks on) and
+// node and link fields and the "faults" group runs a copy of src/signal.ts with errors injected at
+// its functions' heads (white-box). Run in both modes: `bun test` (dev checks on) and
 // `NODE_ENV=production bun test` (the production-only tests run; dev checks skip).
 // Callbacks under test branch on the value they receive.
 // oxlint-disable vitest/no-conditional-in-test
@@ -15,9 +16,12 @@ import {
   dispose,
   effect,
   get,
+  type Scope,
   scope,
   set,
+  type Signal,
   signal,
+  sub,
   untracked,
 } from "../../src/signal.ts";
 
@@ -587,7 +591,9 @@ describe("ownership", () => {
     expect(live.size).toBe(0);
   });
 
-  test("a scope's writes reach effects after its fn returns", () => {
+  // Changed contract: a scope's body is no longer batched (it only owns), so at top level its
+  // writes run what they reach before the body goes on
+  test("a scope's writes reach effects before its fn goes on", () => {
     expect.assertions(1);
     const s = signal(0);
     const seen: string[] = [];
@@ -598,7 +604,7 @@ describe("ownership", () => {
       set(s, 1);
       seen.push("scope body done");
     });
-    expect(seen).toEqual(["effect 0", "scope body done", "effect 1"]);
+    expect(seen).toEqual(["effect 0", "effect 1", "scope body done"]);
   });
 });
 
@@ -1234,10 +1240,9 @@ const depsOf = (node: unknown): RawLink[] => {
   return out;
 };
 const M_BIT = 8;
-const N_BIT = 64;
 
 describe("mechanisms", () => {
-  describe("stamp: a run links a source once until it resumes (I4)", () => {
+  describe("stamp: a run links a source once (I4)", () => {
     test("a signal read many times in one run, around other reads, is linked once", () => {
       expect.assertions(3);
       const s = signal(1);
@@ -1270,8 +1275,9 @@ describe("mechanisms", () => {
       expect(subscribers(t)).toHaveLength(1);
     });
 
-    // The run resumes with a fresh id after a nested evaluation: its older stamps no longer count
-    test("a source read again after a nested evaluation links once more, and re-runs keep both", () => {
+    // Changed mechanism: a nested evaluation gives the run its id back when it ends, so the run's
+    // older stamps still count (the previous core gave the run a fresh id and linked it again)
+    test("a source read again after a nested evaluation is linked once, also on re-runs", () => {
       expect.assertions(4);
       const s = signal(1);
       const other = signal(0);
@@ -1284,15 +1290,15 @@ describe("mechanisms", () => {
         get(c);
         get(s);
       });
-      expect(depsOf(e).map((l) => l.D)).toEqual([raw(s), raw(c), raw(s)]);
+      expect(depsOf(e).map((l) => l.D)).toEqual([raw(s), raw(c)]);
       set(other, 1);
       set(s, 2);
       expect(runs).toBe(3);
-      expect(subscribers(s)).toHaveLength(2);
+      expect(subscribers(s)).toHaveLength(1);
       expect(subscribers(other)).toHaveLength(1);
     });
 
-    // Without the fresh id the run would take the nested run's stamps for its own and link nothing
+    // The nested run stamps what it reads with its own id, not the run's: the run still links it
     test("a run reading a source after an evaluation that read it is subscribed to it", () => {
       expect.assertions(1);
       const b = signal(0);
@@ -1536,14 +1542,18 @@ describe("mechanisms", () => {
     });
   });
 
-  describe("climb (N)", () => {
-    test("only effects and scopes with an effect among their owners carry N", () => {
-      expect.assertions(6);
+  // Changed mechanism (I3): each runner keeps in `o` its climb target, the nearest effect or sub
+  // among its owners, instead of an N flag for "an effect among its owners"
+  describe("climb target (I3)", () => {
+    test("effects, subs and scopes keep the nearest effect or sub above them, through scopes", () => {
+      expect.assertions(8);
       let top: unknown;
       let inScope: unknown;
       let inEffect: unknown;
       let inScopeInEffect: unknown;
       let scopeInEffect: unknown;
+      let subInEffect: unknown;
+      let inSub: unknown;
       const root = scope(() => {
         inScope = effect(() => {});
         top = effect(() => {
@@ -1551,14 +1561,19 @@ describe("mechanisms", () => {
           scopeInEffect = scope(() => {
             inScopeInEffect = effect(() => {});
           });
+          subInEffect = sub(signal(0), () => {
+            inSub = effect(() => {});
+          });
         });
       });
-      expect(flagged(root, N_BIT)).toBe(false);
-      expect(flagged(inScope, N_BIT)).toBe(false);
-      expect(flagged(top, N_BIT)).toBe(false);
-      expect(flagged(inEffect, N_BIT)).toBe(true);
-      expect(flagged(scopeInEffect, N_BIT)).toBe(true);
-      expect(flagged(inScopeInEffect, N_BIT)).toBe(true);
+      expect(raw(root).o).toBeUndefined();
+      expect(raw(inScope).o).toBeUndefined();
+      expect(raw(top).o).toBeUndefined();
+      expect(raw(inEffect).o).toBe(raw(top));
+      expect(raw(scopeInEffect).o).toBe(raw(top));
+      expect(raw(inScopeInEffect).o).toBe(raw(top));
+      expect(raw(subInEffect).o).toBe(raw(top));
+      expect(raw(inSub).o).toBe(raw(subInEffect));
     });
 
     test("an owner that re-ran (or threw) still re-runs before its child", () => {
@@ -1636,16 +1651,17 @@ describe("mechanisms", () => {
       expect(flagged(e, M_BIT)).toBe(false);
     });
 
-    test("two reads of a signal around the run's own write share one link holding both (I2)", () => {
+    // Changed mechanism: the write voids the stamp, so the second read links again (the previous
+    // core kept one link holding itself as a "read two values" sentinel)
+    test("two reads of a signal around the run's own write make a link each, holding what each read (I2)", () => {
       expect.assertions(2);
       const s = signal(1);
       const e = effect(() => {
         if (get(s) === 1) set(s, 2);
         get(s);
       });
-      expect(depsOf(e)).toHaveLength(1);
-      // The link holds itself: the run read two values
-      expect((depsOf(e)[0] as RawLink & { v: unknown }).v).toBe(depsOf(e)[0]);
+      expect(depsOf(e).map((l) => l.D)).toEqual([raw(s), raw(s)]);
+      expect(depsOf(e).map((l) => (l as RawLink & { v: unknown }).v)).toEqual([1, 2]);
     });
 
     test("a computed's value is its getter's result or error, never its cursor (I5)", () => {
@@ -1783,23 +1799,218 @@ describe("mechanisms", () => {
     });
 
     // The stamp test compares small integers only (one V8 feedback kind): never undefined
-    test("effects and scopes keep their owner in o, signals and computeds always a number", () => {
-      expect.assertions(5);
-      let child: unknown;
-      let c: unknown;
+    test("signals and computeds keep a number in o, read or not", () => {
+      expect.assertions(3);
       const s = signal(0);
-      const owner = scope(() => {
-        child = effect(() => {
-          get(s);
-        });
-        c = computed(() => get(s));
-        get(c as Computed<number>);
+      const c = computed(() => get(s));
+      effect(() => {
+        get(c);
       });
-      expect(raw(child).o).toBe(raw(owner));
-      expect(raw(owner).o).toBeUndefined();
       expect(typeof raw(s).o).toBe("number");
       expect(typeof raw(c).o).toBe("number");
       expect(typeof raw(signal(0)).o).toBe("number");
     });
+  });
+});
+
+// ── Characterization: what the core chose where its header leaves the answer open ──
+
+describe("characterization", () => {
+  // One reader: the write runs the effect alone; two: another effect ran before it in the same
+  // flush, so a stale owner would adopt what the cleanup made
+  test.each([1, 2])(
+    "Characterization: what a cleanup creates during its effect's re-run is disposed with that effect (%i readers)",
+    (readers) => {
+      expect.assertions(1);
+      const s = signal(0);
+      const t = signal(0);
+      if (readers === 2) {
+        effect(() => {
+          get(s);
+        });
+      }
+      let made = 0;
+      let inner = 0;
+      const handle = effect(() => {
+        get(s);
+        return () => {
+          if (made++ === 0) {
+            effect(() => {
+              get(t);
+              inner++;
+            });
+          }
+        };
+      });
+      set(s, 1);
+      set(t, 1);
+      dispose(handle);
+      set(t, 2);
+      expect(inner).toBe(2);
+    },
+  );
+
+  // A sub's run validates its marked computed source at its end and stays marked, so it is called
+  // again with the value its own write made
+  test("Characterization: a sub on a computed whose fn writes the computed's source is called with each new value", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const c = computed(() => get(s) * 10);
+    const calls: number[] = [];
+    sub(c, (value) => {
+      calls.push(value);
+      if (value < 20) set(s, value / 10 + 1);
+    });
+    expect(calls).toEqual([0, 10, 20]);
+  });
+});
+
+// ── Faults: a RangeError at a fixed stack height, injected into a copy of src/signal.ts ──
+// Each site's head throws while `FAULT.<site>` > 0, as a stack overflow at one height would:
+// nothing changed yet, and the same call fails on every retry. src/signal.ts promises only that
+// the call returns by throwing (no hang); each retry of the flush must consume an entry or unmark
+// a runner, so a write that marks n runners loses at most n calls to faults.
+
+const SITES = ["changed", "run", "update", "climb"] as const;
+type Site = (typeof SITES)[number];
+const HEADS: Record<Site, RegExp> = {
+  changed: /^const changed = \(n: Node\): boolean => \{\n/mu,
+  run: /^const run = \(e: Node\): void => \{\n/mu,
+  update: /^const update = \(e: Node\): void => \{\n/mu,
+  climb: /^const climb = \(e: Node\): Node => \{\n/mu,
+};
+const faultSource = await Bun.file(`${import.meta.dir}/../../src/signal.ts`).text();
+/** Sites whose head is in src/signal.ts exactly once (a renamed function shows up here). */
+const found = SITES.filter(
+  (site) => faultSource.match(new RegExp(HEADS[site], "gmu"))?.length === 1,
+);
+interface Faulty {
+  signal: typeof signal;
+  get: typeof get;
+  set: typeof set;
+  effect: typeof effect;
+  sub: typeof sub;
+  scope: typeof scope;
+  dispose: typeof dispose;
+  FAULT: Record<Site | "thrown", number>;
+}
+/** The faulty copy, loaded from a blob URL as JavaScript (no file is written). */
+const faulty = await (async (): Promise<Faulty> => {
+  let code = faultSource;
+  for (const site of found) {
+    code = code.replace(
+      HEADS[site],
+      (line) =>
+        `${line}  if (FAULT.${site} > 0) { FAULT.${site}--; FAULT.thrown++; throw new RangeError("simulated"); }\n`,
+    );
+  }
+  code += "\nexport const FAULT = { changed: 0, run: 0, update: 0, climb: 0, thrown: 0 };\n";
+  const js = new Bun.Transpiler({ loader: "ts" }).transformSync(code);
+  const url = URL.createObjectURL(new Blob([js], { type: "text/javascript" }));
+  try {
+    return (await import(url)) as Faulty;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+})();
+// A persistent fault, as a real overflow at one stack height (finite, so a core that retries
+// forever still ends)
+const PERSISTENT = 200_000;
+
+/**
+ * A graph on `s`, built in a root scope: owners make their child, then read `s`, so a child pops
+ * first and climbs to its marked owner, `levels` deep, under `roots` roots; `top` "sub" puts each
+ * chain under a sub on `s`. `runners`: how many runners one write to `s` marks; `live`: each live
+ * runner's last value of `s` (an effect's cleanup removes it).
+ */
+const nested = (
+  roots: number,
+  levels: number,
+  top: "effect" | "sub",
+): { s: Signal<number>; runners: number; root: Scope; live: Map<number, number> } => {
+  const c = faulty;
+  const s = c.signal(0);
+  const live = new Map<number, number>();
+  let ids = 0;
+  const level = (k: number): void => {
+    const id = ids++;
+    c.effect(() => {
+      if (k < levels) level(k + 1);
+      live.set(id, c.get(s));
+      return () => {
+        live.delete(id);
+      };
+    });
+  };
+  const root = c.scope(() => {
+    for (let i = 0; i < roots; i++) {
+      if (top === "effect") level(1);
+      else {
+        const id = ids++;
+        let made = false;
+        c.sub(s, (value) => {
+          live.set(id, value);
+          if (!made) level(1);
+          made = true;
+        });
+      }
+    }
+  });
+  return { s, runners: roots * (levels + (top === "sub" ? 1 : 0)), root, live };
+};
+const GRAPHS = [
+  ["4 roots × 3 levels of effects", () => nested(4, 3, "effect")],
+  ["one 6-level chain of effects", () => nested(1, 6, "effect")],
+  ["3 subs on s, each over a 3-level chain", () => nested(3, 3, "sub")],
+  ["a sub on s over one child effect", () => nested(1, 1, "sub")],
+] as const;
+
+describe("faults (a RangeError at a fixed stack height)", () => {
+  test("the copy has every fault site", () => {
+    expect.assertions(1);
+    expect(found).toEqual([...SITES]);
+  });
+
+  describe.each(SITES)("at every %s call", (site) => {
+    test.each(GRAPHS)(
+      "%s: the write returns by throwing it, at most one fault per marked runner",
+      (_label, build) => {
+        expect.assertions(2);
+        const g = build();
+        faulty.FAULT.thrown = 0;
+        faulty.FAULT[site] = PERSISTENT;
+        let thrown: unknown;
+        try {
+          faulty.set(g.s, 1);
+        } catch (error) {
+          thrown = error;
+        }
+        const faults = faulty.FAULT.thrown;
+        faulty.FAULT[site] = 0;
+        faulty.dispose(g.root);
+        expect(faults).toBeLessThanOrEqual(g.runners);
+        expect(thrown).toBeInstanceOf(RangeError);
+      },
+    );
+
+    test.each(GRAPHS)(
+      "Characterization: %s: two clean writes bring every live runner up to date (none stranded)",
+      (_label, build) => {
+        expect.assertions(1);
+        const g = build();
+        faulty.FAULT[site] = PERSISTENT;
+        try {
+          faulty.set(g.s, 1);
+        } catch {
+          // The faulted write's outcome is the test above's business
+        }
+        faulty.FAULT[site] = 0;
+        faulty.set(g.s, 2);
+        faulty.set(g.s, 3);
+        const stale = [...g.live].filter(([, value]) => value !== 3);
+        faulty.dispose(g.root);
+        expect(stale).toEqual([]);
+      },
+    );
   });
 });

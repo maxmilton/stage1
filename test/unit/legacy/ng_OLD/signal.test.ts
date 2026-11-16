@@ -2,7 +2,7 @@
 // oxlint-disable vitest/no-conditional-in-test
 
 import { beforeAll, describe, expect, expectTypeOf, test } from "bun:test";
-import * as graphApi from "../../../src/ng_OLD/signal.ts";
+import * as graphApi from "../../../../src/legacy/ng_OLD/signal.ts";
 import {
   batch,
   computed,
@@ -13,19 +13,19 @@ import {
   type Signal,
   sub,
   untracked,
-} from "../../../src/ng_OLD/signal.ts";
+} from "../../../../src/legacy/ng_OLD/signal.ts";
 import { buildSignal } from "./ng-build.ts";
 
 type Api = typeof graphApi;
 
 // A separate module instance on which only tier 1 ever runs: no computed or effect installs the graph.
-const aloneSpecifier = "../../../src/ng_OLD/signal.ts?alone";
+const aloneSpecifier = "../../../../src/legacy/ng_OLD/signal.ts?alone";
 const aloneApi = (await import(aloneSpecifier)) as Api;
 
 // Two more, on each of which a batch runs before any computed or effect installs the graph.
-const earlyBatchSpecifier1 = "../../../src/ng_OLD/signal.ts?early-batch-1";
+const earlyBatchSpecifier1 = "../../../../src/legacy/ng_OLD/signal.ts?early-batch-1";
 const earlyBatchApi1 = (await import(earlyBatchSpecifier1)) as Api;
-const earlyBatchSpecifier2 = "../../../src/ng_OLD/signal.ts?early-batch-2";
+const earlyBatchSpecifier2 = "../../../../src/legacy/ng_OLD/signal.ts?early-batch-2";
 const earlyBatchApi2 = (await import(earlyBatchSpecifier2)) as Api;
 
 // Bundles of this module with the tier fixed by a Bun feature flag.
@@ -1592,7 +1592,7 @@ describe("batch", () => {
   test("bundles without the graph when nothing else uses it", async () => {
     expect.assertions(1);
     const entry = "/virtual/entry.ts";
-    const source = JSON.stringify(`${import.meta.dir}/../../../src/ng_OLD/signal.ts`);
+    const source = JSON.stringify(`${import.meta.dir}/../../../../src/legacy/ng_OLD/signal.ts`);
     const out = await Bun.build({
       entrypoints: [entry],
       files: { [entry]: `export { batch, get, set, signal, sub, untracked } from ${source};` },

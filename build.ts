@@ -38,9 +38,7 @@ await Bun.build({
   target: "browser",
   allowUnresolved: [],
   env: "disable",
-  define: {
-    "Node.ELEMENT_NODE": "1",
-  },
+  define: { "Node.ELEMENT_NODE": "1" },
   minify: true,
   sourcemap: "linked",
 });
@@ -93,7 +91,7 @@ const declarations = await rolldown({
     "legacy/reconcile/reuse-nodes": "src/legacy/reconcile/reuse-nodes.ts",
     "legacy/reconcile/reuse-lite": "src/legacy/reconcile/reuse-lite.ts",
   },
-  plugins: [dts({ emitDtsOnly: true, sourcemap: true })],
+  plugins: [dts({ dtsOnly: true, sourcemap: true })],
 });
 await declarations.write({ dir: "dist", format: "es", chunkFileNames: "[name].js" });
 await declarations.close();

@@ -63,17 +63,13 @@ const ROOT_EXPORTS = [
   "dispose",
   "effect",
   "get",
-  "holder",
   "list",
   "mark",
-  "own",
-  "owns",
-  "release",
   "scope",
   "set",
   "signal",
+  "sub",
   "untracked",
-  "within",
 ];
 const LITE_EXPORTS = [
   ...DOM_EXPORTS,
@@ -168,17 +164,21 @@ test.describe("a production build of stage1", () => {
     const result = await page.evaluate(async (src) => {
       const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
       // oxlint-disable-next-line typescript/consistent-type-imports
-      const { h, list, set, signal } = (await import(url)) as typeof import("../../src/index.ts");
+      const root = (await import(url)) as typeof import("../../src/index.ts");
+      const { h, list, set, signal, sub } = root;
       const parent = h(/* html */ "<ul></ul>");
       const items = signal([
         { id: 1, label: "a" },
         { id: 2, label: "b" },
       ]);
-      list(parent, items, "id", (item) => {
-        const row = h(/* html */ "<li></li>");
-        row.textContent = item.label;
-        return row;
-      });
+      sub(
+        items,
+        list(parent, "id", (item: { id: number; label: string }) => {
+          const row = h(/* html */ "<li></li>");
+          row.textContent = item.label;
+          return row;
+        }),
+      );
       set(items, [
         { id: 2, label: "b" },
         { id: 3, label: "c" },
@@ -205,17 +205,20 @@ test.describe("a production build of stage1/lite", () => {
       const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
       // oxlint-disable-next-line typescript/consistent-type-imports
       const lite = (await import(url)) as typeof import("../../src/lite/index.ts");
-      const { h, list, set, signal } = lite;
+      const { h, list, set, signal, sub } = lite;
       const parent = h(/* html */ "<ul></ul>");
       const items = signal([
         { id: 1, label: "a" },
         { id: 2, label: "b" },
       ]);
-      list(parent, items, "id", (item) => {
-        const row = h(/* html */ "<li></li>");
-        row.textContent = item.label;
-        return row;
-      });
+      sub(
+        items,
+        list(parent, "id", (item: { id: number; label: string }) => {
+          const row = h(/* html */ "<li></li>");
+          row.textContent = item.label;
+          return row;
+        }),
+      );
       set(items, [
         { id: 2, label: "b" },
         { id: 3, label: "c" },

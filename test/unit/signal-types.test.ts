@@ -1,5 +1,5 @@
 // Type contracts of the signal core's public API (the runtime behaviour is in signal.test.ts and
-// signal-mechanisms.test.ts; the integration helpers' types are in signal-integration.test.ts).
+// signal-mechanisms.test.ts; list's and mark's types are in reconcile.test.ts).
 // oxlint-disable typescript/no-invalid-void-type
 
 import { describe, expect, expectTypeOf, test } from "bun:test";
@@ -12,12 +12,12 @@ import {
   type Effect,
   effect,
   get,
-  type Holder,
   type Scope,
   scope,
   set,
   type Signal,
   signal,
+  sub,
   untracked,
 } from "../../src/signal.ts";
 
@@ -138,6 +138,34 @@ describe("scope", () => {
   });
 });
 
+describe("sub", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf(sub).not.toBeAny();
+    expectTypeOf(sub).toBeFunction();
+    // Erased: `T` -> `unknown`.
+    expectTypeOf(sub).parameters.toEqualTypeOf<
+      [source: Signal<unknown> | Computed<unknown>, fn: (value: unknown) => void]
+    >();
+    // An effect's handle: dispose takes it
+    expectTypeOf(sub).returns.toEqualTypeOf<Effect>();
+    expectTypeOf(sub<number>).parameters.toEqualTypeOf<
+      [source: Signal<number> | Computed<number>, fn: (value: number) => void]
+    >();
+    expectTypeOf((s: Signal<number>, c: Computed<string>) => {
+      sub(s, (value) => {
+        expectTypeOf(value).toEqualTypeOf<number>();
+      });
+      sub(c, (value) => {
+        expectTypeOf(value).toEqualTypeOf<string>();
+      });
+      // @ts-expect-error - fn takes the source's type
+      sub(s, (_value: string) => {});
+      dispose(sub(s, () => {}));
+    }).toBeFunction();
+  });
+});
+
 describe("defer", () => {
   test("types", () => {
     expect.assertions(0);
@@ -157,11 +185,10 @@ describe("dispose", () => {
     expectTypeOf(dispose).parameters.toEqualTypeOf<[node: Effect | Scope | Computed<unknown>]>();
     expectTypeOf(dispose).returns.toBeVoid();
     expectTypeOf(dispose).returns.not.toBeUndefined();
-    expectTypeOf((e: Effect, s: Scope, c: Computed<number>, h: Holder, v: Signal<number>) => {
+    expectTypeOf((e: Effect, s: Scope, c: Computed<number>, v: Signal<number>) => {
       dispose(e);
       dispose(s);
       dispose(c);
-      dispose(h);
       // @ts-expect-error - a signal owns nothing and is never disposed
       dispose(v);
     }).toBeFunction();

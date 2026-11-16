@@ -1,8 +1,7 @@
-// Signals, computeds, effects and scopes: an ownership-first intrusive tree over a single-colour,
-// value-recording dependency graph. An effect or scope owns the effects, computeds, scopes and
-// cleanups (`defer`) its run creates: they are disposed, newest first, before it re-runs and when
-// it is disposed. Owner-aware primitives (list, mark: ./reconcile.ts) use the "Integration" section
-// at the end; each export there tree-shakes when unused.
+// Signals, computeds, effects, subs and scopes: an ownership-first intrusive tree over a
+// single-colour, value-recording dependency graph. An effect, sub or scope owns the effects, subs,
+// computeds, scopes and cleanups (`defer`) its run creates: they are disposed, newest first, when it
+// is disposed, and an effect's also before it re-runs.
 //
 // Dev checks sit behind `process.env.NODE_ENV !== "production"`: a production build (which must
 // define it, e.g. `define: { "process.env.NODE_ENV": '"production"' }` in Bun.build) drops them
@@ -11,36 +10,62 @@
 // Invariants:
 // - I1 A marked node's subscribers are marked (marks stop at marked nodes). Validation clears a
 //   mark when it descends into the node, so it also terminates on cycles.
-// - I2 A link's `v` is the value its subscriber read, or the link itself (equal to no value) if one
-//   run read two values through it. A node is current when every link's `v` is its dep's current
-//   `v` (deps validated first).
-// - I3 Runners (effects, scopes, cleanup nodes) keep their children in `s`, newest first. A child's
-//   `n` is its older sibling and `p` its newer one, or its owner if it is the newest. Effects and
-//   scopes also keep their owner in `o` (for the climb).
-// - I4 Stamp: `runs` is the running reader's id (an effect's run or first run, a computed's
-//   evaluation). Each run takes the next id, and so does a run that resumes after other code ran
-//   (a nested run, or untracked code: a cleanup, a scope's fn, `untracked`), which may have stamped
-//   with the current one. A source's `o` is the id of the last run that read it (NONE: none), so
-//   `o === runs` means the running reader linked it since it started or resumed; `set` above
-//   depth 0 resets it. A read first tries the link after the cursor (static re-runs), then the
-//   stamp. Ids repeat after 2^30 runs.
-// - I5 Cursor: while an effect or computed runs, its `v` is the last dep link its run read
+// - I2 A link's `v` is the value its subscriber read. A run that reads a source again after its
+//   stamp was voided (I4) links it again, so every value the run read has a link. A node is current
+//   when every link's `v` is its dep's current `v` (deps validated first).
+// - I3 Runners (effects, subs, scopes, cleanup nodes) keep their children in `s`, newest first. A
+//   child's `n` is its older sibling and `p` its newer one, or its owner if it is the newest.
+//   Effects, subs and scopes keep in `o` their climb target: the nearest effect or sub above them.
+// - I4 Stamp: `runs` is the running reader's id (an effect's or sub's run or first run, a computed's
+//   evaluation). Each run takes a fresh id from `ids` and gives back the id it found when it ends,
+//   so what runs inside it (a nested run, untracked code) leaves its id as it was. A source's `o`
+//   is the id of the last run that read it (NONE: none), so `o === runs` means the running reader
+//   linked it in this run; `set` above depth 0 and an evaluation reset it (its value may change
+//   while a run that read it is open). A read first tries the link after the cursor (static
+//   re-runs), then the stamp. Ids repeat after 2^30 runs.
+// - I5 Cursor: while an effect, sub or computed runs, its `v` is the last dep link its run read
 //   (undefined before the first); the run's end stores the cleanup or value there.
 // - I6 A marked effect is queued or running. A running effect a write marks (its own, its
 //   cleanups', its children's first runs') does not run again for it: its run's end validates its
 //   marked deps (restoring I1) and unmarks it, so its queue entry does nothing. Its links keep the
-//   values it read, so a later check re-runs it if the write changed them for good.
-// - I7 `depth` is above 0 while a batch, flush, first run or disposal is open: writes then only
-//   mark and queue. At depth 0 no effect is marked or running (computeds stay marked until read),
-//   so neither tracker nor owner is set when a flush starts.
+//   values it read, so a later check re-runs it if the write changed them for good. A sub stays
+//   marked instead: its queue entry calls its fn again if the value moved, and what climbs to it
+//   waits for that (`climb`: nothing runs while an effect or sub above it is marked).
+// - I7 `depth` is above 0 while a batch, flush, effect's or sub's first run or disposal is open:
+//   writes then only mark and queue. A scope's body does not hold it (owner scopes): at depth 0 its
+//   writes run what they reach at once. At depth 0 no effect is marked or running (computeds stay
+//   marked until read) and no tracker is set; the owner is none, or the scope whose body runs. A
+//   re-run sets the tracker and owner and leaves them set (its teardown runs as its own); the flush
+//   gives back the owner it found and no tracker.
 // - I8 Teardown: children and cleanup nodes newest first, in one list, then the node's own
 //   cleanup. A node leaves its owner's list only when its teardown is done, so a `dispose` that
 //   re-enters a teardown in progress (a cleanup disposing an ancestor) finishes it first.
 // - I9 Cleanup errors are dropped (dev builds console.error them): teardown never throws.
+//
+// Unspecified (what this core does, not a promise):
+// - Sibling order: creation order (the stack drain). Several errors in one flush: the last one
+//   thrown reaches the caller. Ids wrap after 2^30 runs.
+// - Writes in a computed's getter, cycles and endless write loops (production). Dev builds throw
+//   for a loop at a flush's millionth run, and for each run the flush still has queued.
+// - After a RangeError (stack overflow) out of a write, flush, batch end or dispose, the graph is
+//   unspecified, but the call returns by throwing (no hang): each retry of the flush consumes an
+//   entry or unmarks a runner (`flush`, `climb`). A runner whose update overflowed misses that
+//   write, and later ones that reach it only through a computed it read (that stays marked: marks
+//   stop there) until something reads that computed. A batch whose end overflows, or a dispose
+//   (also a failed first run's) whose teardown does, leaves `depth` above 0: nothing runs after it.
+// - What a cleanup creates belongs to the current owner: during a re-run's teardown, the effect
+//   re-running (I7). Under a disposed owner, that owner: the end of its run disposes it, but a
+//   teardown that disposed its own effect ends no run, so what a cleanup creates after that lives
+//   on. Dev builds throw for it, except during a sub's call. Between runs of a flush the owner is
+//   the last run's: computed getters validated there must not create (dev error).
+// - A sub's later call that writes its source and then throws is called again in the same flush.
+//   A node whose creation rethrows an error from the flush that ends its own effect()/sub() is
+//   disposed. A computed as a sub's source works as `get` reads it (its error reaches the writer).
+//
 // oxlint-disable no-bitwise no-param-reassign no-use-before-define
 // Short names, `=== undefined` tests and chained assignments are deliberate (bytes; V8 speed), and
 // dev checks read process.env and log to the console.
-// oxlint-disable id-length no-console no-continue no-multi-assign no-negated-condition no-shadow
+// oxlint-disable id-length no-continue no-multi-assign no-negated-condition no-shadow
 // oxlint-disable node/no-process-env unicorn/no-negated-condition unicorn/no-useless-undefined
 // oxlint-disable unicorn/number-literal-case typescript/explicit-member-accessibility
 // oxlint-disable typescript/non-nullable-type-assertion-style typescript/no-unsafe-call
@@ -48,13 +73,12 @@
 
 /** Kinds and states, in `f`. Signals are 0. */
 const C = 1; // computed
-const E = 2; // effect: a runner that tracks its reads
-const S = 4; // scope (has a fn) or cleanup node (none): a runner that never tracks
+const E = 2; // effect: a runner that tracks its reads and re-runs when they change
+const S = 4; // keeps its children until disposed: scope (a fn), cleanup node (none); with E, a sub
 const M = 8; // marked: a dep may have changed since the last run or evaluation
 const D = 16; // disposed
 const X = 32; // computed: `v` is the error its getter threw
-const N = 64; // effect or scope with an effect among its owners: it climbs (parent-first)
-const R = 128; // dev builds only: a computed whose getter is running (cycle check)
+const R = 64; // dev builds only: a computed whose getter is running (cycle check)
 /** Run ids wrap below 2^30 to stay small integers; NONE is no run's. */
 const MASK = 0x3fffffff;
 const NONE = -1;
@@ -75,10 +99,10 @@ interface Link {
 class Node {
   declare f: number;
   declare v: unknown; // signal/computed: value (or error, X); runner: its cleanup; running: cursor (I5)
-  declare g: (() => unknown) | undefined; // computed getter, effect/scope fn
+  declare g: (() => unknown) | undefined; // computed getter; effect/sub fn; scope fn (body only)
   declare d: Link | undefined; // deps, in read order
   declare s: Link | Node | undefined; // signal/computed: subscriber links; runner: children
-  declare o: Node | number | undefined; // signal/computed: stamp (I4); effect/scope: owner
+  declare o: Node | number | undefined; // signal/computed: stamp (I4); effect/sub/scope: climb target (I3)
   declare n: Node | undefined; // older sibling
   declare p: Node | undefined; // newer sibling, or the owner (I3)
   constructor(f: number, g: (() => unknown) | undefined, v: unknown, p: Node | undefined) {
@@ -92,6 +116,18 @@ class Node {
     this.p = p;
   }
 }
+
+// TODO: Consider supporting disposal via Symbol.dispose either for all Node or add with an optional function.
+// Node.prototype[Symbol.dispose] = function (this: Node): void {
+//   dispose(this as unknown as Effect | Scope | Computed<unknown>);
+// };
+// const disposer = function (this: Effect | Scope | Computed<unknown>) {
+//   dispose(this);
+// };
+// export const disposable = <T extends Effect | Scope | Computed<unknown>>(node: T): T & Disposable =>
+//   Object.defineProperty(node, Symbol.dispose, {
+//     value: disposer,
+//   }) as T & Disposable;
 
 declare const brand: unique symbol;
 export interface Signal<T> {
@@ -110,27 +146,22 @@ export interface Scope {
   readonly [brand]: "scope";
 }
 
-/** The effect or computed whose reads subscribe it. */
+/** The effect, sub or computed whose reads subscribe it. */
 let tracker: Node | undefined;
 /** The runner that owns what is created now. */
 let owner: Node | undefined;
-/** The running reader's id, or the last one handed out (I4). */
+/** The running reader's id (I4). */
 let runs = 0;
+/** The last run id handed out. */
+let ids = 0;
 /** Batches, flushes, first runs and disposals in progress: effects wait while above 0 (I7). */
 let depth = 0;
+/** Effects to run (a stack: the flush pops the newest entry). */
 const queue: (Node | undefined)[] = [];
-let head = 0;
 let tail = 0;
 /** Walk stack (links), shared by mark and changed; each walk pops back to where it started. */
 const stack: (Link | undefined)[] = [];
 let sp = 0;
-
-const fail = (message: string): never => {
-  throw new Error(`stage1: ${message}`);
-};
-/** Dev builds only: getters running (untracked inside one does not hide them). */
-let evaluating = 0;
-const inGetter = (): boolean => evaluating !== 0;
 
 export const signal = <T>(value: T): Signal<T> =>
   new Node(0, undefined, value, undefined) as unknown as Signal<T>;
@@ -139,10 +170,17 @@ export const signal = <T>(value: T): Signal<T> =>
 const create = (f: number, g: (() => unknown) | undefined, v: unknown): Node => {
   const o = owner;
   if (process.env.NODE_ENV !== "production") {
-    if (inGetter()) fail("effect, computed, scope or defer created inside a computed");
+    if (inGetter()) {
+      diagnostic("critical", "effect, computed, scope, or defer created inside a computed");
+    }
     // The owner disposed itself in this run: its end disposes what the rest creates, so only a
-    // cleanup (it then runs) is meaningful
-    if (o !== undefined && o.f & D && g !== undefined) fail("created under a disposed owner");
+    // cleanup (it then runs) is meaningful. A sub's call is exempt, however deep the owner: it may
+    // be a list's reconcile that cannot stop when a row's cleanup or effect disposed the sub; the
+    // ends of the runs in progress dispose what the rest made, silently
+    if (o !== undefined && o.f & D && calling === 0 && g !== undefined) {
+      diagnostic("critical", "created under a disposed owner");
+    }
+    checkCreateRow(o, f, g);
   }
   const n = new Node(f, g, v, o);
   if (o !== undefined) {
@@ -160,30 +198,38 @@ export const computed = <T>(fn: () => T): Computed<T> =>
   create(C | M, fn, undefined) as unknown as Computed<T>;
 
 /**
- * First run of a new effect or scope: no teardown or trim (a first run only appends links). It
- * holds the flush like a batch; if the run or the flush after it throws, the node is disposed.
+ * First run of a new effect, sub or scope: no teardown or trim (a first run only appends links),
+ * and the tracker, owner and run id given back. An effect's or sub's holds the flush like a batch
+ * (a scope's body does not: I7); if the run or the flush after it throws, the node is disposed.
  */
 const start = (n: Node): Node => {
   const pt = tracker;
   const po = owner;
-  const d = depth++;
-  if (po !== undefined && po.f & (E | N)) n.f |= N;
+  const pr = runs;
+  const d = depth;
+  // Its climb target (I3): its owner if that is an effect or sub, else its owner's
+  n.o = po === undefined || po.f & E ? po : po.o;
   owner = n;
   if (n.f & E) {
+    depth++;
     tracker = n;
-    runs = (runs + 1) & MASK;
+    runs = ids = (ids + 1) & MASK;
   } else tracker = undefined;
   try {
     n.v = (n.g as () => unknown)();
-    resume(pt);
-    owner = n.o = po;
+    tracker = pt;
+    runs = pr;
+    owner = po;
     if (process.env.NODE_ENV !== "production") checkReturn(n);
     // Disposed during its run: dispose what the rest of it linked and made, and its cleanup
     if (n.f & D) kill(n);
     else if (n.f & M) repair(n);
-    end();
+    if (n.f & E) end();
+    // A scope never runs again: it lets its fn (and what that holds) go
+    else n.g = undefined;
   } catch (error) {
-    resume(pt);
+    tracker = pt;
+    runs = pr;
     owner = po;
     depth = d;
     dispose(n as unknown as Effect);
@@ -198,6 +244,33 @@ export const effect = (fn: () => void | (() => void)): Effect =>
   start(create(E, fn, undefined)) as unknown as Effect;
 
 /**
+ * Calls `fn(value)` untracked now and after each change of `source` (a signal, or a computed read
+ * as `get` reads it); a write to it during `fn` calls `fn` again after it returns, until the value
+ * is stable. What `fn` creates belongs to the sub, across calls, until the sub is disposed. A sub
+ * is an effect that keeps its children (E|S) and stays marked after its own writes (I6, `repair`).
+ */
+export const sub = <T>(source: Signal<T> | Computed<T>, fn: (value: T) => void): Effect =>
+  start(
+    create(
+      E | S,
+      (): void => {
+        const value = get(source);
+        // `start` or the flush gives the tracker back
+        tracker = undefined;
+        if (process.env.NODE_ENV !== "production") {
+          calling++;
+          try {
+            fn(value);
+          } finally {
+            calling--;
+          }
+        } else fn(value);
+      },
+      undefined,
+    ),
+  ) as unknown as Effect;
+
+/**
  * Runs `fn` once, untracked, as the owner of what it creates; a returned function runs when the
  * scope is disposed, after its children.
  */
@@ -208,7 +281,7 @@ export const scope = (fn: () => void | (() => void)): Scope =>
 /** Calls `fn` when the current owner is disposed or, for an effect, before its next run. */
 export const defer = (fn: () => void): void => {
   if (process.env.NODE_ENV !== "production" && owner === undefined) {
-    console.warn("stage1: defer outside a scope or effect is never called");
+    diagnostic("warn", "defer outside a scope or effect is never called");
   }
   create(S, undefined, fn);
 };
@@ -216,7 +289,7 @@ export const defer = (fn: () => void): void => {
 export const get = <T>(node: Signal<T> | Computed<T>): T => {
   const n = node as unknown as Node;
   // Signals and current computeds take one test; dev builds also send disposed and running ones,
-  // and runners (a cast reaches them: a tracked read would overwrite their owner, `o`)
+  // and runners (a cast reaches them: a tracked read would overwrite their climb target, `o`)
   if (n.f & (process.env.NODE_ENV !== "production" ? M | X | D | R | E | S : M | X)) {
     return pull(n) as T;
   }
@@ -228,21 +301,15 @@ export const get = <T>(node: Signal<T> | Computed<T>): T => {
 /** `get` of a computed that is marked (or new) or holds an error. */
 const pull = (n: Node): unknown => {
   if (process.env.NODE_ENV !== "production") {
-    if (n.f & (E | S)) fail("get of an effect or scope");
-    if (n.f & D) fail("read of a disposed computed");
-    if (n.f & R) fail("cycle: a computed read itself");
+    if (n.f & (E | S)) diagnostic("critical", "get of an effect or scope");
+    if (n.f & D) diagnostic("critical", "read of a disposed computed");
+    if (n.f & R) diagnostic("critical", "cycle: a computed read itself");
   }
   if (n.f & M) refresh(n);
   const t = tracker;
   if (t !== undefined) track(n, t);
   if (n.f & X) throw n.v;
   return n.v;
-};
-
-/** Gives the tracker back to `t`; a run resumed takes a fresh id (I4: what ran may have stamped). */
-const resume = (t: Node | undefined): void => {
-  tracker = t;
-  if (t !== undefined) runs = (runs + 1) & MASK;
 };
 
 /** Subscribes running `sub` to `n` at its cursor, unless this run did already (I4, I5). */
@@ -255,19 +322,15 @@ const track = (n: Node, sub: Node): void => {
     sub.v = next;
     n.o = runs;
   } else if (n.o !== runs) {
+    // First read in this run, or again after a write voided its stamp (I2)
     n.o = runs;
-    if (c !== undefined && c.D === n) {
-      // Read again right after a write or a resume voided its stamp: another value makes two (I2)
-      if (c.v !== n.v) c.v = c;
-    } else {
-      const h = n.s as Link | undefined;
-      const l: Link = { D: n, S: sub, v: n.v, d: next, p: undefined, n: h };
-      if (h !== undefined) h.p = l;
-      n.s = l;
-      if (c === undefined) sub.d = l;
-      else c.d = l;
-      sub.v = l;
-    }
+    const h = n.s as Link | undefined;
+    const l: Link = { D: n, S: sub, v: n.v, d: next, p: undefined, n: h };
+    if (h !== undefined) h.p = l;
+    n.s = l;
+    if (c === undefined) sub.d = l;
+    else c.d = l;
+    sub.v = l;
   }
 };
 
@@ -293,13 +356,17 @@ const trim = (n: Node, last: Link | undefined): void => {
 /** Brings marked computed `c` up to date: evaluates it if it is new or a dep's value changed. */
 const refresh = (c: Node): void => {
   if (c.d === undefined || changed(c)) recompute(c);
+  else c.f &= ~M;
 };
 
 /** Evaluates computed `c` as a run of its own (I4), boxing a throw (X); then trims its deps. */
 const recompute = (c: Node): void => {
   const pt = tracker;
+  const pr = runs;
   tracker = c;
-  runs = (runs + 1) & MASK;
+  runs = ids = (ids + 1) & MASK;
+  // Its value may change: a run in progress that read it reads it again through the slow path
+  c.o = NONE;
   c.f &= ~(M | X);
   c.v = undefined;
   if (process.env.NODE_ENV !== "production") {
@@ -317,20 +384,20 @@ const recompute = (c: Node): void => {
     c.f &= ~R;
     evaluating--;
   }
-  resume(pt);
+  tracker = pt;
+  runs = pr;
   const last = c.v as Link | undefined;
   c.v = value;
   trim(c, last);
 };
 
 /**
- * Validates marked `n` (I1, I2): whether a dep's value differs from the one `n` read, after
- * re-evaluating the marked computeds on the way (iteratively: chains may be deep).
+ * Validates `n` (I1, I2): whether a dep's value differs from the one `n` read, after re-evaluating
+ * the marked computeds on the way (iteratively: chains may be deep). Its caller unmarks `n`.
  */
 const changed = (n: Node): boolean => {
   const base = sp;
   let l = n.d;
-  n.f &= ~M;
   for (;;) {
     if (l === undefined) {
       // The node's deps are all as it read them; back to its reader's link
@@ -376,7 +443,9 @@ const mark = (l: Link): void => {
 
 export const set = <T>(signal: Signal<T>, value: T): void => {
   const s = signal as unknown as Node;
-  if (process.env.NODE_ENV !== "production" && inGetter()) fail("set inside a computed");
+  if (process.env.NODE_ENV !== "production" && inGetter()) {
+    diagnostic("critical", "set inside a computed");
+  }
   if (s.v !== value) {
     s.v = value;
     const l = s.s as Link | undefined;
@@ -406,46 +475,97 @@ const end = (): void => {
   if (--depth === 0 && tail !== 0) flush();
 };
 
-/** Runs `e` (a write's only reader), then every queued effect; a throw finishes the rest first. */
+/**
+ * Runs `e` (a write's only reader), then every queued effect, the newest entry first (siblings in
+ * creation order). A throw does not stop it: every entry runs, then one error reaches the caller
+ * (dev builds: past a million runs, each entry left throws instead of running: `run`).
+ */
 const flush = (e?: Node): void => {
+  // Runs leave their tracker and owner set: the flush gives back the owner it found (a scope's
+  // body that wrote stays the owner) and no tracker (I7)
+  const o = owner;
+  // No error yet: a private object, so a thrown undefined is rethrown too
+  let error: unknown = queue;
   depth = 1;
-  try {
-    if (e !== undefined) run(e);
-    while (head < tail) {
-      const q = queue[head] as Node;
-      queue[head++] = undefined;
-      if (q.f & M) update(q);
+  if (process.env.NODE_ENV !== "production") ran = 0;
+  for (;;) {
+    try {
+      if (e !== undefined) run(e);
+      while (tail !== 0) {
+        const q = queue[--tail] as Node;
+        queue[tail] = undefined;
+        // Unmarked before any call: a stack overflow from here on leaves no popped runner marked
+        if (q.f & M) {
+          q.f &= ~M;
+          update(q);
+        }
+      }
+      break;
+      // `error` is the flush's result above
+      // oxlint-disable-next-line unicorn/catch-error-name
+    } catch (thrown) {
+      e = undefined;
+      error = thrown;
     }
-  } finally {
-    depth = 0;
-    if (head < tail) flush();
-    else head = tail = 0;
   }
-};
-
-/** Brings effect `e` up to date, its marked owners first: an owner's re-run disposes it. */
-const update = (e: Node): void => {
-  if (e.f & N) update(e.o as Node);
-  if (e.f & M && changed(e)) run(e);
+  depth = 0;
+  tracker = undefined;
+  owner = o;
+  if (error !== queue) throw error;
 };
 
 /**
- * Re-runs effect `e` from a flush (I7: no tracker or owner to restore): its teardown, if it has
- * children or a cleanup, then its fn, tracked; then drops the deps it did not read again.
+ * Brings effect or sub `e` (popped marked; the flush unmarked it) up to date once no effect or sub
+ * above it is marked (parent-first): `climb` picks the one to validate.
+ */
+const update = (e: Node): void => {
+  if (e.o !== undefined) e = climb(e);
+  if (changed(e)) run(e);
+};
+
+/**
+ * The runner to bring up to date for unmarked `e`: `e` if no effect or sub above it is marked. Else
+ * `e` and each marked one above it but the topmost wait in the queue again, marked (the higher, the
+ * sooner), and the topmost, unmarked, is returned (an effect's re-run disposes what it owns; a sub
+ * keeps it, and its fn may throw or mark itself or an owner again). No call in between: a throw
+ * strands none, and a stack overflow cannot repeat a climb: each retry of the flush unmarks a
+ * runner or consumes an entry.
+ */
+const climb = (e: Node): Node => {
+  for (let o = e.o as Node | undefined; o !== undefined; o = o.o as Node | undefined) {
+    if (o.f & M) {
+      e.f |= M;
+      queue[tail++] = e;
+      e = o;
+      e.f &= ~M;
+    }
+  }
+  return e;
+};
+
+/**
+ * Re-runs effect or sub `e` from a flush, as its tracker and owner (I7: nothing to give back; its
+ * teardown's cleanups run as its own too): its teardown, if it has children or a cleanup (a sub
+ * keeps them: its S is tested only then), then its fn, tracked; then drops the deps it did not read
+ * again.
  */
 const run = (e: Node): void => {
-  if (e.s !== undefined || e.v !== undefined) {
+  // Dev builds: an endless write loop throws (the bound is far above any loop that settles); the
+  // flush's catch then drains the queue, each run left throwing here too
+  if (process.env.NODE_ENV !== "production" && ++ran > 1_000_000) {
+    diagnostic("critical", "cycle: a flush ran effects and subs a million times");
+  }
+  tracker = owner = e;
+  if ((e.s !== undefined || e.v !== undefined) && !(e.f & S)) {
     reset(e);
     // A cleanup disposed it
     if (e.f & D) return;
   }
-  runs = (runs + 1) & MASK;
-  tracker = owner = e;
+  runs = ids = (ids + 1) & MASK;
   let fn: unknown;
   try {
     fn = (e.g as () => unknown)();
   } finally {
-    tracker = owner = undefined;
     const last = e.v as Link | undefined;
     e.v = fn;
     // Disposed during its run: dispose what the rest of it linked and made, and its cleanup
@@ -458,9 +578,13 @@ const run = (e: Node): void => {
   if (process.env.NODE_ENV !== "production") checkReturn(e);
 };
 
-/** A write during `e`'s run reached it (I6): unmarks it and validates its marked deps. */
+/**
+ * A write during runner `e`'s run reached it (I6): validates its marked deps and unmarks an effect
+ * (its queue entry does nothing). A sub (S) stays marked: its entry calls fn again if the value
+ * moved.
+ */
 const repair = (e: Node): void => {
-  e.f &= ~M;
+  if (!(e.f & S)) e.f &= ~M;
   for (let l = e.d; l !== undefined; l = l.d) if (l.D.f & M) refresh(l.D);
 };
 
@@ -478,16 +602,18 @@ const reset = (n: Node): void => {
       try {
         cleanup();
       } catch (error) {
-        console.error("stage1: a cleanup threw", error);
+        diagnostic("error", "a cleanup threw", error);
       }
     } else {
       try {
         cleanup();
       } catch {
         // dropped
+        // TODO: Consider using reportError. Bad browser coverage but can be polyfilled.
+        // reportError(error);
       }
     }
-    resume(pt);
+    tracker = pt;
   }
 };
 
@@ -520,10 +646,10 @@ const kill = (n: Node): void => {
 export const dispose = (node: Effect | Scope | Computed<unknown>): void => {
   const n = node as unknown as Node;
   if (process.env.NODE_ENV !== "production") {
-    if (inGetter()) fail("dispose inside a computed");
-    if (!(n.f & (C | E | S))) fail("dispose of a signal");
+    if (inGetter()) diagnostic("critical", "dispose inside a computed");
+    if (!(n.f & (C | E | S))) diagnostic("critical", "dispose of a signal");
     if (n.f & C && !(n.f & D) && n.s !== undefined) {
-      console.warn("stage1: disposed a computed that still has readers; its value freezes");
+      diagnostic("warn", "disposed a computed that still has readers; its value freezes");
     }
   }
   depth++;
@@ -547,7 +673,105 @@ export const untracked = <T>(fn: () => T): T => {
   try {
     return fn();
   } finally {
-    resume(prev);
+    tracker = prev;
+  }
+};
+
+// TODO: Consider supporting auto grouped batch via microtask scheduling. Needs to be tested for performance and correctness (especially reentrantcy and execution ordering!).
+// let scheduled = false;
+// const schedule = () => {
+//   if (--depth === 0 && tail !== 0 && !scheduled) {
+//     scheduled = true;
+//     queueMicrotask(flush);
+//   }
+// }
+//
+// export const autobatch = (fn: () => void): void => {
+//   depth++;
+//   try {
+//     fn();
+//   } finally {
+//     schedule();
+//   }
+// };
+
+// ── Dev Builds ───────────────────────────────────────────────────────────────
+
+/** Dev builds only: getters running (untracked inside one does not hide them). */
+let evaluating = 0;
+const inGetter = (): boolean => evaluating !== 0;
+/** Dev builds only: sub calls in progress (creating under a disposed owner is allowed there). */
+let calling = 0;
+/** Dev builds only: runs in the current flush (an endless write loop throws: `run`). */
+let ran = 0;
+
+function diagnostic(level: "critical", message: string): never;
+function diagnostic(level: "error", message: string, x?: unknown): void;
+function diagnostic(level: "warn" | "info", message: string): void;
+function diagnostic(
+  level: "critical" | "error" | "warn" | "info",
+  message: string,
+  x?: unknown,
+): void {
+  switch (level) {
+    case "critical":
+      throw new Error(`stage1: ${message}`);
+    case "error":
+      // oxlint-disable-next-line no-console
+      console.error(`stage1: ${message}`, x);
+      break;
+    case "warn":
+      // oxlint-disable-next-line no-console
+      console.warn(`stage1: ${message}`);
+      break;
+    case "info":
+      // oxlint-disable-next-line no-console
+      console.log(`stage1: ${message}`);
+      break;
+    default:
+      throw new Error(`Unknown diagnostic level "${String(level)}"`);
+  }
+}
+
+/**
+ * Dev builds only: a list's create or update is running. The list (./reconcile.ts, dev) sets this
+ * registered global around each call, with `o` = the object itself until the call's first creation
+ * records its owner (the owner the call runs under: the list's wiring, or none), `u` true for an
+ * update, and `w` the warnings given (1 create, 2 update). Production and lite builds have none of
+ * it.
+ */
+interface RowCheck {
+  o: unknown;
+  u: boolean;
+  w: number;
+}
+/**
+ * Dev builds only: warns once per list with no drop when its create makes an effect, sub, computed
+ * or cleanup straight under a re-running wiring (a sub or effect) rather than in a scope of the
+ * row's own (a list with a drop sets `w` to 1 up front), and once per list when its update makes
+ * anything straight under whatever runs it (never the row's). A scope is S with a fn; a sub (E|S)
+ * and a cleanup node (S, no fn) are not.
+ */
+const checkCreateRow = (o: Node | undefined, f: number, g: unknown): void => {
+  const c = (globalThis as Record<symbol, RowCheck | undefined>)[Symbol.for("stage1.row")];
+  if (c === undefined) return;
+  if (c.o === c) c.o = o;
+  // Made inside something the call made: that was checked when it was made
+  if (o !== c.o) return;
+  if (c.u) {
+    if (!(c.w & 2)) {
+      c.w |= 2;
+      diagnostic(
+        "warn",
+        "a list's update made an effect, computed, scope or cleanup: it belongs to the list's wiring, not the row, and is never dropped with the row. Make a row's effects in its create (in a scope of the row's own that the list's drop disposes)",
+      );
+    }
+  } else if (!(c.w & 1) && o !== undefined && o.f & E && (f !== S || g === undefined)) {
+    c.w |= 1;
+    diagnostic(
+      "warn",
+      "a list's create made an effect, computed or cleanup outside a scope: it belongs to the list's wiring, not the row (a sub keeps it until the sub is disposed; an effect disposes it when it re-runs). Make it in a scope of the row's own and pass list a drop that disposes it",
+    );
   }
 };
 
@@ -555,91 +779,6 @@ export const untracked = <T>(fn: () => T): T => {
 const checkReturn = (n: Node): void => {
   if (n.v !== undefined && typeof n.v !== "function") {
     n.v = undefined;
-    fail("an effect or scope returned neither a function nor undefined");
+    diagnostic("critical", "an effect or scope returned neither a function nor undefined");
   }
-};
-
-// ── Integration (list, mark: ./reconcile.ts; each export tree-shakes when unused) ──────────────
-// A holder is a scope-kind node with no fn: it never runs (it has no deps, so no write marks it)
-// and owns what is created `within` it; `kill` tears it down like any runner (I8, then `v` if it
-// is a function). Its `o` is the node its children climb to (parent-first), which need not be the
-// owner whose list holds it: a list's rows' holders sit in the list's holder but climb to its
-// subscription, which owns nothing, so its re-runs tear nothing down.
-
-/** An owner that never runs (see `holder`). `g` is the caller's data, undefined once disposed. */
-export interface Holder extends Effect {
-  readonly g: unknown;
-}
-
-/**
- * Calls `fn(a, b)` with tracking off and `o` as the owner (undefined: none), then gives both back
- * (a tracked run resumes with a fresh id). For code that owns on behalf of something else
- * (list rows) and async callbacks (keep a handle, then `within(handle, cb)`).
- */
-export const within = <A, B, R>(
-  o: Effect | Scope | undefined,
-  fn: (a: A, b: B) => R,
-  a?: A,
-  b?: B,
-): R => {
-  if (process.env.NODE_ENV !== "production" && inGetter()) fail("within inside a computed");
-  const t = tracker;
-  const prev = owner;
-  tracker = undefined;
-  owner = o as unknown as Node | undefined;
-  try {
-    return fn(a as A, b as B);
-  } finally {
-    resume(t);
-    owner = prev;
-  }
-};
-
-/**
- * An owner that never runs (a scope without a fn), in no owner's list until `own`ed. What is
- * created `within` it is its child; `dispose` disposes those, newest first, then calls `v`; `g` is
- * the caller's data, cleared on disposal. Effects made in it climb to `up` (default: the current
- * owner) as they would from a child of `up`, so they re-run after `up`'s marked owners.
- */
-export const holder = (
-  v?: () => void,
-  g?: unknown,
-  up: Effect | Scope | undefined = owner as never,
-): Holder => {
-  const h = new Node(S, g as never, v, undefined);
-  const o = up as unknown as Node | undefined;
-  h.o = o;
-  if (o !== undefined && o.f & (E | N)) h.f |= N;
-  return h as unknown as Holder;
-};
-
-/** The current owner (if any) adopts `h`: it becomes its newest child, disposed with it. */
-export const own = <T extends Holder>(h: T): T => {
-  const n = h as unknown as Node;
-  // In another owner's list already: threading it into a second would corrupt both (I3)
-  if (process.env.NODE_ENV !== "production" && n.p !== undefined) {
-    fail("own of a holder that already has an owner");
-  }
-  const o = owner;
-  if (o !== undefined) {
-    const k = o.s as Node | undefined;
-    if (k !== undefined) {
-      k.p = n;
-      n.n = k;
-    }
-    n.p = o;
-    o.s = n;
-  }
-  return h;
-};
-
-/** Whether `h` owns something newer than `after` (one of its children; default: anything). */
-export const owns = (h: Holder, after?: unknown): boolean => (h as unknown as Node).s !== after;
-
-/** Disposes what `h` owns newer than `after` (default: all of it), newest first; `h` stays. */
-export const release = (h: Holder, after?: unknown): void => {
-  const n = h as unknown as Node;
-  depth++;
-  for (let k; (k = n.s as Node | undefined) !== after && k !== undefined;) kill(k);
-  end();
 };

@@ -1,7 +1,7 @@
 // Browser side: one page per variant, ops modelled on js-framework-benchmark.
 
-import { list, mark } from "../../src/ng_OLD/reconcile.ts";
-import { set, signal } from "../../src/ng_OLD/signal.ts";
+import { list, mark } from "../../src/legacy/ng_OLD/reconcile.ts";
+import { set, signal } from "../../src/legacy/ng_OLD/signal.ts";
 
 interface Row {
   id: number;

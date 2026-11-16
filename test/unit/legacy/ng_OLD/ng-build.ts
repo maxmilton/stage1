@@ -1,10 +1,10 @@
 // Builds an ng module with Bun feature flags, the way an app's build would, and loads it.
 
-import type * as Ng from "../../../src/ng_OLD/index.ts";
-import type * as Signal from "../../../src/ng_OLD/signal.ts";
+import type * as Ng from "../../../../src/legacy/ng_OLD/index.ts";
+import type * as Signal from "../../../../src/legacy/ng_OLD/signal.ts";
 
 const build = async (file: string, features: string[]): Promise<unknown> => {
-  const entry = `${import.meta.dir}/../../../src/ng_OLD/${file}`;
+  const entry = `${import.meta.dir}/../../../../src/legacy/ng_OLD/${file}`;
   const out = await Bun.build({ entrypoints: [entry], features, target: "browser" });
   const code = await out.outputs[0].text();
   const url = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));

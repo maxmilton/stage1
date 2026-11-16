@@ -7,14 +7,10 @@ import * as nonKeyedExports from "../../src/legacy/reconcile/non-keyed.ts";
 import * as reuseLiteExports from "../../src/legacy/reconcile/reuse-lite.ts";
 import * as reuseNodesExports from "../../src/legacy/reconcile/reuse-nodes.ts";
 import * as liteExports from "../../src/lite/index.ts";
-import type { List as LiteList } from "../../src/lite/reconcile.ts";
 import type { Signal as LiteSignal, Sub } from "../../src/lite/signal.ts";
 import * as macroExports from "../../src/macro.ts";
-import * as ngExports from "../../src/ng_OLD/index.ts";
-import type { List as NgList } from "../../src/ng_OLD/reconcile.ts";
-import type { Signal as NgSignal } from "../../src/ng_OLD/signal.ts";
-import type { List } from "../../src/reconcile.ts";
-import type { Computed, Effect, Holder, Scope, Signal } from "../../src/signal.ts";
+import type { Marked, Rows } from "../../src/reconcile.ts";
+import type { Computed, Effect, Scope, Signal } from "../../src/signal.ts";
 import type { FlatRefs, InferRefs, RefKeys, Refs } from "../../src/types.ts";
 
 describe("browser", () => {
@@ -73,8 +69,10 @@ describe("index", () => {
     expectTypeOf<indexExports.Computed<number>>().toEqualTypeOf<Computed<number>>();
     expectTypeOf<indexExports.Effect>().toEqualTypeOf<Effect>();
     expectTypeOf<indexExports.Scope>().toEqualTypeOf<Scope>();
-    expectTypeOf<indexExports.Holder>().toEqualTypeOf<Holder>();
-    expectTypeOf<indexExports.List<number, Element>>().toEqualTypeOf<List<number, Element>>();
+    expectTypeOf<indexExports.Rows<number, string, Element>>().toEqualTypeOf<
+      Rows<number, string, Element>
+    >();
+    expectTypeOf<indexExports.Marked<string, Element>>().toEqualTypeOf<Marked<string, Element>>();
   });
 
   const publicExports = [
@@ -94,13 +92,9 @@ describe("index", () => {
     ["get", "Function"],
     ["set", "Function"],
     ["dispose", "Function"],
+    ["sub", "Function"],
     ["batch", "Function"],
     ["untracked", "Function"],
-    ["within", "Function"],
-    ["holder", "Function"],
-    ["own", "Function"],
-    ["owns", "Function"],
-    ["release", "Function"],
     ["noop", "Function"],
     ["fragment", "Function"],
     ["text", "Function"],
@@ -146,12 +140,15 @@ describe("lite", () => {
     expectTypeOf<liteExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
     expectTypeOf<liteExports.Signal<number>>().toEqualTypeOf<LiteSignal<number>>();
     expectTypeOf<liteExports.Sub>().toEqualTypeOf<Sub>();
-    expectTypeOf<liteExports.List<number, Element>>().toEqualTypeOf<LiteList<number, Element>>();
+    // One list module serves both tiers
+    expectTypeOf<liteExports.Rows<number, string, Element>>().toEqualTypeOf<
+      Rows<number, string, Element>
+    >();
+    expectTypeOf<liteExports.Marked<string, Element>>().toEqualTypeOf<Marked<string, Element>>();
   });
 
   const publicExports = [
     ["h", "Function"],
-    ["hh", "Function"],
     ["collect", "Function"],
     ["ONCLICK", "Symbol"],
     ["handleClick", "Function"],
@@ -198,6 +195,11 @@ describe("lite", () => {
   test("has no default export", () => {
     expect.assertions(1);
     expect(liteExports).not.toHaveProperty("default");
+  });
+  test("shares list and mark with stage1 (one list module for both tiers)", () => {
+    expect.assertions(2);
+    expect(liteExports.list).toBe(indexExports.list);
+    expect(liteExports.mark).toBe(indexExports.mark);
   });
 });
 
@@ -249,71 +251,6 @@ describe("legacy", () => {
   test("has no default export", () => {
     expect.assertions(1);
     expect(legacyExports).not.toHaveProperty("default");
-  });
-});
-
-describe("ng_OLD", () => {
-  test("types", () => {
-    expect.assertions(0);
-    expectTypeOf<ngExports.Refs>().toEqualTypeOf<Refs>();
-    expectTypeOf<ngExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
-    expectTypeOf<ngExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
-    expectTypeOf<ngExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
-    expectTypeOf<ngExports.Signal<number>>().toEqualTypeOf<NgSignal<number>>();
-    expectTypeOf<ngExports.List<number, Element>>().toEqualTypeOf<NgList<number, Element>>();
-  });
-
-  const publicExports = [
-    ["h", "Function"],
-    ["hh", "Function"],
-    ["collect", "Function"],
-    ["ONCLICK", "Symbol"],
-    ["handleClick", "Function"],
-    ["setupSyntheticClick", "Function"],
-    ["removeSyntheticClick", "Function"],
-    ["list", "Function"],
-    ["mark", "Function"],
-    ["signal", "Function"],
-    ["get", "Function"],
-    ["set", "Function"],
-    ["sub", "Function"],
-    ["batch", "Function"],
-    ["untracked", "Function"],
-    ["computed", "Function"],
-    ["effect", "Function"],
-    ["noop", "Function"],
-    ["fragment", "Function"],
-    ["text", "Function"],
-    ["create", "Function"],
-    ["clone", "Function"],
-    ["append", "Function"],
-    ["prepend", "Function"],
-    ["insert", "Function"],
-    ["replace", "Function"],
-    ["$", "Function"],
-    ["$$", "Function"],
-  ] as const;
-
-  test.each(publicExports)('exports public "%s" %s', (name, type) => {
-    expect.assertions(2);
-    expect(ngExports).toHaveProperty(name);
-    // oxlint-disable-next-line import/namespace
-    expect(ngExports[name]).toHaveObjectType(`[object ${type}]`);
-  });
-
-  test("does not export any private internals", () => {
-    expect.assertions(publicExports.length + 1);
-    const publicExportNames: string[] = publicExports.map(([name, _type]) => name);
-    // oxlint-disable-next-line guard-for-in
-    for (const name in ngExports) {
-      expect(publicExportNames).toContain(name);
-    }
-    expect(publicExportNames).toHaveLength(Object.keys(ngExports).length);
-  });
-
-  test("has no default export", () => {
-    expect.assertions(1);
-    expect(ngExports).not.toHaveProperty("default");
   });
 });
 

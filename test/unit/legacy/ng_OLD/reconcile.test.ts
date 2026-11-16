@@ -2,8 +2,8 @@
 // oxlint-disable vitest/no-conditional-in-test
 
 import { describe, expect, expectTypeOf, test } from "bun:test";
-import { type List, list, mark } from "../../../src/ng_OLD/reconcile.ts";
-import { batch, set, signal, type Signal, sub } from "../../../src/ng_OLD/signal.ts";
+import { type List, list, mark } from "../../../../src/legacy/ng_OLD/reconcile.ts";
+import { batch, set, signal, type Signal, sub } from "../../../../src/legacy/ng_OLD/signal.ts";
 import { buildNg } from "./ng-build.ts";
 
 const listLite = await buildNg(["STAGE1_LIST_LITE"]);
