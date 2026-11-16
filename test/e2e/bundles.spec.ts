@@ -46,7 +46,6 @@ const DOM_EXPORTS = [
   "fragment",
   "h",
   "handleClick",
-  "hh",
   "insert",
   "noop",
   "prepend",
