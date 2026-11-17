@@ -168,6 +168,7 @@ describe("package.json", () => {
       "./legacy/reconcile/non-keyed",
       "./legacy/reconcile/reuse-nodes",
       "./legacy/reconcile/reuse-lite",
+      "./src/*",
       "./package.json",
     ]);
   });
@@ -188,9 +189,16 @@ describe("package.json", () => {
     typeof target === "string" ? [target] : Object.values(target),
   );
 
+  // A subpath pattern target needs at least one match
+  const targetExists = async (target: string) => {
+    if (!target.includes("*")) return Bun.file(target).exists();
+    const first = await new Bun.Glob(target).scan().next();
+    return !first.done;
+  };
+
   test("has a file at every export target", async () => {
     expect.assertions(1);
-    const found = await Promise.all(exportTargets.map((target) => Bun.file(target).exists()));
+    const found = await Promise.all(exportTargets.map((target) => targetExists(target)));
     expect(exportTargets.filter((_target, index) => !found[index])).toBeEmpty();
   });
 
