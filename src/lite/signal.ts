@@ -40,7 +40,8 @@
 //   pushed again or restored before its turn reaches only the subs whose record differs from its
 //   value: none, but a sub created after an earlier write, which recorded the intermediate value.
 //   So a sub whose call writes its own signal is called again after it returns, once the pass
-//   reaches that entry.
+//   reaches that entry. A `trigger` sets every record of its signal to `queue`: no signal holds it
+//   (unless a RangeError cut a trigger short), so each of its subs differs.
 // - I4 Slot: `g` is undefined until the first sub, then that sub's callback, `noop` once it is
 //   disposed; it never returns to undefined (a disposed slot is never reused, so disposing the
 //   signal handle again stays a no-op). So `g === undefined` implies no nodes, `h.g === fn` tells
@@ -72,7 +73,12 @@
 // - After a RangeError (stack overflow) a write may go undelivered: its pass or batch end could not
 //   start, its walk was cut short, or an overflow at the pass's entry lost the entry popped for it
 //   (those subs lag until their signal's next write). Entries left queued ride with the next pass
-//   (they left `dirty` set), which also clears a `dirty` left set on an empty queue.
+//   (they left `dirty` set), which also clears a `dirty` left set on an empty queue. A trigger it
+//   cuts short can leave `queue` as the signal's value, its own lost: `set` one before using the
+//   signal again.
+// - A trigger, then a set back to the value a sub was last called with, before it is called (in a
+//   batch or a callback) still calls it: an extra call, never a missed one. A sub that triggers
+//   its own signal on every call is an endless write loop.
 // - Queue growth: one entry per write made while `held` that changes a signal with a sub (a
 //   batch's writes, a callback's), so a batch of n such writes holds n entries until its end; the
 //   queue keeps its peak capacity.
@@ -137,7 +143,7 @@ interface Node {
 let held = false;
 /**
  * Signals with subs written while `held`, once per write; the pass pops them. Also the pass's
- * "nothing thrown" value (private, so no user code can throw it).
+ * "nothing thrown" value (private, so no user code can throw it) and a trigger's record (I3).
  */
 const queue: Head[] = [];
 /**
@@ -292,3 +298,22 @@ const flush = (s: Head): void => {
   dirty = false;
   if (error !== queue) throw error;
 };
+
+// Last in the file: Bun's minifier merges adjacent top-level consts into one `var`, which a dead
+// one between live ones splits (+4 B after Bun alone, in apps that do not use trigger)
+
+/**
+ * Calls the subs of a signal whose value was changed in place (`s.v.push(1); trigger(s)`), as a
+ * `set` of a value no sub was called with would. A list needs a new array instead.
+ *
+ * NOTE: It is recommended to use the documented "tick" recipe, as it is both faster and smaller
+ * than this function. This is provided for convenience and simplicity.
+ */
+export const trigger: <T>(signal: Signal<T>) => void = ((s: Head): void => {
+  const value = s.v;
+  // No signal holds `queue`: every record now differs from the value, and `v` from it for `set`. A
+  // signal's `v` sits where a node's record does, so one walk from the signal voids both
+  s.c = queue;
+  for (let x: Head | Node | undefined = s; x !== undefined; x = x.s) x.v = queue;
+  set(s as never, value);
+}) as never;

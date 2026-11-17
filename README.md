@@ -21,8 +21,8 @@ An app imports its signals from one of three tiers, each with its own core:
 <!-- prettier-ignore -->
 | import | available functions | for |
 | --- | --- | --- |
-| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked` | apps with computeds, effects and owners |
-| `stage1/lite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch` | small apps: subs, no owners |
+| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked`, `trigger` | apps with computeds, effects and owners |
+| `stage1/lite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch`, `trigger` | small apps: subs, no owners |
 | `stage1/ultralite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch` | the smallest apps: one sub per signal, no owners |
 
 All three export the same `list` and `mark`. They import no signals: wire them with the tier's `sub`.
@@ -118,6 +118,32 @@ On both lite tiers:
 - Each write that changes a signal with a sub while a batch is open (on `stage1/lite`, also while a callback or a held first call runs) takes a queue entry until it is delivered, so a batch of n such writes holds n entries until its end; the queue keeps its peak capacity.
 - An endless write loop (a sub writing NaN to its own signal included: NaN never equals the value it was last called with) hangs a production build; on `stage1/ultralite` outside a batch it overflows the stack instead. A development build throws once one pass (`stage1/lite`) or one batch end (`stage1/ultralite`) made a million calls, so a legitimate one that large throws there too.
 - Values compare with `===` (NaN counts as changed); sibling order is unspecified.
+
+### Mutable data
+
+Writes notify by value: `set` compares with `===`, and a reader runs again only when a value it read is no longer `===` to what it read. An object, array, `Map` or typed array changed in place keeps its identity, so nothing is notified (`set(s, s.v)` does nothing). Change mutable data one of these ways:
+
+- **A new value** (copy, then change the copy): `set(items, [...items.v, item])`. A list's items must be changed this way: `list` keeps the array it last rendered and diffs the next one against it by identity, so changing that array in place, even before passing a copy, corrupts the next reconcile (rows go missing; a later removal can throw). A development build throws at the list's next call if the array it rendered was changed in place. An item changed in place keeps its row as rendered: `update` runs only for an item that is a new object.
+- **A tick** (recommended for data changed in place): keep the data in a plain variable with a counter signal beside it. Readers read the counter, writers change the data in place and then count up. Use a counter, not a boolean: two flips in one batch end where they started and notify nothing.
+
+  ```ts
+  const points = new Float32Array(4096); // changed in place
+  const tick = signal(0);
+  effect(() => {
+    get(tick);
+    draw(points);
+  }); // the lite tiers: sub(tick, () => draw(points))
+
+  points[0] = 1;
+  set(tick, (tick.v + 1) & 0x3fffffff); // wraps: stays a small integer (no allocation per write)
+  ```
+
+  A `Map` of counters, one per key, notifies only that key's readers.
+
+- **A new handle on the same data**: `set(buf, buf.v.subarray(0))` (a new view of the same buffer), or a box, `set(s, { d: s.v.d })`.
+- **`trigger(s)`** (`stage1` and `stage1/lite`), for data that must stay in its signal: `s.v.push(x); trigger(s)` runs the signal's readers as a `set` of a value they have not seen would, passing the same object. Shallow: a computed that returns the same object stops it there, as for any unchanged value. Never use it for a list's items. A sub that triggers its own signal on every call never settles (an endless write loop).
+
+Setting a placeholder first (`set(s, undefined); set(s, x)`) is not a notification: in a batch the readers find `x` again and do not run; outside one they run twice, once with the placeholder.
 
 ### Migrating from the previous API
 

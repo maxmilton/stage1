@@ -10,9 +10,11 @@
 // Invariants:
 // - I1 A marked node's subscribers are marked (marks stop at marked nodes). Validation clears a
 //   mark when it descends into the node, so it also terminates on cycles.
-// - I2 A link's `v` is the value its subscriber read. A run that reads a source again after its
-//   stamp was voided (I4) links it again, so every value the run read has a link. A node is current
-//   when every link's `v` is its dep's current `v` (deps validated first).
+// - I2 A link's `v` is the value its subscriber read, or, after a `trigger` of its dep, `queue`:
+//   no node holds it (unless a RangeError cut a trigger short), so the next check sees a change. A
+//   run that reads a source again after its stamp was voided (I4) links it again, so every value
+//   the run read has a link. A node is current when every link's `v` is its dep's current `v`
+//   (deps validated first).
 // - I3 Runners (effects, subs, scopes, cleanup nodes) keep their children in `s`, newest first. A
 //   child's `n` is its older sibling and `p` its newer one, or its owner if it is the newest.
 //   Effects, subs and scopes keep in `o` their climb target: the nearest effect or sub above them.
@@ -53,11 +55,16 @@
 //   write, and later ones that reach it only through a computed it read (that stays marked: marks
 //   stop there) until something reads that computed. A batch whose end overflows, or a dispose
 //   (also a failed first run's) whose teardown does, leaves `depth` above 0: nothing runs after it.
+//   A trigger it cuts short can leave `queue` as the signal's value, its own lost: `set` one before
+//   using the signal again.
 // - What a cleanup creates belongs to the current owner: during a re-run's teardown, the effect
 //   re-running (I7). Under a disposed owner, that owner: the end of its run disposes it, but a
 //   teardown that disposed its own effect ends no run, so what a cleanup creates after that lives
 //   on. Dev builds throw for it, except during a sub's call. Between runs of a flush the owner is
 //   the last run's: computed getters validated there must not create (dev error).
+// - A trigger, then a set back to the value its readers read, before they run (in a batch or a
+//   run) still runs them: an extra run, never a missed one. A sub that triggers its source on every
+//   call is an endless write loop.
 // - A sub's later call that writes its source and then throws is called again in the same flush.
 //   A node whose creation rethrows an error from the flush that ends its own effect()/sub() is
 //   disposed. A computed as a sub's source works as `get` reads it (its error reaches the writer).
@@ -168,7 +175,7 @@ let runs = 0;
 let ids = 0;
 /** Batches, flushes, first runs and disposals in progress: effects wait while above 0 (I7). */
 let depth = 0;
-/** Effects to run (a stack: the flush pops the newest entry). */
+/** Effects to run (a stack: the flush pops the newest entry); also a value no node holds (I2). */
 const queue: (Node | undefined)[] = [];
 let tail = 0;
 /** Walk stack (links), shared by mark and changed; each walk pops back to where it started. */
@@ -691,6 +698,28 @@ export const untracked = <T>(fn: () => T): T => {
   } finally {
     tracker = prev;
   }
+};
+
+/**
+ * Notifies what read `signal` that its value changed in place: a `set` of a value no reader has
+ * seen (its readers' links forget the value they read, I2), without replacing or comparing it.
+ * Shallow: a computed that returns the same reference stops it. A list needs a new array instead.
+ *
+ * NOTE: It is recommended to use the documented "tick" recipe, as it is both faster and smaller
+ * than this function. This is provided for convenience and simplicity.
+ */
+export const trigger = <T>(signal: Signal<T>): void => {
+  const s = signal as unknown as Node;
+  // Before any write: a computed boxes this throw, and the signal must keep its value and its
+  // readers' links the values they read
+  if (process.env.NODE_ENV !== "production" && inComputed()) {
+    report("critical", "trigger inside a computed");
+  }
+  const value = s.v;
+  // No node holds `queue`: every reader's next check sees a changed value, and so does `set`
+  for (let l = s.s as Link | undefined; l !== undefined; l = l.n) l.v = queue;
+  s.v = queue;
+  set(signal, value as T);
 };
 
 // TODO: Consider supporting auto grouped batch via microtask scheduling. Needs to be tested for performance and correctness (especially reentrantcy and execution ordering!).

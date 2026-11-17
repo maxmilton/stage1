@@ -19,7 +19,10 @@ import {
   type Signal,
   signal,
   sub,
+  trigger,
 } from "../../src/lite/signal.ts";
+import { list } from "../../src/reconcile.ts";
+import { noop as utilsNoop } from "../../src/utils.ts";
 
 const DEV = process.env.NODE_ENV !== "production";
 
@@ -1812,6 +1815,644 @@ describe("lite signals", () => {
         return error;
       });
       expect(alive).toBeLessThan(10);
+    });
+  });
+
+  // A trigger is a set of a value no sub was called with: tests run per write, `trigger` after an
+  // in-place push and the oracle, a set of a copy, against one expected outcome
+  describe("trigger", () => {
+    const WRITES: [name: string, write: (s: Signal<number[]>, x: number) => void][] = [
+      [
+        "trigger",
+        (s, x) => {
+          s.v.push(x);
+          trigger(s);
+        },
+      ],
+      [
+        "set of a copy",
+        (s, x) => {
+          set(s, [...s.v, x]);
+        },
+      ],
+    ];
+
+    describe("at rest", () => {
+      test.each(WRITES)("calls the first sub and every node once more (%s)", (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const subs = [watch(source), watch(source), watch(source)];
+        write(source, 2);
+        expect(subs.map(({ seen }) => seen.length)).toEqual([2, 2, 2]);
+      });
+
+      test("passes the signal's own value", () => {
+        expect.assertions(1);
+        const value = [1];
+        const source = signal(value);
+        const { seen } = watch(source);
+        trigger(source);
+        expect(seen[1]).toBe(value);
+      });
+
+      test("leaves the signal's value in place", () => {
+        expect.assertions(1);
+        const value = [1];
+        const source = signal(value);
+        watch(source);
+        trigger(source);
+        expect(source.v).toBe(value);
+      });
+
+      test("calls each sub again on each trigger", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        const { seen } = watch(source);
+        trigger(source);
+        trigger(source);
+        expect(seen).toHaveLength(3);
+      });
+
+      test("a set of the same value after a trigger calls no sub", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        const { seen } = watch(source);
+        trigger(source);
+        set(source, source.v);
+        expect(seen).toHaveLength(2);
+      });
+
+      test("a set of a new value after a trigger calls each sub with it", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        const { seen } = watch(source);
+        trigger(source);
+        set(source, [1]);
+        expect(seen).toEqual([[0], [0], [1]]);
+      });
+
+      test("calls the first sub and every node of a signal holding undefined", () => {
+        expect.assertions(1);
+        // oxlint-disable-next-line unicorn/no-useless-undefined -- the value under test
+        const source = signal(undefined);
+        const subs = [watch(source), watch(source), watch(source)];
+        trigger(source);
+        // Not toEqual on `seen`: it ignores undefined array items
+        expect(subs.map(({ seen }) => seen.length)).toEqual([2, 2, 2]);
+      });
+
+      test("calls the first sub and every node of a signal holding stage1's noop (a disposed sub's callback)", () => {
+        expect.assertions(1);
+        const source = signal(utilsNoop);
+        const subs = [watch(source), watch(source), watch(source)];
+        trigger(source);
+        expect(subs.map(({ seen }) => seen.length)).toEqual([2, 2, 2]);
+      });
+
+      test("on a signal with no subs throws nothing", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        expect(() => {
+          trigger(source);
+        }).not.toThrow();
+      });
+
+      test("on a signal with no subs, a sub made after it is called once, at creation", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        trigger(source);
+        const { seen } = watch(source);
+        expect(seen).toHaveLength(1);
+      });
+    });
+
+    describe("disposed subs", () => {
+      test("a disposed first sub is not called", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        let calls = 0;
+        const first = sub(source, () => {
+          calls++;
+        });
+        watch(source);
+        dispose(first);
+        trigger(source);
+        expect(calls).toBe(1);
+      });
+
+      test("the nodes of a signal whose first sub was disposed are called", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        dispose(sub(source, noop));
+        const node = watch(source);
+        trigger(source);
+        expect(node.seen).toHaveLength(2);
+      });
+
+      test("a disposed node is not called", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        watch(source);
+        const node = watch(source);
+        dispose(node.handle);
+        trigger(source);
+        expect(node.seen).toHaveLength(1);
+      });
+    });
+
+    describe("in callbacks (delivered after the callback returns)", () => {
+      test.each(WRITES)(
+        "a sub that writes its own signal while called is called again (%s)",
+        (_name, write) => {
+          expect.assertions(1);
+          const source = signal([0]);
+          let calls = 0;
+          sub(source, () => {
+            if (++calls === 2) write(source, 1);
+          });
+          set(source, [9]);
+          expect(calls).toBe(3);
+        },
+      );
+
+      test.each(WRITES)(
+        "a sub's first call that writes its signal is called again before sub returns (%s)",
+        (_name, write) => {
+          expect.assertions(1);
+          const source = signal([0]);
+          let calls = 0;
+          sub(source, () => {
+            if (++calls === 1) write(source, 1);
+          });
+          expect(calls).toBe(2);
+        },
+      );
+
+      test.each(WRITES)(
+        "a node's write while called reaches each node after it once (%s)",
+        (_name, write) => {
+          expect.assertions(1);
+          const source = signal([0]);
+          watch(source);
+          const older = watch(source);
+          let calls = 0;
+          sub(source, () => {
+            if (++calls === 2) write(source, 1);
+          });
+          set(source, [9]);
+          expect(older.seen).toHaveLength(2);
+        },
+      );
+
+      test("a set inside a trigger's walk reaches each node after the writer once, with the new value", () => {
+        expect.assertions(1);
+        const before = [0];
+        const after = [1];
+        const source = signal(before);
+        let calls = 0;
+        sub(source, () => {
+          if (++calls === 2) set(source, after);
+        });
+        const node = watch(source);
+        trigger(source);
+        expect(node.seen).toEqual([before, after]);
+      });
+
+      test("a trigger inside a set's walk reaches each node after the writer once", () => {
+        expect.assertions(1);
+        const after = [1];
+        const source = signal([0]);
+        sub(source, (value) => {
+          if (value === after && value.length === 1) {
+            value.push(2);
+            trigger(source);
+          }
+        });
+        const node = watch(source);
+        set(source, after);
+        expect(node.seen).toHaveLength(2);
+      });
+
+      test.each(WRITES)(
+        "a write by a sub of another signal calls that signal's subs after the sub returns (%s)",
+        (_name, write) => {
+          expect.assertions(1);
+          const a = signal(0);
+          const b = signal([0]);
+          const order: string[] = [];
+          sub(b, () => {
+            order.push("b");
+          });
+          sub(a, (value) => {
+            if (value === 1) write(b, 1);
+            order.push("a");
+          });
+          order.length = 0;
+          set(a, 1);
+          expect(order).toEqual(["a", "b"]);
+        },
+      );
+
+      test.each(WRITES)(
+        "a write in a callback's own batch calls the subs after that callback returns (%s)",
+        (_name, write) => {
+          expect.assertions(1);
+          const a = signal(0);
+          const b = signal([0]);
+          const order: string[] = [];
+          sub(b, () => {
+            order.push("b");
+          });
+          sub(a, (value) => {
+            if (value === 1) {
+              batch(() => {
+                write(b, 1);
+                order.push("body");
+              });
+            }
+            order.push("a");
+          });
+          order.length = 0;
+          batch(() => {
+            set(a, 1);
+          });
+          expect(order).toEqual(["body", "a", "b"]);
+        },
+      );
+    });
+
+    describe("batch", () => {
+      test("defers the calls to the batch end", () => {
+        expect.assertions(2);
+        const source = signal([0]);
+        const { seen } = watch(source);
+        batch(() => {
+          trigger(source);
+          expect(seen).toHaveLength(1);
+        });
+        expect(seen).toHaveLength(2);
+      });
+
+      test.each(WRITES)(
+        "several writes in a batch call each sub once at its end (%s)",
+        (_name, write) => {
+          expect.assertions(2);
+          const source = signal([0]);
+          const first = watch(source);
+          const node = watch(source);
+          batch(() => {
+            write(source, 1);
+            write(source, 2);
+          });
+          expect(first.seen).toHaveLength(2);
+          expect(node.seen).toHaveLength(2);
+        },
+      );
+
+      test("a nested batch's trigger waits for the outermost end", () => {
+        expect.assertions(2);
+        const source = signal([0]);
+        const { seen } = watch(source);
+        batch(() => {
+          batch(() => {
+            trigger(source);
+          });
+          expect(seen).toHaveLength(1);
+        });
+        expect(seen).toHaveLength(2);
+      });
+
+      test("a trigger, then a write of another value and back, calls each sub with the value", () => {
+        expect.assertions(1);
+        const value = [0];
+        const source = signal(value);
+        const { seen } = watch(source);
+        batch(() => {
+          value.push(1);
+          trigger(source);
+          set(source, [2]);
+          set(source, value);
+        });
+        expect(seen).toEqual([value, value]);
+      });
+
+      test("a trigger, then a set, calls each sub once with the set value", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        const { seen } = watch(source);
+        batch(() => {
+          trigger(source);
+          set(source, [1]);
+        });
+        expect(seen).toEqual([[0], [1]]);
+      });
+
+      test("a set, then a trigger, calls each sub once with the set value", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        const { seen } = watch(source);
+        batch(() => {
+          set(source, [1]);
+          trigger(source);
+        });
+        expect(seen).toEqual([[0], [1]]);
+      });
+
+      test("a write and its restore, then a trigger, call each sub with the restored value", () => {
+        expect.assertions(1);
+        const value = [0];
+        const source = signal(value);
+        const { seen } = watch(source);
+        batch(() => {
+          set(source, [1]);
+          set(source, value);
+          trigger(source);
+        });
+        expect(seen).toEqual([value, value]);
+      });
+
+      test("Accepted tradeoff: a trigger, then a restore of the value a sub was called with, calls it again", () => {
+        expect.assertions(1);
+        const value = [0];
+        const source = signal(value);
+        const { seen } = watch(source);
+        batch(() => {
+          const other = [1];
+          set(source, other);
+          other.push(2);
+          trigger(source);
+          set(source, value);
+        });
+        // A trigger forgets every record, also one of a value the signal no longer holds (a set
+        // of an unseen value, then back, calls nothing)
+        expect(seen).toEqual([value, value]);
+      });
+
+      test("a node made after a trigger is called once, at creation", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        watch(source);
+        let node: { seen: number[][] } | undefined;
+        batch(() => {
+          trigger(source);
+          node = watch(source);
+        });
+        expect(node?.seen).toHaveLength(1);
+      });
+
+      test("a first sub made after a trigger is called once, at creation", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        let first: { seen: number[][] } | undefined;
+        batch(() => {
+          trigger(source);
+          first = watch(source);
+        });
+        expect(first?.seen).toHaveLength(1);
+      });
+
+      test("a sub made before a trigger is called again at its end", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        watch(source);
+        let node: { seen: number[][] } | undefined;
+        batch(() => {
+          node = watch(source);
+          trigger(source);
+        });
+        expect(node?.seen).toHaveLength(2);
+      });
+
+      test("on a signal with no subs, the batch end throws nothing", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        expect(() => {
+          batch(() => {
+            trigger(source);
+          });
+        }).not.toThrow();
+      });
+    });
+
+    describe("errors", () => {
+      test("a throwing sub stops no other sub", () => {
+        expect.assertions(2);
+        const source = signal([0]);
+        const first = watch(source);
+        const older = watch(source);
+        let calls = 0;
+        sub(source, () => {
+          if (++calls === 2) throw new Error("second call");
+        });
+        thrownBy(() => {
+          trigger(source);
+        });
+        expect(first.seen).toHaveLength(2);
+        expect(older.seen).toHaveLength(2);
+      });
+
+      test("rethrows a sub's error", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        const error = new Error("second call");
+        let calls = 0;
+        sub(source, () => {
+          if (++calls === 2) throw error;
+        });
+        expect(
+          thrownBy(() => {
+            trigger(source);
+          }),
+        ).toBe(error);
+      });
+
+      test("a batch end rethrows the error of a sub a trigger in it reached", () => {
+        expect.assertions(1);
+        const source = signal([0]);
+        const error = new Error("second call");
+        let calls = 0;
+        sub(source, () => {
+          if (++calls === 2) throw error;
+        });
+        expect(
+          thrownBy(() => {
+            batch(() => {
+              trigger(source);
+            });
+          }),
+        ).toBe(error);
+      });
+    });
+
+    // Unsupported (documented): a list keeps the array it rendered and diffs by identity
+    describe("a list's items pushed in place, then triggered", () => {
+      /** A list of 1 in a detached parent, wired as sub(items, list(...)). */
+      const mount = (): { items: Signal<{ id: number }[]>; parent: HTMLElement } => {
+        const parent = document.createElement("div");
+        const items = signal([{ id: 1 }]);
+        sub(
+          items,
+          list(parent, "id", (item) => {
+            const row = document.createElement("p");
+            row.textContent = String(item.id);
+            return row;
+          }),
+        );
+        return { items, parent };
+      };
+
+      test.if(DEV)("dev: the trigger throws the list guard's error", () => {
+        expect.assertions(1);
+        const { items } = mount();
+        items.v.push({ id: 2 });
+        expect(() => {
+          trigger(items);
+        }).toThrow(/^stage1: a list's items array was changed in place/u);
+      });
+
+      test.if(!DEV)("Characterization (production): no row is added", () => {
+        expect.assertions(1);
+        const { items, parent } = mount();
+        items.v.push({ id: 2 });
+        trigger(items);
+        expect(parent.children).toHaveLength(1);
+      });
+    });
+
+    // Seeded programs run twice: in place (boxes changed in place, then triggered) and with copies
+    // (each change sets a new box). The calls (box id and count) must match. A trigger forgets every
+    // record, so with copies a change also replaces every box the signal can be set back to.
+    describe("differential: a trigger is a set of a new box", () => {
+      interface Box {
+        readonly id: string;
+        n: number;
+      }
+      interface World {
+        readonly signals: Signal<Box>[];
+        write: (si: number, k: number) => void;
+        change: (si: number) => void;
+      }
+      const SIGNALS = 3;
+      const POOL = 3;
+      const pools = (): Box[][] =>
+        Array.from({ length: SIGNALS }, (_, si) =>
+          Array.from({ length: POOL }, (_unused, k) => ({ id: `${si}${k}`, n: 0 })),
+        );
+      const inPlace = (): World => {
+        const boxes = pools();
+        const signals = boxes.map((pool) => signal(pool[0]));
+        return {
+          signals,
+          write: (si, k) => {
+            set(signals[si], boxes[si][k]);
+          },
+          change: (si) => {
+            signals[si].v.n++;
+            trigger(signals[si]);
+          },
+        };
+      };
+      const copies = (): World => {
+        const latest = pools();
+        const signals = latest.map((pool) => signal(pool[0]));
+        return {
+          signals,
+          write: (si, k) => {
+            set(signals[si], latest[si][k]);
+          },
+          change: (si) => {
+            const pool = latest[si];
+            const k = pool.findIndex((box) => box.id === signals[si].v.id);
+            for (let j = 0; j < POOL; j++) pool[j] = { ...pool[j] };
+            pool[k] = { id: pool[k].id, n: pool[k].n + 1 };
+            set(signals[si], pool[k]);
+          },
+        };
+      };
+      /** Program `seed` in a world: its log of calls and errors. */
+      const run = (seed: number, make: () => World): string[] => {
+        // mulberry32
+        let state = seed;
+        /* oxlint-disable no-bitwise unicorn/prefer-math-trunc unicorn/number-literal-case */
+        const random = (): number => {
+          state = (state + 0x6d_2b_79_f5) | 0;
+          let t = Math.imul(state ^ (state >>> 15), 1 | state);
+          t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+          return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
+        };
+        /* oxlint-enable no-bitwise unicorn/prefer-math-trunc unicorn/number-literal-case */
+        const pick = (n: number): number => Math.floor(random() * n);
+        const world = make();
+        const log: string[] = [];
+        const handles: Effect[] = [];
+        // Bounds what callbacks do, so a self-write loop ends
+        let budget = 40;
+        let made = 0;
+        let calls = 0;
+        const op = (inCallback: boolean): void => {
+          if (inCallback && budget-- <= 0) return;
+          const si = pick(SIGNALS);
+          switch (pick(inCallback ? 7 : 6)) {
+            case 0:
+              world.write(si, pick(POOL));
+              break;
+            case 1:
+            case 2:
+              world.change(si);
+              break;
+            case 3: {
+              const id = made++;
+              handles.push(
+                sub(world.signals[si], (box) => {
+                  const call = calls++;
+                  log.push(`${id}<${box.id}.${box.n}`);
+                  if (random() < 0.35) op(true);
+                  if (random() < 0.05) throw new Error(`e${call}`);
+                }),
+              );
+              break;
+            }
+            case 4:
+              if (handles.length > 0) dispose(handles[pick(handles.length)]);
+              break;
+            case 5:
+              batch(() => {
+                for (let i = pick(4); i >= 0; i--) op(inCallback);
+              });
+              break;
+            default:
+              world.write(si, pick(POOL));
+              world.change(si);
+          }
+        };
+        for (let i = 0; i < 15; i++) {
+          try {
+            op(false);
+          } catch (error) {
+            log.push(`threw ${(error as Error).message}`);
+          }
+        }
+        return log;
+      };
+
+      test("3000 seeded programs log the same calls in both worlds", () => {
+        expect.assertions(2);
+        let first = "";
+        let total = 0;
+        for (let seed = 1; seed <= 3000 && first === ""; seed++) {
+          const changed = run(seed, inPlace);
+          const copied = run(seed, copies);
+          total += changed.length;
+          const at = changed.findIndex((line, i) => line !== copied[i]);
+          if (at !== -1 || changed.length !== copied.length) {
+            const i = at === -1 ? Math.min(changed.length, copied.length) : at;
+            first = `seed ${seed} call ${i}: in place ${changed[i]}, copies ${copied[i]}`;
+          }
+        }
+        expect(first).toBe("");
+        // Guards against programs that call nothing
+        expect(total).toBeGreaterThan(30_000);
+      });
     });
   });
 });

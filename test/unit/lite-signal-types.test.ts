@@ -9,7 +9,7 @@ import type * as full from "../../src/signal.ts";
 import * as ultralite from "../../src/ultralite/signal.ts";
 
 describe("stage1/lite", () => {
-  const { batch, dispose, get, set, signal, sub } = lite;
+  const { batch, dispose, get, set, signal, sub, trigger } = lite;
   type Signal<T> = lite.Signal<T>;
   type Effect = lite.Effect;
 
@@ -70,6 +70,23 @@ describe("stage1/lite", () => {
         set(s, 2);
         // @ts-expect-error - the value must be the signal's type
         set(s, "2");
+      }).toBeFunction();
+    });
+  });
+
+  describe("trigger", () => {
+    test("types", () => {
+      expect.assertions(0);
+      expectTypeOf(trigger).not.toBeAny();
+      expectTypeOf(trigger).toBeFunction();
+      // Erased: `T` -> `unknown`.
+      expectTypeOf(trigger).parameters.toEqualTypeOf<[signal: Signal<unknown>]>();
+      expectTypeOf(trigger).returns.toBeVoid();
+      expectTypeOf(trigger).returns.not.toBeUndefined();
+      expectTypeOf(trigger<number[]>).parameters.toEqualTypeOf<[signal: Signal<number[]>]>();
+      expectTypeOf((s: full.Signal<number[]>) => {
+        // @ts-expect-error - a full-tier signal is not a lite one
+        trigger(s);
       }).toBeFunction();
     });
   });

@@ -69,10 +69,11 @@ const ROOT_EXPORTS = [
   "set",
   "signal",
   "sub",
+  "trigger",
   "untracked",
 ];
-/** stage1/lite's, and stage1/ultralite's: the same names. */
-const LITE_EXPORTS = [
+/** stage1/ultralite's; stage1/lite also has `trigger`. */
+const ULTRALITE_EXPORTS = [
   ...DOM_EXPORTS,
   "batch",
   "dispose",
@@ -83,6 +84,7 @@ const LITE_EXPORTS = [
   "signal",
   "sub",
 ];
+const LITE_EXPORTS = [...ULTRALITE_EXPORTS, "trigger"];
 const PRECOMPILED_EXPORTS = [
   "ONCLICK",
   "append",
@@ -238,7 +240,7 @@ test.describe("a production build of stage1/ultralite", () => {
       return Object.keys((await import(url)) as object);
     }, ultraliteCode);
 
-    expect(result.toSorted(byCodeUnit)).toEqual(LITE_EXPORTS.toSorted(byCodeUnit));
+    expect(result.toSorted(byCodeUnit)).toEqual(ULTRALITE_EXPORTS.toSorted(byCodeUnit));
   });
 
   test("keeps a list's rows in step with its items", async ({ page }) => {

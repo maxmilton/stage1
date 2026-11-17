@@ -6,6 +6,7 @@
 // oxlint-disable vitest/no-conditional-in-test
 
 import { describe, expect, spyOn, test } from "bun:test";
+import { list } from "../../src/reconcile.ts";
 import {
   batch,
   type Computed,
@@ -21,6 +22,7 @@ import {
   type Signal,
   signal,
   sub,
+  trigger,
   untracked,
 } from "../../src/signal.ts";
 
@@ -355,18 +357,18 @@ describe("ownership", () => {
 
   test("an effect created inside untracked in an effect's run is disposed before that effect re-runs", () => {
     expect.assertions(1);
-    const trigger = signal(0);
+    const poke = signal(0);
     const source = signal(0);
     const seen: string[] = [];
     const handle = effect(() => {
-      const round = get<number>(trigger);
+      const round = get<number>(poke);
       untracked(() => {
         effect(() => {
           seen.push(`child ${round} sees ${get<number>(source)}`);
         });
       });
     });
-    set(trigger, 1);
+    set(poke, 1);
     set(source, 1);
     dispose(handle);
     set(source, 2);
@@ -438,11 +440,11 @@ describe("ownership", () => {
 
   test("an effect's re-run disposes the scopes its last run created, with their effects and cleanups", () => {
     expect.assertions(1);
-    const trigger = signal(0);
+    const poke = signal(0);
     const source = signal(0);
     const seen: string[] = [];
     const handle = effect(() => {
-      const round = get<number>(trigger);
+      const round = get<number>(poke);
       scope(() => {
         effect(() => {
           seen.push(`effect ${round} sees ${get<number>(source)}`);
@@ -452,7 +454,7 @@ describe("ownership", () => {
         });
       });
     });
-    set(trigger, 1);
+    set(poke, 1);
     set(source, 1);
     dispose(handle);
     expect(seen).toEqual([
@@ -557,11 +559,11 @@ describe("ownership", () => {
 
   test("a scope disposed twice, then again by its owner's re-run, calls its cleanup once", () => {
     expect.assertions(1);
-    const trigger = signal(0);
+    const poke = signal(0);
     let calls = 0;
     let inner!: Scope;
     const handle = effect(() => {
-      get(trigger);
+      get(poke);
       inner = scope(() => {
         defer(() => {
           calls++;
@@ -571,7 +573,7 @@ describe("ownership", () => {
     dispose(inner);
     dispose(inner);
     // The re-run disposes the disposed scope again and makes a new one, which the last dispose() disposes
-    set(trigger, 1);
+    set(poke, 1);
     dispose(handle);
     expect(calls).toBe(2);
   });
@@ -980,12 +982,12 @@ describe("teardown order", () => {
         body("dispose");
       }),
     );
-    const trigger = signal(0);
+    const poke = signal(0);
     const handle = effect(() => {
-      get(trigger);
+      get(poke);
       body("rerun");
     });
-    set(trigger, 1);
+    set(poke, 1);
     dispose(handle);
     expect(seen).toEqual([
       "dispose 10",
@@ -2320,14 +2322,14 @@ describe("errors", () => {
 
   test("effect() rethrows the error of another effect its first run's write made throw", () => {
     expect.assertions(1);
-    const trigger = signal(0);
+    const poke = signal(0);
     const bad = effect(() => {
-      if (get<number>(trigger) === 1) throw new Error("other");
+      if (get<number>(poke) === 1) throw new Error("other");
     });
     // Whether the new effect stays live then is unspecified (only a failed first run is pinned)
     expect(() => {
       effect(() => {
-        set(trigger, 1);
+        set(poke, 1);
       });
     }).toThrow("other");
     dispose(bad);
@@ -5833,20 +5835,20 @@ describe("memory", () => {
   test("a computed an effect's earlier run created and read is collectable after the effect re-runs", async () => {
     expect.assertions(1);
     const source = signal(1);
-    const trigger = signal(0);
+    const poke = signal(0);
     const handles: Effect[] = [];
     const refs: WeakRef<object>[] = [];
     for (let index = 0; index < 20; index++) {
       handles.push(
         effect(() => {
-          const round = get<number>(trigger);
+          const round = get<number>(poke);
           const node = computed(() => get<number>(source) + 1);
           get(node);
           if (round === 0) refs.push(new WeakRef(node));
         }),
       );
     }
-    set(trigger, 1);
+    set(poke, 1);
     await Bun.sleep(0); // a WeakRef keeps its target until the current job ends
     Bun.gc(true);
     const alive = refs.filter((ref) => ref.deref() !== undefined).length;
@@ -5903,6 +5905,700 @@ describe("memory", () => {
       return fn;
     });
     expect(alive).toBeLessThan(10);
+  });
+});
+
+/**
+ * The two ways to write a changed array: `trigger` after an in-place push, and the oracle, a `set`
+ * of a copy (a value no reader has seen). Tests run per write against one expected outcome.
+ */
+const WRITES: [name: string, write: (s: Signal<number[]>, x: number) => void][] = [
+  [
+    "trigger",
+    (s, x) => {
+      s.v.push(x);
+      trigger(s);
+    },
+  ],
+  [
+    "set of a copy",
+    (s, x) => {
+      set(s, [...s.v, x]);
+    },
+  ],
+];
+
+describe("trigger", () => {
+  describe("direct readers", () => {
+    test.each(WRITES)("an effect runs again and sees the new contents (%s)", (_name, write) => {
+      expect.assertions(1);
+      const source = signal([1]);
+      const seen: number[][] = [];
+      effect(() => {
+        seen.push([...get(source)]);
+      });
+      write(source, 2);
+      write(source, 3);
+      expect(seen).toEqual([[1], [1, 2], [1, 2, 3]]);
+    });
+
+    test.each(WRITES)("every reader runs again (%s)", (_name, write) => {
+      expect.assertions(1);
+      const source = signal([1]);
+      const runs = [0, 0, 0];
+      for (const index of runs.keys()) {
+        effect(() => {
+          runs[index]++;
+          get(source);
+        });
+      }
+      write(source, 2);
+      expect(runs).toEqual([2, 2, 2]);
+    });
+
+    test("a trigger without a change still runs the readers: nothing is compared", () => {
+      expect.assertions(1);
+      const source = signal([1]);
+      let runs = 0;
+      effect(() => {
+        runs++;
+        get(source);
+      });
+      trigger(source);
+      expect(runs).toBe(2);
+    });
+
+    test("a signal holding undefined runs its readers", () => {
+      expect.assertions(1);
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the value under test
+      const source = signal<number[] | undefined>(undefined);
+      let runs = 0;
+      effect(() => {
+        runs++;
+        get(source);
+      });
+      trigger(source);
+      expect(runs).toBe(2);
+    });
+
+    test("the signal keeps its value", () => {
+      expect.assertions(1);
+      const value = [1];
+      const source = signal(value);
+      effect(() => {
+        get(source);
+      });
+      trigger(source);
+      expect(source.v).toBe(value);
+    });
+
+    test("a signal with no readers keeps its value, in a batch too", () => {
+      expect.assertions(1);
+      const value = [1];
+      const source = signal(value);
+      trigger(source);
+      batch(() => {
+        trigger(source);
+      });
+      expect(source.v).toBe(value);
+    });
+
+    test("an effect reads the same reference again", () => {
+      expect.assertions(2);
+      const value = [1];
+      const source = signal(value);
+      const seen: number[][] = [];
+      effect(() => {
+        seen.push(get(source));
+      });
+      trigger(source);
+      expect(seen).toHaveLength(2);
+      expect(seen[1]).toBe(value);
+    });
+
+    test("a sub is called again with the same reference", () => {
+      expect.assertions(2);
+      const value = [1];
+      const source = signal(value);
+      const seen: number[][] = [];
+      sub(source, (got) => {
+        seen.push(got);
+      });
+      trigger(source);
+      expect(seen).toHaveLength(2);
+      expect(seen[1]).toBe(value);
+    });
+
+    test.each(WRITES)(
+      "an unobserved computed evaluates again on its next read only (%s)",
+      (_name, write) => {
+        expect.assertions(3);
+        const source = signal([1]);
+        let evaluations = 0;
+        const length = computed(() => {
+          evaluations++;
+          return get(source).length;
+        });
+        get(length);
+        write(source, 2);
+        expect(evaluations).toBe(1);
+        expect(get(length)).toBe(2);
+        expect(evaluations).toBe(2);
+      },
+    );
+
+    test.each(WRITES)(
+      "an observed computed evaluates once and its effect runs again (%s)",
+      (_name, write) => {
+        expect.assertions(2);
+        const source = signal([1]);
+        let evaluations = 0;
+        const length = computed(() => {
+          evaluations++;
+          return get(source).length;
+        });
+        const seen: number[] = [];
+        effect(() => {
+          seen.push(get(length));
+        });
+        write(source, 2);
+        expect(seen).toEqual([1, 2]);
+        expect(evaluations).toBe(2);
+      },
+    );
+
+    test("an untracked read is not triggered", () => {
+      expect.assertions(1);
+      const source = signal([1]);
+      let runs = 0;
+      effect(() => {
+        runs++;
+        untracked(() => get(source));
+      });
+      trigger(source);
+      expect(runs).toBe(1);
+    });
+
+    test("a signal whose only reader was disposed runs nothing", () => {
+      expect.assertions(1);
+      const source = signal([1]);
+      let runs = 0;
+      const handle = effect(() => {
+        runs++;
+        get(source);
+      });
+      dispose(handle);
+      trigger(source);
+      expect(runs).toBe(1);
+    });
+
+    test.each(WRITES)("a reader's throw reaches the writer (%s)", (_name, write) => {
+      expect.assertions(1);
+      const source = signal([1]);
+      effect(() => {
+        if (get(source).length === 2) throw new Error("two");
+      });
+      expect(() => {
+        write(source, 2);
+      }).toThrow("two");
+    });
+
+    test.each(WRITES)("a reader that threw runs again on the next write (%s)", (_name, write) => {
+      expect.assertions(1);
+      const source = signal([1]);
+      const seen: number[] = [];
+      effect(() => {
+        const { length } = get(source);
+        seen.push(length);
+        if (length === 2) throw new Error("two");
+      });
+      thrownBy(() => {
+        write(source, 2);
+      });
+      write(source, 3);
+      expect(seen).toEqual([1, 2, 3]);
+    });
+  });
+
+  // Documented: a trigger reaches direct readers only (a set of a copy goes through)
+  describe("shallow: a computed that returns the same reference stops it", () => {
+    test("a pass-through computed evaluates again, but its effect does not run", () => {
+      expect.assertions(2);
+      const source = signal([1]);
+      let evaluations = 0;
+      const same = computed(() => {
+        evaluations++;
+        return get(source);
+      });
+      let runs = 0;
+      effect(() => {
+        runs++;
+        get(same);
+      });
+      trigger(source);
+      expect(evaluations).toBe(2);
+      expect(runs).toBe(1);
+    });
+
+    test("a sub on a pass-through computed is not called", () => {
+      expect.assertions(1);
+      const source = signal([1]);
+      let calls = 0;
+      sub(
+        computed(() => get(source)),
+        () => {
+          calls++;
+        },
+      );
+      trigger(source);
+      expect(calls).toBe(1);
+    });
+  });
+
+  describe("batches", () => {
+    test.each(WRITES)("a batch's writes run the readers once (%s)", (_name, write) => {
+      expect.assertions(1);
+      const source = signal([1]);
+      const seen: number[][] = [];
+      effect(() => {
+        seen.push([...get(source)]);
+      });
+      batch(() => {
+        write(source, 2);
+        write(source, 3);
+      });
+      expect(seen).toEqual([[1], [1, 2, 3]]);
+    });
+
+    test.each(WRITES)("each write outside a batch runs the readers (%s)", (_name, write) => {
+      expect.assertions(1);
+      const source = signal([1]);
+      let runs = 0;
+      effect(() => {
+        runs++;
+        get(source);
+      });
+      write(source, 2);
+      write(source, 3);
+      write(source, 4);
+      expect(runs).toBe(4);
+    });
+
+    test("a trigger, then a set: one run, with the set value", () => {
+      expect.assertions(1);
+      const source = signal([1]);
+      const seen: number[][] = [];
+      effect(() => {
+        seen.push([...get(source)]);
+      });
+      batch(() => {
+        trigger(source);
+        set(source, [7]);
+      });
+      expect(seen).toEqual([[1], [7]]);
+    });
+
+    test("a trigger, then a set of the same reference: one run", () => {
+      expect.assertions(1);
+      const source = signal([1]);
+      const seen: number[][] = [];
+      effect(() => {
+        seen.push([...get(source)]);
+      });
+      batch(() => {
+        source.v.push(2);
+        trigger(source);
+        set(source, source.v);
+      });
+      expect(seen).toEqual([[1], [1, 2]]);
+    });
+
+    test("a set, then a trigger: one run, with the set value changed", () => {
+      expect.assertions(1);
+      const source = signal([1]);
+      const seen: number[][] = [];
+      effect(() => {
+        seen.push([...get(source)]);
+      });
+      batch(() => {
+        set(source, [7]);
+        source.v.push(8);
+        trigger(source);
+      });
+      expect(seen).toEqual([[1], [7, 8]]);
+    });
+
+    test.each(WRITES)(
+      "it reaches a reader that an earlier write in the batch marked and undid (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const offset = signal(0);
+        const sum = computed(() => get(source).length + get(offset));
+        const seen: number[] = [];
+        effect(() => {
+          seen.push(get(sum));
+        });
+        batch(() => {
+          // Marks sum and leaves offset as sum read it: the trigger's mark stops at sum
+          set(offset, 1);
+          set(offset, 0);
+          write(source, 2);
+        });
+        expect(seen).toEqual([1, 2]);
+      },
+    );
+
+    test("Accepted tradeoff: a trigger, then a set back to the value the readers read, in one batch, still runs them", () => {
+      expect.assertions(2);
+      const value = [1];
+      const source = signal(value);
+      let runs = 0;
+      effect(() => {
+        runs++;
+        get(source);
+      });
+      // The model: a set of an unseen value, then back, runs nothing
+      batch(() => {
+        set(source, [5]);
+        set(source, value);
+      });
+      expect(runs).toBe(1);
+      batch(() => {
+        const other = [5];
+        set(source, other);
+        other.push(6);
+        trigger(source);
+        set(source, value);
+      });
+      // A trigger forgets every record, also one of a value the signal no longer holds
+      expect(runs).toBe(2);
+    });
+  });
+
+  describe("writes during runs, cleanups and owners", () => {
+    test.each(WRITES)("in a scope's body a write runs its readers at once (%s)", (_name, write) => {
+      expect.assertions(1);
+      const source = signal([1]);
+      const seen: number[] = [];
+      scope(() => {
+        effect(() => {
+          seen.push(get(source).length);
+        });
+        write(source, 2);
+        expect(seen).toEqual([1, 2]);
+      });
+    });
+
+    test.each(WRITES)(
+      "an effect that writes its own dep on its first run does not run again for it (%s)",
+      (_name, write) => {
+        expect.assertions(2);
+        const source = signal([1]);
+        const seen: number[] = [];
+        effect(() => {
+          seen.push(get(source).length);
+          if (seen.length === 1) write(source, 2);
+        });
+        expect(seen).toEqual([1]);
+        expect(source.v).toEqual([1, 2]);
+      },
+    );
+
+    test.each(WRITES)(
+      "an effect that wrote its own dep runs again on its next check (%s)",
+      (_name, write) => {
+        expect.assertions(2);
+        const source = signal([1]);
+        const level = signal(1);
+        const positive = computed(() => get(level) > 0);
+        const seen: number[] = [];
+        effect(() => {
+          seen.push(get(source).length);
+          get(positive);
+          if (seen.length === 1) write(source, 2);
+        });
+        // positive stays true: only the stale record of source runs it again
+        set(level, 2);
+        expect(seen).toEqual([1, 2]);
+        set(level, 3);
+        expect(seen).toEqual([1, 2]);
+      },
+    );
+
+    test.each(WRITES)(
+      "an effect that writes its own dep on a re-run does not run again for it (%s)",
+      (_name, write) => {
+        expect.assertions(2);
+        const source = signal([1]);
+        const level = signal(1);
+        const positive = computed(() => get(level) > 0);
+        const seen: number[] = [];
+        effect(() => {
+          seen.push(get(source).length);
+          get(positive);
+          if (seen.length === 2) write(source, 3);
+        });
+        write(source, 2);
+        expect(seen).toEqual([1, 2]);
+        set(level, 2);
+        expect(seen).toEqual([1, 2, 3]);
+      },
+    );
+
+    test.each(WRITES)(
+      "a run that reads, writes and reads again sees the write and runs again on its next check (%s)",
+      (_name, write) => {
+        expect.assertions(2);
+        const source = signal([1]);
+        const level = signal(1);
+        const positive = computed(() => get(level) > 0);
+        const seen: number[][] = [];
+        effect(() => {
+          const before = get(source).length;
+          if (seen.length === 0) write(source, 2);
+          seen.push([before, get(source).length]);
+          get(positive);
+        });
+        expect(seen).toEqual([[1, 2]]);
+        set(level, 2);
+        expect(seen).toEqual([
+          [1, 2],
+          [2, 2],
+        ]);
+      },
+    );
+
+    test.each(WRITES)(
+      "a sub that writes its own source is called again until it stops (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([0]);
+        const seen: number[] = [];
+        sub(source, (value) => {
+          seen.push(value.length);
+          // Bounded: a write on every call never settles
+          if (value.length < 4) write(source, value.length);
+        });
+        expect(seen).toEqual([1, 2, 3, 4]);
+      },
+    );
+
+    test("a sub that triggers its own source gets the same reference each call", () => {
+      expect.assertions(2);
+      const value = [0];
+      const source = signal(value);
+      const seen: number[][] = [];
+      sub(source, (got) => {
+        seen.push(got);
+        if (seen.length < 3) trigger(source);
+      });
+      expect(seen).toHaveLength(3);
+      expect(seen.filter((got) => got !== value)).toEqual([]);
+    });
+
+    test.each(WRITES)(
+      "an effect's write reaches another effect in the same flush (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const input = signal(0);
+        const log: string[] = [];
+        effect(() => {
+          log.push(`reader ${get(source).length}`);
+        });
+        effect(() => {
+          if (get(input) > 0) write(source, get(input));
+          log.push(`writer ${get(input)}`);
+        });
+        set(input, 1);
+        expect(log).toEqual(["reader 1", "writer 0", "writer 1", "reader 2"]);
+      },
+    );
+
+    test.each(WRITES)(
+      "a cleanup's write during a re-run runs the other readers after it (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const input = signal(0);
+        const log: string[] = [];
+        effect(() => {
+          log.push(`reader ${get(source).length}`);
+        });
+        effect(() => {
+          log.push(`owner ${get(input)}`);
+          return () => {
+            write(source, 9);
+          };
+        });
+        set(input, 1);
+        expect(log).toEqual(["reader 1", "owner 0", "owner 1", "reader 2"]);
+      },
+    );
+
+    test.each(WRITES)(
+      "an effect whose own cleanup writes its dep runs once more (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const input = signal(0);
+        const seen: number[] = [];
+        let cleanups = 0;
+        effect(() => {
+          seen.push(get(source).length);
+          get(input);
+          return () => {
+            if (cleanups++ === 0) write(source, 2);
+          };
+        });
+        set(input, 1);
+        expect(seen).toEqual([1, 2]);
+      },
+    );
+
+    test.each(WRITES)(
+      "an effect that ran after its own cleanup's write is current (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const level = signal(1);
+        const positive = computed(() => get(level) > 0);
+        const seen: number[] = [];
+        let cleanups = 0;
+        effect(() => {
+          seen.push(get(source).length);
+          get(positive);
+          return () => {
+            if (cleanups++ === 0) write(source, 2);
+          };
+        });
+        write(source, 5);
+        // positive stays true: a stale record of source would run it again
+        set(level, 2);
+        expect(seen).toEqual([1, 3]);
+      },
+    );
+
+    test.each(WRITES)(
+      "a cleanup's write during dispose runs the other readers, not the disposed one (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const log: string[] = [];
+        effect(() => {
+          log.push(`reader ${get(source).length}`);
+        });
+        const handle = effect(() => {
+          log.push(`disposed ${get(source).length}`);
+          return () => {
+            write(source, 2);
+          };
+        });
+        dispose(handle);
+        expect(log).toEqual(["reader 1", "disposed 1", "reader 2"]);
+      },
+    );
+
+    test.each(WRITES)(
+      "a parent that read the signal before making its child runs first and disposes it (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const log: string[] = [];
+        effect(() => {
+          log.push(`parent ${get(source).length}`);
+          effect(() => {
+            log.push(`child ${get(source).length}`);
+            return () => {
+              log.push("child cleanup");
+            };
+          });
+        });
+        write(source, 2);
+        expect(log).toEqual(["parent 1", "child 1", "child cleanup", "parent 2", "child 2"]);
+      },
+    );
+
+    test.each(WRITES)(
+      "a parent that read the signal after making its child runs first and disposes it (%s)",
+      (_name, write) => {
+        expect.assertions(1);
+        const source = signal([1]);
+        const log: string[] = [];
+        effect(() => {
+          effect(() => {
+            log.push(`child ${get(source).length}`);
+            return () => {
+              log.push("child cleanup");
+            };
+          });
+          log.push(`parent ${get(source).length}`);
+        });
+        write(source, 2);
+        expect(log).toEqual(["child 1", "parent 1", "child cleanup", "child 2", "parent 2"]);
+      },
+    );
+  });
+
+  // Unsupported (documented): a list keeps the array it rendered and diffs by identity
+  describe("a list's items pushed in place, then triggered", () => {
+    interface Item {
+      readonly id: string;
+    }
+    /** A list of a, b in a detached ul, wired as sub(items, list(...)). */
+    const mount = (): { items: Signal<Item[]>; text: () => string } => {
+      const ul = document.createElement("ul");
+      const items = signal<Item[]>([{ id: "a" }, { id: "b" }]);
+      sub(
+        items,
+        list(ul, "id", (item: Item) => {
+          const li = document.createElement("li");
+          li.textContent = item.id;
+          return li;
+        }),
+      );
+      return { items, text: () => [...ul.children].map((li) => li.textContent).join("") };
+    };
+
+    test.if(DEV)("dev: the trigger throws the list guard's error", () => {
+      expect.assertions(1);
+      const { items } = mount();
+      items.v.push({ id: "c" });
+      expect(() => {
+        trigger(items);
+      }).toThrow(/^stage1: a list's items array was changed in place/u);
+    });
+
+    test.if(!DEV)("Characterization (production): no row is added", () => {
+      expect.assertions(1);
+      const { items, text } = mount();
+      items.v.push({ id: "c" });
+      trigger(items);
+      expect(text()).toBe("ab");
+    });
+
+    test.if(!DEV)("Characterization (production): a later copy adds no row either", () => {
+      expect.assertions(1);
+      const { items, text } = mount();
+      items.v.push({ id: "c" });
+      trigger(items);
+      set(items, [...items.v]);
+      expect(text()).toBe("ab");
+    });
+
+    test.if(!DEV)("Characterization (production): a later removal of the item throws", () => {
+      expect.assertions(1);
+      const { items } = mount();
+      items.v.push({ id: "c" });
+      trigger(items);
+      expect(() => {
+        set(
+          items,
+          items.v.filter((item) => item.id !== "c"),
+        );
+      }).toThrow(TypeError);
+    });
   });
 });
 
@@ -6072,5 +6768,74 @@ describe.if(DEV)("dev checks", () => {
     dispose(root);
     expect(String(error)).toStartWith("Error: stage1: ");
     expect(seen).toBe(7);
+  });
+
+  test("a trigger inside a computed's getter throws on read", () => {
+    expect.assertions(1);
+    const source = signal([1]);
+    const node = computed(() => {
+      trigger(source);
+      return 0;
+    });
+    expect(() => get(node)).toThrow(/^stage1: trigger inside a computed$/u);
+  });
+
+  test("a trigger inside a computed's getter leaves the signal's value as it was", () => {
+    expect.assertions(1);
+    const value = [1];
+    const source = signal(value);
+    thrownBy(() => {
+      get(
+        computed(() => {
+          trigger(source);
+          return 0;
+        }),
+      );
+    });
+    expect(source.v).toBe(value);
+  });
+
+  test("a trigger inside a computed's getter leaves the signal's readers current", () => {
+    expect.assertions(1);
+    const source = signal([1]);
+    const level = signal(1);
+    const positive = computed(() => get(level) > 0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      get(source);
+      get(positive);
+    });
+    thrownBy(() => {
+      get(
+        computed(() => {
+          trigger(source);
+          return 0;
+        }),
+      );
+    });
+    // `positive` stays true: only a reader's link to `source` voided by the throw runs it again
+    set(level, 2);
+    expect(runs).toBe(1);
+  });
+
+  test("after a trigger inside a computed's getter threw, a trigger still runs the readers", () => {
+    expect.assertions(1);
+    const source = signal([1]);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      get(source);
+    });
+    thrownBy(() => {
+      get(
+        computed(() => {
+          trigger(source);
+          return 0;
+        }),
+      );
+    });
+    trigger(source);
+    expect(runs).toBe(2);
   });
 });

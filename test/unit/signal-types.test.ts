@@ -18,6 +18,7 @@ import {
   type Signal,
   signal,
   sub,
+  trigger,
   untracked,
 } from "../../src/signal.ts";
 
@@ -94,6 +95,24 @@ describe("set", () => {
       set(c, 2);
       // @ts-expect-error - the value must be the signal's type
       set(s, "2");
+    }).toBeFunction();
+  });
+});
+
+describe("trigger", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf(trigger).not.toBeAny();
+    expectTypeOf(trigger).toBeFunction();
+    // Erased: `T` -> `unknown`.
+    expectTypeOf(trigger).parameters.toEqualTypeOf<[signal: Signal<unknown>]>();
+    expectTypeOf(trigger).returns.toBeVoid();
+    expectTypeOf(trigger).returns.not.toBeUndefined();
+    expectTypeOf(trigger<number[]>).parameters.toEqualTypeOf<[signal: Signal<number[]>]>();
+    expectTypeOf((s: Signal<number[]>, c: Computed<number[]>) => {
+      trigger(s);
+      // @ts-expect-error - a computed is not a signal: it is not written
+      trigger(c);
     }).toBeFunction();
   });
 });
