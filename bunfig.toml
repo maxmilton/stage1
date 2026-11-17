@@ -15,4 +15,4 @@ minimumReleaseAgeExcludes = ["@maxmilton/oxlint-config", "@maxmilton/test-utils"
 
 [test]
 preload = ["./test/setup.ts"]
-pathIgnorePatterns = ["test/e2e/**", "**/*.bak/**"]
+pathIgnorePatterns = ["test/e2e/**", "test/v8/**", "**/*.bak/**"]

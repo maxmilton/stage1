@@ -82,7 +82,7 @@
       },
     },
     {
-      "files": ["test/e2e/**"],
+      "files": ["test/e2e/**", "test/v8/**"],
       "plugins": ["vitest"],
       "rules": {
         "vitest/consistent-test-filename": ["error", { "pattern": ".*\\.spec\\.ts$" }],
