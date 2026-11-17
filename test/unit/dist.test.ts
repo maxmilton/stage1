@@ -73,11 +73,15 @@ describe("dist files", () => {
   });
 });
 
-// stage1 and stage1/lite ship as source; the app's Bun build decides whether the dev checks stay.
+// stage1, stage1/lite and stage1/ultralite ship as source; the app's Bun build decides whether the
+// dev checks stay.
 describe.each([
   // Measured 6445 B (Bun 1.4.4); the previous signal core and lists made 7088 B
   ["src/index.ts", 6000, 7500],
+  // Measured 4121 B (Bun 1.4.4); the core that walked nested writes at once made 3956 B
   ["src/lite/index.ts", 3500, 4800],
+  // Measured 3697 B (Bun 1.4.4)
+  ["src/ultralite/index.ts", 3300, 4500],
 ])("%s", (entry, minBytes, maxBytes) => {
   // Explicit define: without one, Bun.build substitutes the test process's NODE_ENV.
   const bundle = async (nodeEnv: string) => {
@@ -161,6 +165,7 @@ describe("package.json", () => {
     expect(pkg.exports).toContainAllKeys([
       ".",
       "./lite",
+      "./ultralite",
       "./macro",
       "./browser",
       "./legacy",

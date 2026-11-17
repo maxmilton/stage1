@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 
-/** stage1 and stage1/lite ship as source: bundle one as an app's production build does. */
+/** stage1 and its lite tiers ship as source: bundle one as an app's production build does. */
 function bundle(entry: string): string {
   return execFileSync("bun", ["build", entry, "--production", "--target=browser"], {
     cwd: path.resolve(import.meta.dirname, "../.."),
@@ -17,6 +17,7 @@ function bundle(entry: string): string {
 const jsPath = path.resolve(import.meta.dirname, "../../dist/browser.js");
 const rootCode = bundle("src/index.ts");
 const liteCode = bundle("src/lite/index.ts");
+const ultraliteCode = bundle("src/ultralite/index.ts");
 const [esmCode, precompiledCode] = await Promise.all([
   readFile(path.resolve(import.meta.dirname, "../../dist/browser.mjs"), "utf8"),
   readFile(path.resolve(import.meta.dirname, "../../dist/legacy/index.js"), "utf8"),
@@ -70,6 +71,7 @@ const ROOT_EXPORTS = [
   "sub",
   "untracked",
 ];
+/** stage1/lite's, and stage1/ultralite's: the same names. */
 const LITE_EXPORTS = [
   ...DOM_EXPORTS,
   "batch",
@@ -224,6 +226,46 @@ test.describe("a production build of stage1/lite", () => {
       ]);
       return parent.textContent;
     }, liteCode);
+
+    expect(result).toBe("bc");
+  });
+});
+
+test.describe("a production build of stage1/ultralite", () => {
+  test("exposes exactly the documented exports", async ({ page }) => {
+    const result = await page.evaluate(async (src) => {
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      return Object.keys((await import(url)) as object);
+    }, ultraliteCode);
+
+    expect(result.toSorted(byCodeUnit)).toEqual(LITE_EXPORTS.toSorted(byCodeUnit));
+  });
+
+  test("keeps a list's rows in step with its items", async ({ page }) => {
+    const result = await page.evaluate(async (src) => {
+      const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+      // oxlint-disable-next-line typescript/consistent-type-imports
+      const lite = (await import(url)) as typeof import("../../src/ultralite/index.ts");
+      const { h, list, set, signal, sub } = lite;
+      const parent = h(/* html */ "<ul></ul>");
+      const items = signal([
+        { id: 1, label: "a" },
+        { id: 2, label: "b" },
+      ]);
+      sub(
+        items,
+        list(parent, "id", (item: { id: number; label: string }) => {
+          const row = h(/* html */ "<li></li>");
+          row.textContent = item.label;
+          return row;
+        }),
+      );
+      set(items, [
+        { id: 2, label: "b" },
+        { id: 3, label: "c" },
+      ]);
+      return parent.textContent;
+    }, ultraliteCode);
 
     expect(result).toBe("bc");
   });

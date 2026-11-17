@@ -21,6 +21,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./lite": "./src/lite/index.ts",
+    "./ultralite": "./src/ultralite/index.ts",
     "./macro": {
       "types": "./dist/macro.d.ts",
       "default": "./dist/macro.js"

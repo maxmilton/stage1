@@ -1,9 +1,11 @@
-// list and mark: one signal-free module for both tiers. `list` returns the rows function and `mark`
+// list and mark: one signal-free module for every tier. `list` returns the rows function and `mark`
 // the show function; the "on <tier>" groups wire them with that tier's sub, which decides what
-// becomes of a write to the items or the selection made inside a callback: stage1/lite's sub calls
-// back at once (nested), stage1's after the callback returns. Then the full tier's own behaviour
-// (rows that own effects through drop, parent-first, re-entrancy, components, dev row warnings),
-// and the diff's paths, called directly. stage1/lite's own checks are in lite-reconcile.test.ts.
+// becomes of a write to the items or the selection made inside a callback: stage1's and
+// stage1/lite's subs deliver it after the callback returns, stage1/ultralite's calls back at once
+// outside a batch (nested). stage1/ultralite holds one sub per signal, so tests that sub a signal
+// twice skip it. Then the full tier's own behaviour (rows that own effects through drop,
+// parent-first, re-entrancy, components, dev row warnings), and the diff's paths, called directly.
+// The lite tiers' own checks are in lite-reconcile.test.ts.
 // Run in both modes: `bun test` (dev checks on) and `NODE_ENV=production bun test`.
 // Callbacks and checks inside loops branch on the data they receive.
 // oxlint-disable vitest/no-conditional-in-test node/no-process-env
@@ -26,6 +28,7 @@ import {
   signal,
   sub,
 } from "../../src/signal.ts";
+import * as ultralite from "../../src/ultralite/signal.ts";
 
 const DEV = process.env.NODE_ENV !== "production";
 
@@ -259,9 +262,10 @@ describe("list", () => {
         },
       );
       expectTypeOf(rows).toEqualTypeOf<Rows<Item, string, HTMLSpanElement>>();
-      // Either tier's sub wires it
+      // Any tier's sub wires it
       sub(signal<readonly Item[]>([]), rows);
       lite.sub(lite.signal<readonly Item[]>([]), rows);
+      ultralite.sub(ultralite.signal<readonly Item[]>([]), rows);
       // @ts-expect-error - the source must hold the list's items
       sub(signal<readonly string[]>([]), rows);
       // @ts-expect-error - key must be a property of the items
@@ -315,8 +319,10 @@ interface Source<T> {
   readonly v: T;
 }
 interface Wiring {
-  /** What becomes of a write to the source made inside the callback. */
+  /** What becomes of a write to the source made inside the callback (outside a batch). */
   readonly reentry: "nested" | "after";
+  /** "one": a signal holds at most one live sub (a second is a dev error). */
+  readonly subs: "many" | "one";
   readonly signal: <T>(value: T) => Source<T>;
   readonly set: <T>(source: Source<T>, value: T) => void;
   readonly batch: (fn: () => void) => unknown;
@@ -330,6 +336,7 @@ const TIERS: readonly (readonly [name: string, wiring: Wiring])[] = [
     "stage1",
     {
       reentry: "after",
+      subs: "many",
       signal,
       set: set as Wiring["set"],
       batch,
@@ -340,12 +347,25 @@ const TIERS: readonly (readonly [name: string, wiring: Wiring])[] = [
   [
     "stage1/lite",
     {
-      reentry: "nested",
+      reentry: "after",
+      subs: "many",
       signal: lite.signal,
       set: lite.set as Wiring["set"],
       batch: lite.batch,
       sub: lite.sub as Wiring["sub"],
       dispose: lite.dispose as Wiring["dispose"],
+    },
+  ],
+  [
+    "stage1/ultralite",
+    {
+      reentry: "nested",
+      subs: "one",
+      signal: ultralite.signal,
+      set: ultralite.set as Wiring["set"],
+      batch: ultralite.batch,
+      sub: ultralite.sub as Wiring["sub"],
+      dispose: ultralite.dispose as Wiring["dispose"],
     },
   ],
 ];
@@ -707,30 +727,36 @@ describe.each(TIERS)("on %s", (_tier, w) => {
       expect(itemOrder(rendered.parent)).toEqual(["a", "b", "c", "d"]);
     });
 
-    test("disposing a wiring twice leaves a later list on its items following them", () => {
-      expect.assertions(1);
-      const first = render(ITEMS);
-      w.dispose(first.handle);
-      const parent = document.createElement("div");
-      w.sub(first.source, list(parent, "id", createItemNode));
-      w.dispose(first.handle);
-      first.set(lettered("x"));
-      expect(itemOrder(parent)).toEqual(["x"]);
-    });
+    test.if(w.subs === "many")(
+      "disposing a wiring twice leaves a later list on its items following them",
+      () => {
+        expect.assertions(1);
+        const first = render(ITEMS);
+        w.dispose(first.handle);
+        const parent = document.createElement("div");
+        w.sub(first.source, list(parent, "id", createItemNode));
+        w.dispose(first.handle);
+        first.set(lettered("x"));
+        expect(itemOrder(parent)).toEqual(["x"]);
+      },
+    );
 
-    test("a second list on one items signal follows it too, and is disposed on its own", () => {
-      expect.assertions(1);
-      const items = w.signal(ITEMS);
-      const [first, second] = [document.createElement("div"), document.createElement("div")];
-      const one = w.sub(items, list(first, "id", createItemNode));
-      w.sub(items, list(second, "id", createItemNode));
-      w.dispose(one);
-      w.set(items, lettered("xy"));
-      expect([itemOrder(first), itemOrder(second)]).toEqual([
-        ["a", "b", "c", "d"],
-        ["x", "y"],
-      ]);
-    });
+    test.if(w.subs === "many")(
+      "a second list on one items signal follows it too, and is disposed on its own",
+      () => {
+        expect.assertions(1);
+        const items = w.signal(ITEMS);
+        const [first, second] = [document.createElement("div"), document.createElement("div")];
+        const one = w.sub(items, list(first, "id", createItemNode));
+        w.sub(items, list(second, "id", createItemNode));
+        w.dispose(one);
+        w.set(items, lettered("xy"));
+        expect([itemOrder(first), itemOrder(second)]).toEqual([
+          ["a", "b", "c", "d"],
+          ["x", "y"],
+        ]);
+      },
+    );
 
     test("a batch reconciles once, at its end, with the last items", () => {
       expect.assertions(1);
@@ -839,6 +865,28 @@ describe.each(TIERS)("on %s", (_tier, w) => {
         expect(itemOrder(rendered.parent)).toEqual(["x", "y"]);
       },
     );
+
+    // The wiring's first call is held: the write is delivered after it returns
+    test.if(w.reentry === "after")(
+      "a create in the first reconcile that writes the items leaves the rows matching them",
+      () => {
+        expect.assertions(1);
+        const source = w.signal<readonly Item[]>(lettered("ab"));
+        const parent = document.createElement("div");
+        let wrote = false;
+        w.sub(
+          source,
+          list(parent, "id", (item: Item) => {
+            if (!wrote) {
+              wrote = true;
+              w.set(source, lettered("z"));
+            }
+            return createItemNode(item);
+          }),
+        );
+        expect(itemOrder(parent)).toEqual(["z"]);
+      },
+    );
   });
 
   describe("mark", () => {
@@ -896,7 +944,7 @@ describe.each(TIERS)("on %s", (_tier, w) => {
       expect(calls).toEqual([["b", true]]);
     });
 
-    test("marks a row of a list whose items signal already had a sub", () => {
+    test.if(w.subs === "many")("marks a row of a list whose items signal already had a sub", () => {
       expect.assertions(1);
       const items = w.signal(ITEMS);
       w.sub(items, () => {});
@@ -930,19 +978,22 @@ describe.each(TIERS)("on %s", (_tier, w) => {
       expect(calls).toEqual([["c", true]]);
     });
 
-    test("calls nothing when a batch restores the value, even with a reader made in the batch", () => {
-      expect.assertions(1);
-      const selected = w.signal("a");
-      const [calls, fn] = recorder();
-      marked(selected, rowsOf(ITEMS), fn);
-      calls.length = 0;
-      w.batch(() => {
-        w.set(selected, "b");
-        w.sub(selected, () => {});
-        w.set(selected, "a");
-      });
-      expect(calls).toEqual([]);
-    });
+    test.if(w.subs === "many")(
+      "calls nothing when a batch restores the value, even with a reader made in the batch",
+      () => {
+        expect.assertions(1);
+        const selected = w.signal("a");
+        const [calls, fn] = recorder();
+        marked(selected, rowsOf(ITEMS), fn);
+        calls.length = 0;
+        w.batch(() => {
+          w.set(selected, "b");
+          w.sub(selected, () => {});
+          w.set(selected, "a");
+        });
+        expect(calls).toEqual([]);
+      },
+    );
 
     test("marks the right row after many selections and then a list change", () => {
       expect.assertions(1);
@@ -994,19 +1045,22 @@ describe.each(TIERS)("on %s", (_tier, w) => {
       expect(markedIds(rendered.parent.children)).toEqual(["e"]);
     });
 
-    test("marks the restored key's row when created during a batch that restores the value", () => {
-      expect.assertions(1);
-      const rendered = render(ITEMS);
-      const selected = w.signal("a");
-      w.sub(selected, () => {});
-      const [, fn] = recorder();
-      w.batch(() => {
-        w.set(selected, "b");
-        marked(selected, rendered.rows, fn);
-        w.set(selected, "a");
-      });
-      expect(markedIds(rendered.parent.children)).toEqual(["a"]);
-    });
+    test.if(w.subs === "many")(
+      "marks the restored key's row when created during a batch that restores the value",
+      () => {
+        expect.assertions(1);
+        const rendered = render(ITEMS);
+        const selected = w.signal("a");
+        w.sub(selected, () => {});
+        const [, fn] = recorder();
+        w.batch(() => {
+          w.set(selected, "b");
+          marked(selected, rendered.rows, fn);
+          w.set(selected, "a");
+        });
+        expect(markedIds(rendered.parent.children)).toEqual(["a"]);
+      },
+    );
 
     test("leaves only the final row marked when fn changes the selection mid-change", () => {
       expect.assertions(1);
@@ -1096,28 +1150,36 @@ describe.each(TIERS)("on %s", (_tier, w) => {
       expect(calls).toEqual([]);
     });
 
-    test("disposing a mark's wiring twice leaves a later mark on its selection following it", () => {
-      expect.assertions(1);
-      const selected = w.signal("a");
-      const handle = marked(selected, rowsOf(ITEMS), () => {});
-      w.dispose(handle);
-      const [calls, fn] = recorder();
-      marked(selected, rowsOf(ITEMS), fn);
-      w.dispose(handle);
-      w.set(selected, "b");
-      expect(calls).toEqual([
-        ["a", true],
-        ["a", false],
-        ["b", true],
-      ]);
-    });
+    test.if(w.subs === "many")(
+      "disposing a mark's wiring twice leaves a later mark on its selection following it",
+      () => {
+        expect.assertions(1);
+        const selected = w.signal("a");
+        const handle = marked(selected, rowsOf(ITEMS), () => {});
+        w.dispose(handle);
+        const [calls, fn] = recorder();
+        marked(selected, rowsOf(ITEMS), fn);
+        w.dispose(handle);
+        w.set(selected, "b");
+        expect(calls).toEqual([
+          ["a", true],
+          ["a", false],
+          ["b", true],
+        ]);
+      },
+    );
 
     // Nothing detaches a mark from its list but a later mark (documented; a check would cost
     // bytes). On stage1/lite the wiring is the selection's first sub or a later one: both
-    test.each([
-      ["the selection's only sub", false],
-      ["a later sub of the selection", true],
-    ])(
+    // (stage1/ultralite holds one sub per signal: the first only)
+    test.each(
+      (
+        [
+          ["the selection's only sub", false],
+          ["a later sub of the selection", true],
+        ] as const
+      ).filter(([, shared]) => !shared || w.subs === "many"),
+    )(
       "Accepted tradeoff: a mark whose wiring is disposed still marks rows the list creates later with its last key (%s)",
       (_label, shared) => {
         expect.assertions(1);
@@ -1201,7 +1263,7 @@ describe.each(TIERS)("on %s", (_tier, w) => {
       expect(calls).toEqual([["a", false]]);
     });
 
-    test("lets several marks share one map and one signal", () => {
+    test.if(w.subs === "many")("lets several marks share one map and one signal", () => {
       expect.assertions(1);
       const tabs = elements("ab");
       const selected = w.signal("a");
@@ -2697,7 +2759,7 @@ describe("rows called directly", () => {
 });
 
 describe("bundle", () => {
-  test("the list module imports no signal module (one file serves both tiers)", async () => {
+  test("the list module imports no signal module (one file serves every tier)", async () => {
     expect.assertions(1);
     const loaded: string[] = [];
     const out = await Bun.build({

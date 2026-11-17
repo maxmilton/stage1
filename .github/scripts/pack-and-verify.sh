@@ -64,6 +64,8 @@ jq -e '
   index("src/macro.ts") != null and
   index("src/lite/index.ts") != null and
   index("src/lite/signal.ts") != null and
+  index("src/ultralite/index.ts") != null and
+  index("src/ultralite/signal.ts") != null and
   index("src/browser/index.ts") != null and
   index("src/browser/runtime.ts") != null and
   index("src/legacy/index.ts") != null and
@@ -78,8 +80,8 @@ jq -e '
   index("src/legacy/reconcile/reuse-lite.ts") != null
 ' "$PACK_JSON" \
   || fail "Required package files missing"
-jq -e '.[keys[0]].entryCount == 57' "$PACK_JSON" \
-  || fail "Expected 57 packed files"
+jq -e '.[keys[0]].entryCount == 59' "$PACK_JSON" \
+  || fail "Expected 59 packed files"
 filename="$(jq -er '.[keys[0]].filename' "$PACK_JSON")" \
   || fail "Package filename missing"
 mv -- "$filename" publish.tgz \

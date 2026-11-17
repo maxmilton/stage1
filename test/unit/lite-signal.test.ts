@@ -1,18 +1,30 @@
 // stage1/lite's signals, its design's own edge cases beyond lite-contract.test.ts: the first sub
 // held in the signal (the signal is its handle; a disposed slot is never reused), notification's
-// two steps (the first sub, then the nodes), records under nested writes and batches, errors and
-// memory. Where the contract leaves a choice (sibling order, self-write re-calls, where an error
-// surfaces), a test labelled "Characterization" pins this design's choice, so a change to it is
-// deliberate. A walk calls the first sub, then the nodes newest first, so "after" in a walk means a
-// node created earlier (but after the first sub).
-// oxlint-disable vitest/no-conditional-in-test
+// two steps (the first sub, then the nodes), records under queued writes and batches, the queue
+// (a write made while a callback runs, a batch is open or a first call is held is delivered after
+// it), errors, the dev loop bound, the stack edge and memory. Where the contract leaves a choice
+// (sibling order, where an error surfaces), a test labelled "Characterization" pins this design's
+// choice, so a change to it is deliberate. A walk calls the first sub, then the nodes newest first,
+// so "after" in a walk means a node created earlier (but after the first sub). Run in both modes:
+// `bun test` (dev checks on) and `NODE_ENV=production bun test`.
+// oxlint-disable vitest/no-conditional-in-test node/no-process-env
 
 import { heapStats } from "bun:jsc";
 import { describe, expect, test } from "bun:test";
-import { batch, dispose, set, type Signal, signal, sub, type Sub } from "../../src/lite/signal.ts";
+import {
+  batch,
+  dispose,
+  type Effect,
+  set,
+  type Signal,
+  signal,
+  sub,
+} from "../../src/lite/signal.ts";
+
+const DEV = process.env.NODE_ENV !== "production";
 
 /** A sub that records every value it is called with. */
-const watch = <T>(source: Signal<T>): { seen: T[]; handle: Sub } => {
+const watch = <T>(source: Signal<T>): { seen: T[]; handle: Effect } => {
   const seen: T[] = [];
   const handle = sub(source, (value) => {
     seen.push(value);
@@ -41,19 +53,53 @@ const survivors = async (make: () => object): Promise<number> => {
   return refs.filter((ref) => ref.deref() !== undefined).length;
 };
 
+/** What `fn` threw, boxed (so a thrown undefined shows), or undefined when it returned. */
+const outcome = (fn: () => void): { error: unknown } | undefined => {
+  try {
+    fn();
+  } catch (error) {
+    return { error };
+  }
+  return undefined;
+};
+
+/**
+ * What a probe sub saw after an unbatched write, after a batch's write, and after a first call's
+ * write: each is delivered before it returns only when no pass, batch or first call is left open.
+ */
+const atRest = (): number[][] => {
+  const probe = signal(0);
+  const { seen } = watch(probe);
+  set(probe, 1);
+  const afterSet = [...seen];
+  batch(() => {
+    set(probe, 2);
+  });
+  const afterBatch = [...seen];
+  sub(signal(0), () => {
+    set(probe, 3);
+  });
+  return [afterSet, afterBatch, seen];
+};
+const REST = [
+  [0, 1],
+  [0, 1, 2],
+  [0, 1, 2, 3],
+];
+
 describe("lite signals", () => {
   describe("the first sub, held in the signal", () => {
     test("Characterization: the first sub's handle is its signal", () => {
       expect.assertions(1);
       const source = signal(0);
-      expect(sub(source, noop)).toBe(source as unknown as Sub);
+      expect(sub(source, noop)).toBe(source as unknown as Effect);
     });
 
     test("Characterization: a later sub's handle is not its signal", () => {
       expect.assertions(1);
       const source = signal(0);
       sub(source, noop);
-      expect(sub(source, noop)).not.toBe(source as unknown as Sub);
+      expect(sub(source, noop)).not.toBe(source as unknown as Effect);
     });
 
     test("disposing the first sub's handle again after a later sub was made leaves that sub subscribed", () => {
@@ -153,7 +199,7 @@ describe("lite signals", () => {
     test("the first sub disposing itself mid-notification skips no node", () => {
       expect.assertions(2);
       const source = signal(0);
-      const first: Sub = sub(source, (value) => {
+      const first: Effect = sub(source, (value) => {
         if (value === 1) dispose(first);
       });
       const older = watch(source);
@@ -166,7 +212,7 @@ describe("lite signals", () => {
     test("the first sub disposing a node before the walk reaches it keeps that node from being called", () => {
       expect.assertions(1);
       const source = signal(0);
-      const targets: Sub[] = [];
+      const targets: Effect[] = [];
       sub(source, (value) => {
         if (value === 1) for (const each of targets) dispose(each);
       });
@@ -176,7 +222,7 @@ describe("lite signals", () => {
       expect(node.seen).toEqual([0]);
     });
 
-    test("a node that disposes the first sub and writes again keeps the first sub from the nested write", () => {
+    test("a node that disposes the first sub and writes again keeps the first sub from that write", () => {
       expect.assertions(1);
       const source = signal(0);
       const first = watch(source);
@@ -196,7 +242,7 @@ describe("lite signals", () => {
       sub(source, noop);
       const oldest = watch(source);
       const middle = watch(source);
-      const newest: Sub = sub(source, (value) => {
+      const newest: Effect = sub(source, (value) => {
         if (value === 1) {
           dispose(newest);
           dispose(middle.handle);
@@ -213,7 +259,7 @@ describe("lite signals", () => {
       sub(source, noop);
       const last = watch(source);
       const victims = [watch(source), watch(source)];
-      const handle: Sub = sub(source, (value) => {
+      const handle: Effect = sub(source, (value) => {
         if (value === 1) {
           dispose(handle);
           for (const victim of victims.toReversed()) dispose(victim.handle);
@@ -223,8 +269,8 @@ describe("lite signals", () => {
       expect([last.seen, ...victims.map(({ seen }) => seen)]).toEqual([[0, 1], [0], [0]]);
     });
 
-    // Characterization: the nested walk delivers the newer value to the nodes after the writer, so
-    // the resumed outer walk finds them up to date
+    // The walk reads the value per node, so the nodes after the writer get the newer value in it,
+    // and the walk of the queued write finds them up to date
     test("a write inside a callback reaches each node after the writer once, with the newer value", () => {
       expect.assertions(1);
       const source = signal(0);
@@ -252,7 +298,7 @@ describe("lite signals", () => {
       expect(after.seen).toEqual([0]);
     });
 
-    test("a node after the first sub's nested write is not called again with the older value", () => {
+    test("a node after the first sub's write is not called again with the older value", () => {
       expect.assertions(1);
       const source = signal(0);
       sub(source, (value) => {
@@ -263,7 +309,7 @@ describe("lite signals", () => {
       expect(node.seen).toEqual([0, 2]);
     });
 
-    test("a node made while its signal notifies gets a later sub's nested write", () => {
+    test("a node made while its signal notifies gets a later sub's write", () => {
       expect.assertions(1);
       const source = signal(0);
       let made: number[] = [];
@@ -309,7 +355,6 @@ describe("lite signals", () => {
   });
 
   describe("records", () => {
-    // Characterization: a sub is called again for its own write (unspecified by the contract)
     test("the first sub writing its own signal is called again with that value", () => {
       expect.assertions(1);
       const source = signal(0);
@@ -322,7 +367,6 @@ describe("lite signals", () => {
       expect(seen).toEqual([0, 1, 2]);
     });
 
-    // Characterization, as above
     test("a node writing its own signal is called again with that value", () => {
       expect.assertions(1);
       const source = signal(0);
@@ -432,6 +476,22 @@ describe("lite signals", () => {
   });
 
   describe("batch", () => {
+    test("Characterization: a batch end walks the signals newest write first", () => {
+      expect.assertions(1);
+      const order: string[] = [];
+      const signals = ["a", "b", "c"].map((name) => {
+        const source = signal(0);
+        sub(source, (value) => {
+          if (value === 1) order.push(name);
+        });
+        return source;
+      });
+      batch(() => {
+        for (const source of signals) set(source, 1);
+      });
+      expect(order).toEqual(["c", "b", "a"]);
+    });
+
     test("a signal changed, restored and changed again in one batch calls its sub once with the final value", () => {
       expect.assertions(1);
       const source = signal(0);
@@ -504,7 +564,7 @@ describe("lite signals", () => {
       const seen: number[] = [];
       sub(source, (value) => {
         seen.push(value);
-        // Ends at depth 0, so it walks what the outer batch end has not popped yet
+        // Inside a callback: its end delivers nothing, the outer pass does
         batch(noop);
       });
       batch(() => {
@@ -515,7 +575,7 @@ describe("lite signals", () => {
     });
 
     // Characterization: the end pops the newest write first, and a batch a callback runs there
-    // delivers only the writes made since it began, so the outer end delivers the rest after it
+    // delivers nothing at its own end, so the outer end delivers the rest after that callback
     test("a callback's batch at a batch end leaves the signals the outer end has not reached to that end", () => {
       expect.assertions(1);
       const pending = signal(0);
@@ -643,12 +703,11 @@ describe("lite signals", () => {
       ).toBe(error);
     });
 
-    // Characterization: a nested walk's error is thrown into the callback that wrote
-    test("an error in a walk a callback's write started is thrown into that callback", () => {
+    test("an error from the subs a callback's write reaches is rethrown by the outer write, not into that callback", () => {
       expect.assertions(1);
       const source = signal(0);
       const target = signal(0);
-      const error = new Error("nested");
+      const error = new Error("target");
       sub(target, (value) => {
         if (value === 1) throw error;
       });
@@ -659,15 +718,17 @@ describe("lite signals", () => {
             set(target, 1);
           });
       });
-      set(source, 1);
-      expect(caught).toBe(error);
+      const outer = thrownBy(() => {
+        set(source, 1);
+      });
+      expect([caught, outer]).toEqual([undefined, error]);
     });
 
-    test("an error a callback lets escape from a nested walk is rethrown by the outer write after every sub ran", () => {
+    test("an error from the subs a callback's write reaches is rethrown after every sub of the outer signal ran", () => {
       expect.assertions(2);
       const source = signal(0);
       const target = signal(0);
-      const error = new Error("nested");
+      const error = new Error("target");
       sub(source, noop);
       const last = watch(source);
       sub(target, (value) => {
@@ -698,6 +759,846 @@ describe("lite signals", () => {
           });
         }),
       ).toBe(error);
+    });
+  });
+
+  describe("queued writes", () => {
+    test("a callback's write to another signal reaches that signal's subs after the callback returns", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      const log: string[] = [];
+      sub(target, (value) => {
+        log.push(`target ${value}`);
+      });
+      sub(source, (value) => {
+        if (value === 1) {
+          set(target, 1);
+          log.push("source returns");
+        }
+      });
+      set(source, 1);
+      expect(log).toEqual(["target 0", "source returns", "target 1"]);
+    });
+
+    test("a callback that writes its own signal is called again after it returns, with the new value", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const log: string[] = [];
+      sub(source, (value) => {
+        log.push(`start ${value}`);
+        if (value === 1) set(source, 2);
+        log.push(`end ${value}`);
+      });
+      set(source, 1);
+      expect(log).toEqual(["start 0", "end 0", "start 1", "end 1", "start 2", "end 2"]);
+    });
+
+    test("a sub made in a callback whose first call writes its own signal is called again after that call", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const own = signal(0);
+      const log: string[] = [];
+      sub(source, (value) => {
+        if (value === 1) {
+          sub(own, (ownValue) => {
+            log.push(`start ${ownValue}`);
+            if (ownValue === 0) set(own, 1);
+            log.push(`end ${ownValue}`);
+          });
+        }
+      });
+      set(source, 1);
+      expect(log).toEqual(["start 0", "end 0", "start 1", "end 1"]);
+    });
+
+    // Far past the stack depth a recursion per link reaches (about 4k on V8, 15k on JSC)
+    test("a chain of 100k subs, each writing the next signal, delivers to the last", () => {
+      expect.assertions(1);
+      const last = signal(0);
+      const chain = [...Array.from({ length: 99_999 }, () => signal(0)), last];
+      for (let index = 0; index < chain.length - 1; index++) {
+        const next = chain[index + 1];
+        sub(chain[index], (value) => {
+          set(next, value);
+        });
+      }
+      const { seen } = watch(last);
+      const error = thrownBy(() => {
+        set(chain[0], 1);
+      });
+      expect([error, seen.at(-1)]).toEqual([undefined, 1]);
+    });
+
+    test("a batch a callback runs is delivered after that callback returns, not at the batch's end", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      const log: string[] = [];
+      sub(target, (value) => {
+        log.push(`target ${value}`);
+      });
+      sub(source, (value) => {
+        if (value === 1) {
+          batch(() => {
+            set(target, 1);
+          });
+          log.push("batch returned");
+        }
+      });
+      set(source, 1);
+      expect(log).toEqual(["target 0", "batch returned", "target 1"]);
+    });
+
+    test("a callback's write at a batch end reaches its signal's subs after the callback returns", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      const log: string[] = [];
+      sub(target, (value) => {
+        log.push(`target ${value}`);
+      });
+      sub(source, (value) => {
+        if (value === 1) {
+          set(target, 1);
+          log.push("source returns");
+        }
+      });
+      batch(() => {
+        set(source, 1);
+      });
+      expect(log).toEqual(["target 0", "source returns", "target 1"]);
+    });
+
+    test("a sub a callback disposes after writing its signal is not called for that write", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      sub(target, noop);
+      let calls = 0;
+      const later = sub(target, () => {
+        calls++;
+      });
+      sub(source, (value) => {
+        if (value === 1) {
+          set(target, 1);
+          dispose(later);
+        }
+      });
+      set(source, 1);
+      expect(calls).toBe(1);
+    });
+
+    test("a callback writing a signal 1000 times calls that signal's sub once, with the last value", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      const { seen } = watch(target);
+      sub(source, (value) => {
+        if (value === 1) for (let write = 1; write <= 1000; write++) set(target, write);
+      });
+      set(source, 1);
+      expect(seen).toEqual([0, 1000]);
+    });
+
+    test("a sub a callback creates after writing its signal is called once, at creation", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      sub(target, noop);
+      let seen: number[] = [];
+      sub(source, (value) => {
+        if (value === 1) {
+          set(target, 1);
+          ({ seen } = watch(target));
+        }
+      });
+      set(source, 1);
+      expect(seen).toEqual([1]);
+    });
+  });
+
+  describe("batches in callbacks and first calls", () => {
+    test("a callback's batch that throws leaves the callback's later writes queued", () => {
+      expect.assertions(2);
+      const source = signal(0);
+      const target = signal(0);
+      const log: string[] = [];
+      sub(target, (value) => {
+        log.push(`target ${value}`);
+      });
+      sub(source, (value) => {
+        if (value === 0) return;
+        thrownBy(() => {
+          batch(() => {
+            throw new Error("body");
+          });
+        });
+        set(target, value);
+        log.push("writer returns");
+      });
+      set(source, 1);
+      expect(log).toEqual(["target 0", "writer returns", "target 1"]);
+      expect(atRest()).toEqual(REST);
+    });
+
+    test("nested batches inside a callback deliver after the callback returns, not at their ends", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      const log: string[] = [];
+      sub(target, (value) => {
+        log.push(`target ${value}`);
+      });
+      sub(source, (value) => {
+        if (value === 0) return;
+        batch(() => {
+          batch(() => {
+            set(target, value);
+          });
+          log.push("inner end");
+        });
+        log.push("outer end");
+      });
+      set(source, 1);
+      expect(log).toEqual(["target 0", "inner end", "outer end", "target 1"]);
+    });
+
+    test("a batch inside an at-rest first call delivers after the first call returns, before sub returns", () => {
+      expect.assertions(1);
+      const target = signal(0);
+      const log: string[] = [];
+      sub(target, (value) => {
+        log.push(`target ${value}`);
+      });
+      sub(signal(0), () => {
+        batch(() => {
+          set(target, 1);
+        });
+        log.push("first call returns");
+      });
+      log.push("sub returned");
+      expect(log).toEqual(["target 0", "first call returns", "target 1", "sub returned"]);
+    });
+  });
+
+  describe("first call", () => {
+    test("a first call that writes its own signal is called again after it returns, before sub returns", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const log: string[] = [];
+      sub(source, (value) => {
+        log.push(`start ${value}`);
+        if (value === 0) set(source, 1);
+        log.push(`end ${value}`);
+      });
+      log.push("sub returned");
+      expect(log).toEqual(["start 0", "end 0", "start 1", "end 1", "sub returned"]);
+    });
+
+    test("a first call's write to another signal reaches its subs after the first call returns", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      const log: string[] = [];
+      sub(target, (value) => {
+        log.push(`target ${value}`);
+      });
+      sub(source, () => {
+        set(target, 1);
+        log.push("first call returns");
+      });
+      expect(log).toEqual(["target 0", "first call returns", "target 1"]);
+    });
+
+    test("sub rethrows an error from the subs its first call's write reached", () => {
+      expect.assertions(1);
+      const target = signal(0);
+      const error = new Error("target");
+      sub(target, (value) => {
+        if (value === 1) throw error;
+      });
+      expect(
+        thrownBy(() => {
+          sub(signal(0), () => {
+            // The first call itself throws nothing
+            thrownBy(() => {
+              set(target, 1);
+            });
+          });
+        }),
+      ).toBe(error);
+    });
+
+    test("a sub whose first call's writes made sub throw is never called again", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      sub(target, (value) => {
+        if (value === 1) throw new Error("target");
+      });
+      let calls = 0;
+      thrownBy(() => {
+        sub(source, () => {
+          calls++;
+          set(target, 1);
+        });
+      });
+      set(source, 1);
+      expect(calls).toBe(1);
+    });
+
+    // Characterization: the newest queued signal is delivered first
+    test("a sub made inside an at-rest first call is held too, and both are delivered after the outer first call", () => {
+      expect.assertions(1);
+      const a = signal(0);
+      const b = signal(0);
+      const log: string[] = [];
+      sub(a, (value) => {
+        log.push(`a ${value}`);
+        if (value === 0) {
+          sub(b, (bValue) => {
+            log.push(`b ${bValue}`);
+            if (bValue === 0) {
+              set(b, 1);
+              set(a, 1);
+            }
+          });
+          log.push("a first returns");
+        }
+      });
+      log.push("sub returned");
+      expect(log).toEqual(["a 0", "b 0", "a first returns", "a 1", "b 1", "sub returned"]);
+    });
+
+    test("a sub made in a callback whose first call throws is disposed, and its writes reach others after the callback", () => {
+      expect.assertions(3);
+      const source = signal(0);
+      const inner = signal(0);
+      const target = signal(0);
+      const log: string[] = [];
+      sub(target, (value) => {
+        log.push(`target ${value}`);
+      });
+      let innerCalls = 0;
+      sub(source, (value) => {
+        if (value === 0) return;
+        const error = thrownBy(() => {
+          sub(inner, (innerValue) => {
+            // Writes once, so a sub left subscribed is a count, not an endless loop
+            if (++innerCalls > 1) return;
+            set(target, value);
+            set(inner, innerValue + 1);
+            throw new Error("first");
+          });
+        });
+        log.push(`caught ${(error as Error).message}`, "outer returns");
+      });
+      set(source, 1);
+      expect(log).toEqual(["target 0", "caught first", "outer returns", "target 1"]);
+      set(inner, 5);
+      expect(innerCalls).toBe(1);
+      expect(atRest()).toEqual(REST);
+    });
+
+    // Characterization: which error reaches the caller is unspecified; this core rethrows the last
+    test("when an at-rest first call and the delivery of its writes both throw, sub rethrows the delivery's error", () => {
+      expect.assertions(2);
+      const target = signal(0);
+      sub(target, (value) => {
+        if (value === 1) throw new Error("delivery");
+      });
+      const error = thrownBy(() => {
+        sub(signal(0), () => {
+          set(target, 1);
+          throw new Error("first");
+        });
+      });
+      expect((error as Error).message).toBe("delivery");
+      expect(atRest()).toEqual(REST);
+    });
+
+    test("an at-rest first call that writes its signal and throws, whose writes' delivery throws too, is not called again", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      sub(target, (value) => {
+        if (value === 1) throw new Error("delivery");
+      });
+      let calls = 0;
+      thrownBy(() => {
+        sub(source, () => {
+          calls++;
+          set(target, 1);
+          set(source, 1);
+          throw new Error("first");
+        });
+      });
+      set(source, 2);
+      expect(calls).toBe(1);
+    });
+
+    test("a first call that disposes its own sub and writes its signal is not called again", () => {
+      expect.assertions(2);
+      const source = signal(0);
+      let calls = 0;
+      sub(source, (value) => {
+        calls++;
+        // The first sub's handle is its signal (characterized above)
+        if (value === 0) {
+          dispose(source as unknown as Effect);
+          set(source, 1);
+        }
+      });
+      const afterSub = calls;
+      set(source, 2);
+      expect(afterSub).toBe(1);
+      expect(calls).toBe(1);
+    });
+  });
+
+  describe("failed first call", () => {
+    /**
+     * A sub on `source` whose first call writes `write` (default: its own signal) 1 and then
+     * throws; returns how often it was called after that throw.
+     */
+    const failingWriter = (source: Signal<number>, write = source): (() => number) => {
+      let threw = false;
+      let after = 0;
+      thrownBy(() => {
+        sub(source, () => {
+          if (threw) after++;
+          else {
+            set(write, 1);
+            threw = true;
+            throw new Error("first call");
+          }
+        });
+      });
+      return () => after;
+    };
+
+    test("a first sub whose first call writes its signal and then throws is not called after it threw", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const after = failingWriter(source);
+      set(source, 2);
+      expect(after()).toBe(0);
+    });
+
+    test("a node whose first call writes its signal and then throws is not called after it threw", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      sub(source, noop);
+      const after = failingWriter(source);
+      set(source, 2);
+      expect(after()).toBe(0);
+    });
+
+    test("a first call whose write reaches a sub writing its signal, then throws, is not called after it threw", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const relay = signal(0);
+      sub(relay, (value) => {
+        set(source, value);
+      });
+      const after = failingWriter(source, relay);
+      expect(after()).toBe(0);
+    });
+
+    test("in a batch, a first call that writes its signal and then throws is not called after it threw", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      let after = (): number => -1;
+      batch(() => {
+        after = failingWriter(source);
+      });
+      expect(after()).toBe(0);
+    });
+
+    test("a failed first call's write still reaches its signal's other subs", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const { seen } = watch(source);
+      failingWriter(source);
+      expect(seen).toEqual([0, 1]);
+    });
+
+    test("a first call that throws undefined makes sub throw and leaves no sub", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      let calls = 0;
+      const result = outcome(() => {
+        sub(source, () => {
+          calls++;
+          // oxlint-disable-next-line no-throw-literal typescript/only-throw-error -- the case under test
+          throw undefined;
+        });
+      });
+      set(source, 1);
+      expect([result, calls]).toEqual([{ error: undefined }, 1]);
+    });
+  });
+
+  describe("errors in a pass", () => {
+    test("a pass that queued nothing still rethrows a node's thrown undefined", () => {
+      expect.assertions(3);
+      const source = signal(0);
+      const { seen } = watch(source);
+      sub(source, (value) => {
+        // oxlint-disable-next-line no-throw-literal typescript/only-throw-error -- the case under test
+        if (value === 1) throw undefined;
+      });
+      const result = outcome(() => {
+        set(source, 1);
+      });
+      expect(result).toEqual({ error: undefined });
+      expect(seen).toEqual([0, 1]);
+      expect(atRest()).toEqual(REST);
+    });
+
+    test("a pass that queued nothing still rethrows the first sub's thrown undefined", () => {
+      expect.assertions(3);
+      const source = signal(0);
+      sub(source, (value) => {
+        // oxlint-disable-next-line no-throw-literal typescript/only-throw-error -- the case under test
+        if (value === 1) throw undefined;
+      });
+      const { seen } = watch(source);
+      const result = outcome(() => {
+        set(source, 1);
+      });
+      expect(result).toEqual({ error: undefined });
+      expect(seen).toEqual([0, 1]);
+      expect(atRest()).toEqual(REST);
+    });
+
+    test("an error in the write's own walk is rethrown after its callback's queued writes are delivered", () => {
+      expect.assertions(3);
+      const source = signal(0);
+      const target = signal(0);
+      const { seen } = watch(target);
+      sub(source, (value) => {
+        if (value === 0) return;
+        set(target, value);
+        throw new Error("walk");
+      });
+      const error = thrownBy(() => {
+        set(source, 1);
+      });
+      expect((error as Error).message).toBe("walk");
+      expect(seen).toEqual([0, 1]);
+      expect(atRest()).toEqual(REST);
+    });
+
+    test("a thrown undefined from the delivery of queued writes alone is rethrown by the write that started the pass", () => {
+      expect.assertions(3);
+      const source = signal(0);
+      const target = signal(0);
+      sub(source, (value) => {
+        set(target, value);
+      });
+      sub(target, (value) => {
+        // oxlint-disable-next-line no-throw-literal typescript/only-throw-error -- the case under test
+        if (value === 1) throw undefined;
+      });
+      const { seen } = watch(target);
+      const result = outcome(() => {
+        set(source, 1);
+      });
+      expect(result).toEqual({ error: undefined });
+      expect(seen).toEqual([0, 1]);
+      expect(atRest()).toEqual(REST);
+    });
+
+    test("an error caught in one pass is not rethrown by the next one", () => {
+      expect.assertions(2);
+      const source = signal(0);
+      sub(source, (value) => {
+        if (value === 1) throw new Error("once");
+      });
+      const first = outcome(() => {
+        set(source, 1);
+      });
+      const second = outcome(() => {
+        set(source, 2);
+      });
+      expect(first).toBeDefined();
+      expect(second).toBeUndefined();
+    });
+
+    // Characterization: which error reaches the caller is unspecified; this core rethrows the last
+    test("of an error in the write's walk and one in the delivery of its queued writes, the delivery's reaches the caller", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      const target = signal(0);
+      sub(target, (value) => {
+        if (value !== 0) throw new Error("delivery");
+      });
+      sub(source, (value) => {
+        if (value === 0) return;
+        set(target, value);
+        throw new Error("walk");
+      });
+      const error = thrownBy(() => {
+        set(source, 1);
+      });
+      expect((error as Error).message).toBe("delivery");
+    });
+  });
+
+  describe("dev loop bound", () => {
+    test.if(DEV)(
+      "dev: a write loop that never settles throws once a pass made a million calls",
+      () => {
+        expect.assertions(1);
+        const source = signal(0);
+        sub(source, (value) => {
+          if (value > 0) set(source, value + 1);
+        });
+        expect(() => {
+          set(source, 1);
+        }).toThrow(/million/u);
+      },
+    );
+
+    test.if(DEV)(
+      "dev: after a NaN self-write throws at the bound, writes call back at once",
+      () => {
+        expect.assertions(1);
+        const source = signal(0);
+        sub(source, (value) => {
+          if (value !== 0) set(source, Number.NaN);
+        });
+        thrownBy(() => {
+          set(source, 1);
+        });
+        expect(atRest()).toEqual(REST);
+      },
+    );
+
+    // The skipped sub keeps its old record, so a pass that inherited the entry would call it
+    test.if(DEV)(
+      "dev: once the bound throws, the pass drains: a write queued before it reaches no later pass",
+      () => {
+        expect.assertions(1);
+        const loop = signal(0);
+        const other = signal(0);
+        const { seen } = watch(other);
+        sub(loop, (value) => {
+          if (value === 1) set(other, 1);
+          if (value > 0) set(loop, value + 1);
+        });
+        thrownBy(() => {
+          set(loop, 1);
+        });
+        const probe = signal(0);
+        sub(probe, noop);
+        set(probe, 1);
+        expect(seen).toEqual([0]);
+      },
+    );
+
+    // The bound counts every call in one pass, endless or not
+    test.if(DEV)("Accepted tradeoff: dev: a pass of more than a million calls throws", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      sub(source, (value) => {
+        if (value > 0 && value < 1_100_000) set(source, value + 1);
+      });
+      expect(() => {
+        set(source, 1);
+      }).toThrow(/million/u);
+    });
+
+    test.if(!DEV)("production: a pass of 1.1M calls makes every call", () => {
+      expect.assertions(1);
+      const source = signal(0);
+      let calls = 0;
+      sub(source, (value) => {
+        calls++;
+        if (value > 0 && value < 1_100_000) set(source, value + 1);
+      });
+      calls = 0;
+      set(source, 1);
+      expect(calls).toBe(1_100_000);
+    });
+
+    test.if(DEV)("dev: a first call's write loop throws at the bound and disposes the sub", () => {
+      expect.assertions(2);
+      const source = signal(0);
+      let calls = 0;
+      const error = thrownBy(() => {
+        sub(source, (value) => {
+          calls++;
+          set(source, value + 1);
+        });
+      });
+      const before = calls;
+      set(source, -5);
+      expect((error as Error).message).toContain("million");
+      expect(calls).toBe(before);
+    });
+  });
+
+  // JSC throws RangeError only at calls; the V8 back-edge and OSR-entry throws a pass must survive
+  // need V8: test/v8/turbofan.spec.ts
+  describe("stack edge", () => {
+    // Long enough to cut a walk short; JSC throws only at calls, so longer loops (2000) found no more
+    const SUBS = 200;
+    const FRAMES = 48;
+    const pads = Array.from({ length: 128 }, (_item, slots) =>
+      Array.from<number>({ length: slots }).fill(0),
+    );
+
+    /**
+     * Recurses to the stack limit, then, unwinding, calls `op` with 0 to 127 padding arguments in
+     * each of FRAMES frames from the first one where a call fits again, swallowing what it throws:
+     * so some call of `op` stops at each point of its work.
+     */
+    const atStackEdge = (op: () => void): void => {
+      const call = (): void => {
+        op();
+      };
+      const tiny = (): number => 0;
+      let started = false;
+      let swept = 0;
+      // try/catch in place, not thrownBy: a helper's own call could overflow outside the `try`
+      const deeper = (): void => {
+        try {
+          deeper();
+        } catch {
+          // the stack limit
+        }
+        if (!started) {
+          try {
+            tiny();
+            started = true;
+          } catch {
+            // not yet below the limit
+          }
+        }
+        if (started && swept < FRAMES) {
+          swept++;
+          // An index loop: an iterator's calls could overflow outside the `try`
+          for (let slots = 0; slots < 128; slots++) {
+            try {
+              Reflect.apply(call, undefined, pads[slots]);
+            } catch {
+              // what `op` threw, an overflow included
+            }
+          }
+        }
+      };
+      deeper();
+    };
+
+    /** Signals with a sub each that records its last value, and ops that write them. */
+    const fixture = () => {
+      const many = Array.from({ length: SUBS }, () => signal(0));
+      const lastSeen = many.map(() => 0);
+      for (const [index, each] of many.entries()) {
+        sub(each, (value) => {
+          lastSeen[index] = value;
+        });
+      }
+      const writeMany = (value: number): void => {
+        for (let index = 0; index < SUBS; index++) set(many[index], value);
+      };
+      let value = 0;
+      const big = signal(0);
+      for (let index = 0; index < SUBS; index++) sub(big, noop);
+      const source = signal(0);
+      sub(source, writeMany);
+      const thrower = signal(0);
+      sub(thrower, (thrown) => {
+        if (thrown === 0) return;
+        writeMany(thrown);
+        throw new Error("thrower");
+      });
+      const nested = signal(0);
+      sub(nested, (written) => {
+        thrownBy(() => {
+          batch(() => {
+            writeMany(written);
+            throw new Error("inner batch");
+          });
+        });
+      });
+      const heldSub = signal(0);
+      sub(heldSub, (written) => {
+        if (written !== 0) {
+          dispose(
+            sub(signal(0), () => {
+              writeMany(written);
+            }),
+          );
+        }
+      });
+      const ops: Record<string, () => void> = {
+        walk: () => {
+          set(big, ++value);
+        },
+        drain: () => {
+          set(source, ++value);
+        },
+        throwdrain: () => {
+          set(thrower, ++value);
+        },
+        batchwalk: () => {
+          batch(() => {
+            set(big, ++value);
+          });
+        },
+        batchdrain: () => {
+          batch(() => {
+            writeMany(++value);
+          });
+        },
+        subdrain: () => {
+          dispose(
+            sub(signal(0), () => {
+              writeMany(++value);
+            }),
+          );
+        },
+        subthrow: () => {
+          sub(signal(0), () => {
+            writeMany(++value);
+            throw new Error("first");
+          });
+        },
+        nestedbatch: () => {
+          set(nested, ++value);
+        },
+        heldsub: () => {
+          set(heldSub, ++value);
+        },
+      };
+      return { many, lastSeen, ops };
+    };
+
+    test.each([
+      ["a write to a signal with 200 subs", "walk"],
+      ["a write whose callback writes 200 signals", "drain"],
+      ["a write whose callback writes 200 signals and throws", "throwdrain"],
+      ["a batch writing a signal with 200 subs", "batchwalk"],
+      ["a batch writing 200 signals", "batchdrain"],
+      ["a sub whose first call writes 200 signals", "subdrain"],
+      ["a sub whose first call writes 200 signals and throws", "subthrow"],
+      ["a callback whose throwing batch writes 200 signals", "nestedbatch"],
+      ["a sub made in a callback whose first call writes 200 signals", "heldsub"],
+    ])("%s, run at the stack edge, leaves later writes delivered", (_label, name) => {
+      expect.assertions(2);
+      const { many, lastSeen, ops } = fixture();
+      const op = ops[name];
+      atStackEdge(op);
+      for (let run = 0; run < 300; run++) thrownBy(op);
+      atStackEdge(op);
+      expect(atRest()).toEqual(REST);
+      // A walk cut short is excused until the signal's next write: rewrite every signal at rest
+      for (let index = 0; index < SUBS; index++) set(many[index], -1 - index);
+      expect(lastSeen.every((seen, index) => seen === -1 - index)).toBe(true);
     });
   });
 
@@ -757,7 +1658,6 @@ describe("lite signals", () => {
       expect(made).toEqual([Number.NaN, Number.NaN]);
     });
 
-    // Without the early return, the equal write would walk the nodes the outer walk has not reached
     test("an equal write inside a callback calls no other sub before it returns", () => {
       expect.assertions(1);
       const source = signal(0);
@@ -876,6 +1776,41 @@ describe("lite signals", () => {
         return node;
       });
       set(source, 1); // the signal lives past the collection
+      expect(alive).toBeLessThan(10);
+    });
+
+    test("a pass keeps none of the signals it popped", async () => {
+      expect.assertions(1);
+      const alive = await survivors(() => {
+        const source = signal(0);
+        const target = signal(0);
+        sub(target, noop);
+        sub(source, (value) => {
+          set(target, value);
+        });
+        set(source, 1);
+        return target;
+      });
+      expect(alive).toBeLessThan(10);
+    });
+
+    test("a pass keeps none of the errors it caught", async () => {
+      expect.assertions(1);
+      const alive = await survivors(() => {
+        const source = signal(0);
+        const target = signal(0);
+        const error = new Error("each");
+        sub(target, (value) => {
+          if (value === 1) throw error;
+        });
+        sub(source, (value) => {
+          set(target, value);
+        });
+        thrownBy(() => {
+          set(source, 1);
+        });
+        return error;
+      });
       expect(alive).toBeLessThan(10);
     });
   });

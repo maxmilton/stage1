@@ -7,11 +7,16 @@ import * as nonKeyedExports from "../../src/legacy/reconcile/non-keyed.ts";
 import * as reuseLiteExports from "../../src/legacy/reconcile/reuse-lite.ts";
 import * as reuseNodesExports from "../../src/legacy/reconcile/reuse-nodes.ts";
 import * as liteExports from "../../src/lite/index.ts";
-import type { Signal as LiteSignal, Sub } from "../../src/lite/signal.ts";
+import type { Effect as LiteEffect, Signal as LiteSignal } from "../../src/lite/signal.ts";
 import * as macroExports from "../../src/macro.ts";
 import type { Marked, Rows } from "../../src/reconcile.ts";
 import type { Computed, Effect, Scope, Signal } from "../../src/signal.ts";
 import type { FlatRefs, InferRefs, RefKeys, Refs } from "../../src/types.ts";
+import * as ultraliteExports from "../../src/ultralite/index.ts";
+import type {
+  Effect as UltraliteEffect,
+  Signal as UltraliteSignal,
+} from "../../src/ultralite/signal.ts";
 
 describe("browser", () => {
   test("types", () => {
@@ -139,8 +144,8 @@ describe("lite", () => {
     expectTypeOf<liteExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
     expectTypeOf<liteExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
     expectTypeOf<liteExports.Signal<number>>().toEqualTypeOf<LiteSignal<number>>();
-    expectTypeOf<liteExports.Sub>().toEqualTypeOf<Sub>();
-    // One list module serves both tiers
+    expectTypeOf<liteExports.Effect>().toEqualTypeOf<LiteEffect>();
+    // One list module serves every tier
     expectTypeOf<liteExports.Rows<number, string, Element>>().toEqualTypeOf<
       Rows<number, string, Element>
     >();
@@ -196,10 +201,84 @@ describe("lite", () => {
     expect.assertions(1);
     expect(liteExports).not.toHaveProperty("default");
   });
-  test("shares list and mark with stage1 (one list module for both tiers)", () => {
+  test("shares list and mark with stage1 (one list module for every tier)", () => {
     expect.assertions(2);
     expect(liteExports.list).toBe(indexExports.list);
     expect(liteExports.mark).toBe(indexExports.mark);
+  });
+});
+
+describe("ultralite", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf<ultraliteExports.Refs>().toEqualTypeOf<Refs>();
+    expectTypeOf<ultraliteExports.InferRefs<Refs>>().toEqualTypeOf<InferRefs<Refs>>();
+    expectTypeOf<ultraliteExports.FlatRefs<Refs>>().toEqualTypeOf<FlatRefs<Refs>>();
+    expectTypeOf<ultraliteExports.RefKeys<Refs>>().toEqualTypeOf<RefKeys<Refs>>();
+    expectTypeOf<ultraliteExports.Signal<number>>().toEqualTypeOf<UltraliteSignal<number>>();
+    expectTypeOf<ultraliteExports.Effect>().toEqualTypeOf<UltraliteEffect>();
+    // One list module serves every tier
+    expectTypeOf<ultraliteExports.Rows<number, string, Element>>().toEqualTypeOf<
+      Rows<number, string, Element>
+    >();
+    expectTypeOf<ultraliteExports.Marked<string, Element>>().toEqualTypeOf<
+      Marked<string, Element>
+    >();
+  });
+
+  const publicExports = [
+    ["h", "Function"],
+    ["collect", "Function"],
+    ["ONCLICK", "Symbol"],
+    ["handleClick", "Function"],
+    ["setupSyntheticClick", "Function"],
+    ["removeSyntheticClick", "Function"],
+    ["list", "Function"],
+    ["mark", "Function"],
+    ["signal", "Function"],
+    ["get", "Function"],
+    ["set", "Function"],
+    ["sub", "Function"],
+    ["dispose", "Function"],
+    ["batch", "Function"],
+    ["noop", "Function"],
+    ["fragment", "Function"],
+    ["text", "Function"],
+    ["create", "Function"],
+    ["clone", "Function"],
+    ["append", "Function"],
+    ["prepend", "Function"],
+    ["insert", "Function"],
+    ["replace", "Function"],
+    ["$", "Function"],
+    ["$$", "Function"],
+  ] as const;
+
+  test.each(publicExports)('exports public "%s" %s', (name, type) => {
+    expect.assertions(2);
+    expect(ultraliteExports).toHaveProperty(name);
+    // oxlint-disable-next-line import/namespace
+    expect(ultraliteExports[name]).toHaveObjectType(`[object ${type}]`);
+  });
+
+  test("does not export any private internals", () => {
+    expect.assertions(publicExports.length + 1);
+    const publicExportNames: string[] = publicExports.map(([name, _type]) => name);
+    // oxlint-disable-next-line guard-for-in
+    for (const name in ultraliteExports) {
+      expect(publicExportNames).toContain(name);
+    }
+    expect(publicExportNames).toHaveLength(Object.keys(ultraliteExports).length);
+  });
+
+  test("has no default export", () => {
+    expect.assertions(1);
+    expect(ultraliteExports).not.toHaveProperty("default");
+  });
+  test("shares list and mark with stage1 (one list module for every tier)", () => {
+    expect.assertions(2);
+    expect(ultraliteExports.list).toBe(indexExports.list);
+    expect(ultraliteExports.mark).toBe(indexExports.mark);
   });
 });
 

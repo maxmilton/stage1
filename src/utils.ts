@@ -1,6 +1,5 @@
-export const noop = (): void => {
-  /* empty */
-};
+// oxlint-disable-next-line no-empty-function
+export const noop = (): void => {};
 
 // DOM utilities
 

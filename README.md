@@ -16,18 +16,19 @@ High-performance JavaScript micro framework.
 
 ## Signals and lists
 
-An app imports its signals from one of two tiers, each with its own core:
+An app imports its signals from one of three tiers, each with its own core:
 
 <!-- prettier-ignore -->
 | import | available functions | for |
 | --- | --- | --- |
 | `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked` | apps with computeds, effects and owners |
-| `stage1/lite` | `signal`, `get`, ` `, `sub`, `dispose`, `batch` | the smallest apps: subs, no owners      |
+| `stage1/lite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch` | small apps: subs, no owners |
+| `stage1/ultralite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch` | the smallest apps: one sub per signal, no owners |
 
-Both export the same `list` and `mark`. They import no signals: wire them with the tier's `sub`.
+All three export the same `list` and `mark`. They import no signals: wire them with the tier's `sub`.
 
 ```ts
-import { list, mark, set, signal, sub } from "stage1"; // or "stage1/lite": the same code
+import { list, mark, set, signal, sub } from "stage1"; // or a lite tier: the same code
 
 interface Item {
   readonly id: number;
@@ -68,7 +69,8 @@ set(selected, 2); // row 2 gets "danger"
 - `list(parent, key, create, update?, drop?)` returns the rows function. Called with items, it keeps one row per item in `parent`, matched by `item[key]`, and moves as few rows as it can. `update` runs on a kept row whose item is a new object; `drop` runs on each row the list removes, clears or replaces, while the row is still in the DOM.
 - `mark(rows, fn)` returns the show function: shown a key, it calls `fn(row, true)` for that key's row and `fn(row, false)` for the row shown before. It also takes any map from key to element with `get`, such as a `Map`.
 - The sub is the handle: dispose it, or its owner, to stop following the signal. The rows stay in the DOM, and a mark stays attached to its list.
-- `stage1/lite` has no owners: a sub lives until it is disposed. Writing a list's items while it reconciles (from `create`, `update`, `drop`, or a mark callback the reconcile calls) is unsupported there: a development build throws.
+- `batch(fn)` returns what `fn` returns, on every tier: `const sum = batch(() => { set(a, 1); set(b, 2); return get(a) + get(b); })`. When its end delivers its writes and a callback throws there, that error reaches the caller instead (if `fn` threw too, which error wins is unspecified). Only an outermost batch's end delivers, and on `stage1` and `stage1/lite` only outside every callback and effect: elsewhere `batch` returns first, and the error reaches what delivers the writes later.
+- The lite tiers have no owners: a sub lives until it is disposed. Writing a list's items while it reconciles (from `create`, `update`, `drop`, or a mark callback the reconcile calls) reconciles again after it when a `stage1` or `stage1/lite` sub runs the rows function. When the write is delivered at once, on `stage1/ultralite` outside a batch or when the rows function was called outside every callback and batch, it is unsupported: a development build throws (see "The lite tiers").
 
 ### Owners (`stage1`)
 
@@ -105,6 +107,18 @@ sub(items, rows);
 
 A row that owns several things makes them in a scope of its own, `tr.s = scope(() => { … })`, and `drop` disposes `tr.s` (without that `drop` the scope lives until the sub is disposed, and nothing warns). Make row effects in `create`: what `update` makes belongs to the sub. On clear and replace the list calls `rows.forEach(drop)`, so write `drop` to use only its first parameter.
 
+### The lite tiers
+
+`stage1/lite`'s `sub` keeps the timing of `stage1`'s: a write made while a callback runs is delivered after that callback returns (a callback that writes its own signal is called again then), and the first call is held the same way, so at rest the writes it makes are delivered before `sub` returns (inside a callback or batch, when that callback returns or the batch ends). No write calls a sub back inside a callback, so a chain of subs that each write the next signal runs in one loop at any length. If the first call throws, the sub is disposed and the error rethrown; at rest, the same happens when the delivery of the first call's writes throws (inside a callback or batch, that error reaches the write or batch delivering them, and the sub stays). Every callback a write reaches runs even when some throw; then one of their errors reaches the writer (which one is unspecified). `batch` defers delivery to the end of the outermost batch, or, inside a callback, until that callback returns.
+
+`stage1/ultralite` holds at most one sub per signal: a development build throws on a second, and a production build replaces the first. The sub's handle is its signal, so its sub costs nothing beyond the signal's three fields; fan-out goes inside the one sub, as list and mark wiring does. Outside a batch a write calls the sub at once, before `set` returns, and its error reaches the writer as thrown, so a callback that writes another signal nests that signal's sub inside it (one that writes its own signal is called again inside itself) and a chain of such writes recurses once per link (a stack overflow after several thousand links on V8, tens of thousands on JSC). A batch end delivers the signals written, and the writes its callbacks make are delivered in the same loop. So when a list's `create`, `update` or `drop`, or a mark callback the reconcile calls, writes the list's items outside a batch, the rows function runs again inside the reconcile: a development build throws, and a production build duplicates rows. A write to the selection made there shows its key against the rows as they were before the reconcile. Inside a batch both wait for the reconcile.
+
+On both lite tiers:
+
+- Each write that changes a signal with a sub while a batch is open (on `stage1/lite`, also while a callback or a held first call runs) takes a queue entry until it is delivered, so a batch of n such writes holds n entries until its end; the queue keeps its peak capacity.
+- An endless write loop (a sub writing NaN to its own signal included: NaN never equals the value it was last called with) hangs a production build; on `stage1/ultralite` outside a batch it overflows the stack instead. A development build throws once one pass (`stage1/lite`) or one batch end (`stage1/ultralite`) made a million calls, so a legitimate one that large throws there too.
+- Values compare with `===` (NaN counts as changed); sibling order is unspecified.
+
 ### Migrating from the previous API
 
 <!-- prettier-ignore -->
@@ -121,6 +135,8 @@ A row that owns several things makes them in a scope of its own, `tr.s = scope((
 | `holder`, `own`, `owns`, type `Holder` | removed: create in place with `scope` and keep the handle (`Scope`, `Effect`) |
 | `release(h)` | `batch(() => { for (let i = hs.length; i--; ) dispose(hs[i]); })` over the kept handles |
 | sibling effects ran newest first | creation order (unspecified: do not rely on either) |
+| `stage1/lite`: a write in a sub's callback called the subs it reached at once (nested) | delivered after the callback returns, as `stage1`'s `sub` (see "The lite tiers"); `stage1/ultralite` keeps the nested timing outside batches for one-sub signals |
+| `stage1/lite`: type `Sub` (what `sub` returns) | `Effect`, as `stage1`'s `sub` names it |
 
 ## TODO
 

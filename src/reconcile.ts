@@ -5,19 +5,24 @@
 // around the longest run of rows that kept their order, so no row moves unless it has to. New rows
 // with no others left to place go in in order.
 //
-// One module for both tiers, and it imports no signal module: `list` returns the rows function and
-// `mark` the show function, and the app wires both with either tier's sub:
+// One module for every tier, and it imports no signal module: `list` returns the rows function and
+// `mark` the show function, and the app wires both with its tier's sub:
 // `sub(items, rows)`, `sub(selected, mark(rows, fn))`. The list never touches owners: what `create`
 // and `update` make belongs to whatever calls the rows function (on the full tier, the sub, until
 // it is disposed). Rows that own effects opt in through `drop`, which runs for each row the list
 // removes, clears or replaces, while the row is still in the DOM.
 // `create`, `update` and `drop` must not throw (unsupported: the rows no longer match the items,
 // though a connected parent is put back); a dev build says so, wrapping the error. Calling the rows
-// function again while it reconciles (a lite sub calls back at once when create, update, drop or a
-// mark callback writes the items) is unsupported; a dev build throws. Dev builds also tell a full
-// core when a create or update runs (`told`), so it can warn about what rows make outside a scope.
-// Unspecified: duplicate keys; `drop`'s extra arguments on clear and replace; on the lite tier, a
-// show call made during a reconcile (it looks up the rows as they were before the reconcile).
+// function again while it reconciles is unsupported; a dev build throws. When a stage1 or
+// stage1/lite sub runs the reconcile, a create, update, drop or mark callback that writes the items
+// reconciles again after it (those subs deliver a write made in a callback after that callback
+// returns). A write delivered at once re-enters: under stage1/ultralite's sub outside a batch, or
+// on any tier when the rows function was called outside every callback and batch. Dev builds also
+// tell a full core when a create or update runs (`told`), so it can warn about what rows make
+// outside a scope.
+// Unspecified: duplicate keys; `drop`'s extra arguments on clear and replace; a show call made
+// during a reconcile, as a write to the selection delivered at once makes (it looks up the rows as
+// they were before the reconcile).
 
 // oxlint-disable id-length no-bitwise no-continue oxclippy/similar-names
 // oxlint-disable node/no-process-env no-negated-condition unicorn/no-negated-condition
@@ -122,7 +127,7 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
   update: (node: N, item: T) => void = noop,
   drop?: (node: N) => void,
 ): Rows<T, T[K], N> => {
-  // Dev builds only: a reconcile is running (a sub that calls a nested write back at once re-enters)
+  // Dev builds only: a reconcile is running (a write to the items delivered at once re-enters)
   let busy = false;
   if (process.env.NODE_ENV !== "production") {
     // A list with a drop disposes what its rows own: the create warning is taken as given, so
@@ -271,7 +276,7 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
     if (process.env.NODE_ENV !== "production") {
       if (busy) {
         throw new Error(
-          "stage1: a list's rows were called again during their reconcile (its items were written from create, update, drop or a mark callback under a sub that calls back at once, as stage1/lite's does), which would duplicate rows",
+          "stage1: a list's rows were called again during their reconcile (its items were written from create, update, drop or a mark callback and the write was delivered at once: under stage1/ultralite's sub outside a batch, or because the rows function was called outside every callback and batch), which would duplicate rows",
         );
       }
       busy = true;
