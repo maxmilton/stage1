@@ -70,18 +70,28 @@
 // oxlint-disable unicorn/number-literal-case typescript/explicit-member-accessibility
 // oxlint-disable typescript/non-nullable-type-assertion-style typescript/no-unsafe-call
 // oxlint-disable typescript/prefer-optional-chain
+// The const enums are plain bit flags and numbers:
+// oxlint-disable oxc/bad-bitwise-operator
 
-/** Kinds and states, in `f`. Signals are 0. */
-const C = 1; // computed
-const E = 2; // effect: a runner that tracks its reads and re-runs when they change
-const S = 4; // keeps its children until disposed: scope (a fn), cleanup node (none); with E, a sub
-const M = 8; // marked: a dep may have changed since the last run or evaluation
-const D = 16; // disposed
-const X = 32; // computed: `v` is the error its getter threw
-const R = 64; // dev builds only: a computed whose getter is running (cycle check)
+/**
+ * Bit flags; kinds and states, in `f`. Const enums, not consts: once a module has an import
+ * (./dev.ts), Bun keeps its top-level consts as vars but still inlines enum members (dist.test.ts).
+ */
+const enum F {
+  L = 0, // signal: no bits; test kinds with !(f & (C | E | S))
+  C = 1, // computed
+  E = 2, // effect: a runner that tracks its reads and re-runs when they change
+  S = 4, // keeps its children until disposed: scope (a fn), cleanup node (none); with E, a sub
+  M = 8, // marked: a dep may have changed since the last run or evaluation
+  D = 16, // disposed
+  X = 32, // computed: `v` is the error its getter threw
+  R = 64, // dev builds only: a computed whose getter is running (cycle check)
+}
 /** Run ids wrap below 2^30 to stay small integers; NONE is no run's. */
-const MASK = 0x3fffffff;
-const NONE = -1;
+const enum Id {
+  MASK = 0x3fffffff,
+  NONE = -1,
+}
 
 /**
  * An object literal, made in one place (`track`) in this field order: with a class, a GC after the
@@ -97,7 +107,7 @@ interface Link {
 }
 
 class Node {
-  declare f: number;
+  declare f: F;
   declare v: unknown; // signal/computed: value (or error, X); runner: its cleanup; running: cursor (I5)
   declare g: (() => unknown) | undefined; // computed getter; effect/sub fn; scope fn (body only)
   declare d: Link | undefined; // deps, in read order
@@ -105,13 +115,13 @@ class Node {
   declare o: Node | number | undefined; // signal/computed: stamp (I4); effect/sub/scope: climb target (I3)
   declare n: Node | undefined; // older sibling
   declare p: Node | undefined; // newer sibling, or the owner (I3)
-  constructor(f: number, g: (() => unknown) | undefined, v: unknown, p: Node | undefined) {
+  constructor(f: F, g: (() => unknown) | undefined, v: unknown, p: Node | undefined) {
     this.f = f;
     this.v = v;
     this.g = g;
     this.d = undefined;
     this.s = undefined;
-    this.o = NONE;
+    this.o = Id.NONE;
     this.n = undefined;
     this.p = p;
   }
@@ -164,10 +174,10 @@ const stack: (Link | undefined)[] = [];
 let sp = 0;
 
 export const signal = <T>(value: T): Signal<T> =>
-  new Node(0, undefined, value, undefined) as unknown as Signal<T>;
+  new Node(F.L, undefined, value, undefined) as unknown as Signal<T>;
 
 /** A new node, the newest child of the current owner (I3). */
-const create = (f: number, g: (() => unknown) | undefined, v: unknown): Node => {
+const create = (f: F, g: (() => unknown) | undefined, v: unknown): Node => {
   const o = owner;
   if (process.env.NODE_ENV !== "production") {
     if (inGetter()) {
@@ -177,7 +187,7 @@ const create = (f: number, g: (() => unknown) | undefined, v: unknown): Node => 
     // cleanup (it then runs) is meaningful. A sub's call is exempt, however deep the owner: it may
     // be a list's reconcile that cannot stop when a row's cleanup or effect disposed the sub; the
     // ends of the runs in progress dispose what the rest made, silently
-    if (o !== undefined && o.f & D && calling === 0 && g !== undefined) {
+    if (o !== undefined && o.f & F.D && calling === 0 && g !== undefined) {
       diagnostic("critical", "created under a disposed owner");
     }
     checkCreateRow(o, f, g);
@@ -195,7 +205,7 @@ const create = (f: number, g: (() => unknown) | undefined, v: unknown): Node => 
 };
 
 export const computed = <T>(fn: () => T): Computed<T> =>
-  create(C | M, fn, undefined) as unknown as Computed<T>;
+  create(F.C | F.M, fn, undefined) as unknown as Computed<T>;
 
 /**
  * First run of a new effect, sub or scope: no teardown or trim (a first run only appends links),
@@ -208,12 +218,12 @@ const start = (n: Node): Node => {
   const pr = runs;
   const d = depth;
   // Its climb target (I3): its owner if that is an effect or sub, else its owner's
-  n.o = po === undefined || po.f & E ? po : po.o;
+  n.o = po === undefined || po.f & F.E ? po : po.o;
   owner = n;
-  if (n.f & E) {
+  if (n.f & F.E) {
     depth++;
     tracker = n;
-    runs = ids = (ids + 1) & MASK;
+    runs = ids = (ids + 1) & Id.MASK;
   } else tracker = undefined;
   try {
     n.v = (n.g as () => unknown)();
@@ -222,9 +232,9 @@ const start = (n: Node): Node => {
     owner = po;
     if (process.env.NODE_ENV !== "production") checkReturn(n);
     // Disposed during its run: dispose what the rest of it linked and made, and its cleanup
-    if (n.f & D) kill(n);
-    else if (n.f & M) repair(n);
-    if (n.f & E) end();
+    if (n.f & F.D) kill(n);
+    else if (n.f & F.M) repair(n);
+    if (n.f & F.E) end();
     // A scope never runs again: it lets its fn (and what that holds) go
     else n.g = undefined;
   } catch (error) {
@@ -241,7 +251,7 @@ const start = (n: Node): Node => {
 /** Runs `fn` now and again after the values it read change; a returned function is its cleanup. */
 // oxlint-disable-next-line typescript/no-invalid-void-type
 export const effect = (fn: () => void | (() => void)): Effect =>
-  start(create(E, fn, undefined)) as unknown as Effect;
+  start(create(F.E, fn, undefined)) as unknown as Effect;
 
 /**
  * Calls `fn(value)` untracked now and after each change of `source` (a signal, or a computed read
@@ -252,7 +262,7 @@ export const effect = (fn: () => void | (() => void)): Effect =>
 export const sub = <T>(source: Signal<T> | Computed<T>, fn: (value: T) => void): Effect =>
   start(
     create(
-      E | S,
+      F.E | F.S,
       (): void => {
         const value = get(source);
         // `start` or the flush gives the tracker back
@@ -276,21 +286,23 @@ export const sub = <T>(source: Signal<T> | Computed<T>, fn: (value: T) => void):
  */
 // oxlint-disable-next-line typescript/no-invalid-void-type
 export const scope = (fn: () => void | (() => void)): Scope =>
-  start(create(S, fn, undefined)) as unknown as Scope;
+  start(create(F.S, fn, undefined)) as unknown as Scope;
 
 /** Calls `fn` when the current owner is disposed or, for an effect, before its next run. */
 export const defer = (fn: () => void): void => {
   if (process.env.NODE_ENV !== "production" && owner === undefined) {
     diagnostic("warn", "defer outside a scope or effect is never called");
   }
-  create(S, undefined, fn);
+  create(F.S, undefined, fn);
 };
 
 export const get = <T>(node: Signal<T> | Computed<T>): T => {
   const n = node as unknown as Node;
   // Signals and current computeds take one test; dev builds also send disposed and running ones,
   // and runners (a cast reaches them: a tracked read would overwrite their climb target, `o`)
-  if (n.f & (process.env.NODE_ENV !== "production" ? M | X | D | R | E | S : M | X)) {
+  if (
+    n.f & (process.env.NODE_ENV !== "production" ? F.M | F.X | F.D | F.R | F.E | F.S : F.M | F.X)
+  ) {
     return pull(n) as T;
   }
   const t = tracker;
@@ -301,14 +313,14 @@ export const get = <T>(node: Signal<T> | Computed<T>): T => {
 /** `get` of a computed that is marked (or new) or holds an error. */
 const pull = (n: Node): unknown => {
   if (process.env.NODE_ENV !== "production") {
-    if (n.f & (E | S)) diagnostic("critical", "get of an effect or scope");
-    if (n.f & D) diagnostic("critical", "read of a disposed computed");
-    if (n.f & R) diagnostic("critical", "cycle: a computed read itself");
+    if (n.f & (F.E | F.S)) diagnostic("critical", "get of an effect or scope");
+    if (n.f & F.D) diagnostic("critical", "read of a disposed computed");
+    if (n.f & F.R) diagnostic("critical", "cycle: a computed read itself");
   }
-  if (n.f & M) refresh(n);
+  if (n.f & F.M) refresh(n);
   const t = tracker;
   if (t !== undefined) track(n, t);
-  if (n.f & X) throw n.v;
+  if (n.f & F.X) throw n.v;
   return n.v;
 };
 
@@ -356,7 +368,7 @@ const trim = (n: Node, last: Link | undefined): void => {
 /** Brings marked computed `c` up to date: evaluates it if it is new or a dep's value changed. */
 const refresh = (c: Node): void => {
   if (c.d === undefined || changed(c)) recompute(c);
-  else c.f &= ~M;
+  else c.f &= ~F.M;
 };
 
 /** Evaluates computed `c` as a run of its own (I4), boxing a throw (X); then trims its deps. */
@@ -364,13 +376,13 @@ const recompute = (c: Node): void => {
   const pt = tracker;
   const pr = runs;
   tracker = c;
-  runs = ids = (ids + 1) & MASK;
+  runs = ids = (ids + 1) & Id.MASK;
   // Its value may change: a run in progress that read it reads it again through the slow path
-  c.o = NONE;
-  c.f &= ~(M | X);
+  c.o = Id.NONE;
+  c.f &= ~(F.M | F.X);
   c.v = undefined;
   if (process.env.NODE_ENV !== "production") {
-    c.f |= R;
+    c.f |= F.R;
     evaluating++;
   }
   let value: unknown;
@@ -378,10 +390,10 @@ const recompute = (c: Node): void => {
     value = (c.g as () => unknown)();
   } catch (error) {
     value = error;
-    c.f |= X;
+    c.f |= F.X;
   }
   if (process.env.NODE_ENV !== "production") {
-    c.f &= ~R;
+    c.f &= ~F.R;
     evaluating--;
   }
   tracker = pt;
@@ -405,8 +417,8 @@ const changed = (n: Node): boolean => {
       l = stack[--sp] as Link;
     } else {
       const d = l.D;
-      if (d.f & M) {
-        d.f &= ~M;
+      if (d.f & F.M) {
+        d.f &= ~F.M;
         stack[sp++] = l;
         l = d.d;
       } else if (l.v === d.v) {
@@ -426,9 +438,9 @@ const mark = (l: Link): void => {
   for (;;) {
     const sub = l.S;
     const f = sub.f;
-    if (!(f & M)) {
-      sub.f = f | M;
-      if (f & E) queue[tail++] = sub;
+    if (!(f & F.M)) {
+      sub.f = f | F.M;
+      if (f & F.E) queue[tail++] = sub;
       else if (sub.s !== undefined) {
         if (l.n !== undefined) stack[sp++] = l.n;
         l = sub.s as Link;
@@ -453,7 +465,7 @@ export const set = <T>(signal: Signal<T>, value: T): void => {
       if (depth !== 0) {
         mark(l);
         // A run in progress that read it reads it again through the slow path (I4)
-        s.o = NONE;
+        s.o = Id.NONE;
       } else notify(l, value);
     }
   }
@@ -462,7 +474,7 @@ export const set = <T>(signal: Signal<T>, value: T): void => {
 /** Runs what a write outside batches and runs reaches, through its first subscriber link `l`. */
 const notify = (l: Link, value: unknown): void => {
   // Its only reader is an effect, and nothing is marked (I7): run it if what it read changed
-  if (l.n === undefined && l.S.f & E) {
+  if (l.n === undefined && l.S.f & F.E) {
     if (l.v !== value) flush(l.S);
   } else {
     mark(l);
@@ -495,8 +507,8 @@ const flush = (e?: Node): void => {
         const q = queue[--tail] as Node;
         queue[tail] = undefined;
         // Unmarked before any call: a stack overflow from here on leaves no popped runner marked
-        if (q.f & M) {
-          q.f &= ~M;
+        if (q.f & F.M) {
+          q.f &= ~F.M;
           update(q);
         }
       }
@@ -533,11 +545,11 @@ const update = (e: Node): void => {
  */
 const climb = (e: Node): Node => {
   for (let o = e.o as Node | undefined; o !== undefined; o = o.o as Node | undefined) {
-    if (o.f & M) {
-      e.f |= M;
+    if (o.f & F.M) {
+      e.f |= F.M;
       queue[tail++] = e;
       e = o;
-      e.f &= ~M;
+      e.f &= ~F.M;
     }
   }
   return e;
@@ -556,12 +568,12 @@ const run = (e: Node): void => {
     diagnostic("critical", "cycle: a flush ran effects and subs a million times");
   }
   tracker = owner = e;
-  if ((e.s !== undefined || e.v !== undefined) && !(e.f & S)) {
+  if ((e.s !== undefined || e.v !== undefined) && !(e.f & F.S)) {
     reset(e);
     // A cleanup disposed it
-    if (e.f & D) return;
+    if (e.f & F.D) return;
   }
-  runs = ids = (ids + 1) & MASK;
+  runs = ids = (ids + 1) & Id.MASK;
   let fn: unknown;
   try {
     fn = (e.g as () => unknown)();
@@ -569,10 +581,10 @@ const run = (e: Node): void => {
     const last = e.v as Link | undefined;
     e.v = fn;
     // Disposed during its run: dispose what the rest of it linked and made, and its cleanup
-    if (e.f & D) kill(e);
+    if (e.f & F.D) kill(e);
     else {
       trim(e, last);
-      if (e.f & M) repair(e);
+      if (e.f & F.M) repair(e);
     }
   }
   if (process.env.NODE_ENV !== "production") checkReturn(e);
@@ -584,8 +596,8 @@ const run = (e: Node): void => {
  * moved.
  */
 const repair = (e: Node): void => {
-  if (!(e.f & S)) e.f &= ~M;
-  for (let l = e.d; l !== undefined; l = l.d) if (l.D.f & M) refresh(l.D);
+  if (!(e.f & F.S)) e.f &= ~F.M;
+  for (let l = e.d; l !== undefined; l = l.d) if (l.D.f & F.M) refresh(l.D);
 };
 
 /** Disposes `n`'s children and cleanup nodes, newest first, then calls its cleanup (I8, I9). */
@@ -622,10 +634,10 @@ const reset = (n: Node): void => {
  * run that disposed it), it finishes the teardown in progress and drops what was linked since.
  */
 const kill = (n: Node): void => {
-  n.f = (n.f & ~M) | D;
+  n.f = (n.f & ~F.M) | F.D;
   drop(n.d);
   n.d = undefined;
-  if (!(n.f & C)) {
+  if (!(n.f & F.C)) {
     // A runner lets its fn go; a computed keeps its getter (D marks it dead): V8 recompiles the
     // getters of computeds whose `g` was written after creation
     n.g = undefined;
@@ -647,8 +659,8 @@ export const dispose = (node: Effect | Scope | Computed<unknown>): void => {
   const n = node as unknown as Node;
   if (process.env.NODE_ENV !== "production") {
     if (inGetter()) diagnostic("critical", "dispose inside a computed");
-    if (!(n.f & (C | E | S))) diagnostic("critical", "dispose of a signal");
-    if (n.f & C && !(n.f & D) && n.s !== undefined) {
+    if (!(n.f & (F.C | F.E | F.S))) diagnostic("critical", "dispose of a signal");
+    if (n.f & F.C && !(n.f & F.D) && n.s !== undefined) {
       diagnostic("warn", "disposed a computed that still has readers; its value freezes");
     }
   }
@@ -752,7 +764,7 @@ interface RowCheck {
  * anything straight under whatever runs it (never the row's). A scope is S with a fn; a sub (E|S)
  * and a cleanup node (S, no fn) are not.
  */
-const checkCreateRow = (o: Node | undefined, f: number, g: unknown): void => {
+const checkCreateRow = (o: Node | undefined, f: F, g: unknown): void => {
   const c = (globalThis as Record<symbol, RowCheck | undefined>)[Symbol.for("stage1.row")];
   if (c === undefined) return;
   if (c.o === c) c.o = o;
@@ -766,7 +778,7 @@ const checkCreateRow = (o: Node | undefined, f: number, g: unknown): void => {
         "a list's update made an effect, computed, scope or cleanup: it belongs to the list's wiring, not the row, and is never dropped with the row. Make a row's effects in its create (in a scope of the row's own that the list's drop disposes)",
       );
     }
-  } else if (!(c.w & 1) && o !== undefined && o.f & E && (f !== S || g === undefined)) {
+  } else if (!(c.w & 1) && o !== undefined && o.f & F.E && (f !== F.S || g === undefined)) {
     c.w |= 1;
     diagnostic(
       "warn",
