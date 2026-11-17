@@ -92,6 +92,7 @@
 // oxlint-disable unicorn/explicit-length-check
 // oxlint-disable typescript/no-unsafe-function-type typescript/no-unsafe-call typescript/ban-types
 
+import { checkCycle } from "../dev.ts";
 // A disposed sub's callback: list apps ship it already
 import { noop } from "../utils.ts";
 
@@ -243,13 +244,11 @@ export const batch = <T>(fn: () => T): T => {
   }
 };
 
-/** Dev builds only: calls the running pass made (an endless write loop throws: `count`). */
-let runs = 0;
+/** Dev builds only: calls the running pass made (an endless write loop throws: `checkPass`). */
+let calls = 0;
 /** Dev builds only: inside a callback's `try`, so the pass drains (each call left throws too). */
-const checkCycle = (): void => {
-  if (++runs > 1_000_000) {
-    throw new Error("stage1: cycle: a pass called subs a million times");
-  }
+const checkPass = (): void => {
+  checkCycle(++calls, "cycle: a pass called subs a million times");
 };
 
 // A pass: walks `s`, then, while `dirty` (anything queued or caught), pops and walks until the
@@ -259,12 +258,12 @@ const checkCycle = (): void => {
 // loop: smaller, and what JSC inlines); one `dirty` test sits on the at-rest path.
 const flush = (s: Head): void => {
   let error: unknown = queue;
-  if (process.env.NODE_ENV !== "production") runs = 0;
+  if (process.env.NODE_ENV !== "production") calls = 0;
   for (;;) {
     if (s.c !== s.v) {
       held = true;
       try {
-        if (process.env.NODE_ENV !== "production") checkCycle();
+        if (process.env.NODE_ENV !== "production") checkPass();
         s.g!((s.c = s.v));
       } catch (error_) {
         error = error_;
@@ -276,7 +275,7 @@ const flush = (s: Head): void => {
       if (x.v !== s.v) {
         held = true;
         try {
-          if (process.env.NODE_ENV !== "production") checkCycle();
+          if (process.env.NODE_ENV !== "production") checkPass();
           x.g((x.v = s.v));
         } catch (error_) {
           error = error_;

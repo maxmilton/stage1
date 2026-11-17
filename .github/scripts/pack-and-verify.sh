@@ -54,6 +54,7 @@ jq -e '
   index("dist/legacy/reconcile/reuse-lite.js.map") != null and
   index("dist/types.d.ts") != null and
   index("dist/types.d.ts.map") != null and
+  index("src/dev.ts") != null and
   index("src/index.ts") != null and
   index("src/runtime.ts") != null and
   index("src/signal.ts") != null and
@@ -80,8 +81,8 @@ jq -e '
   index("src/legacy/reconcile/reuse-lite.ts") != null
 ' "$PACK_JSON" \
   || fail "Required package files missing"
-jq -e '.[keys[0]].entryCount == 59' "$PACK_JSON" \
-  || fail "Expected 59 packed files"
+jq -e '.[keys[0]].entryCount == 60' "$PACK_JSON" \
+  || fail "Expected 60 packed files"
 filename="$(jq -er '.[keys[0]].filename' "$PACK_JSON")" \
   || fail "Package filename missing"
 mv -- "$filename" publish.tgz \

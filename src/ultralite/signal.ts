@@ -57,9 +57,11 @@
 // keep them.
 //
 // Callbacks are typed Function.
-// oxlint-disable id-length max-depth node/no-process-env
+// oxlint-disable id-length max-depth oxclippy/excessive-nesting node/no-process-env
 // oxlint-disable typescript/no-non-null-assertion
 // oxlint-disable typescript/no-unsafe-function-type typescript/no-unsafe-call typescript/ban-types
+
+import { checkCycle, report } from "../dev.ts";
 
 declare const brand: unique symbol;
 export interface Signal<T> {
@@ -124,7 +126,7 @@ export const sub: <T>(signal: Signal<T>, fn: (value: T) => void) => Effect = ((
   fn: Function,
 ): Head => {
   if (process.env.NODE_ENV !== "production" && s.g !== undefined) {
-    throw new Error("stage1: this signal has a sub; dispose it first");
+    report("critical", "sub of a signal that already has a sub; dispose that first");
   }
   s.g = fn;
   try {
@@ -155,10 +157,14 @@ export const batch = <T>(fn: () => T): T => {
       while (queue.length) {
         const s = queue.pop()!;
         if (s.c !== s.v && s.g !== undefined) {
-          if (process.env.NODE_ENV !== "production" && ++calls > 1e6) {
-            queue.length = 0;
-            error = new Error("stage1: cycle: a batch end called subs a million times");
-            break;
+          if (process.env.NODE_ENV !== "production") {
+            try {
+              checkCycle(++calls, "cycle: a batch end called subs a million times");
+            } catch (error_) {
+              queue.length = 0;
+              error = error_;
+              break;
+            }
           }
           depth = 1;
           try {

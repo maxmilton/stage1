@@ -6002,13 +6002,27 @@ describe.if(DEV)("dev checks", () => {
     expect(calls).toBeGreaterThan(0);
   });
 
-  test("creating a sub inside a computed's getter throws on read", () => {
+  test.serial("a throwing cleanup is logged with its error", () => {
+    expect.assertions(1);
+    using spy = spyOn(console, "error").mockImplementation(() => {});
+    const error = new Error("cleanup");
+    dispose(
+      effect(() => () => {
+        throw error;
+      }),
+    );
+    expect(spy.mock.calls).toEqual([["stage1: a cleanup threw", error]]);
+  });
+
+  test("creating a sub inside a computed's getter throws on read, naming sub", () => {
     expect.assertions(1);
     const node = computed(() => {
       sub(signal(0), () => {});
       return 0;
     });
-    expect(() => get(node)).toThrow(/^stage1: /u);
+    expect(() => get(node)).toThrow(
+      /^stage1: effect, sub, computed, scope, or defer inside a computed$/u,
+    );
   });
 
   test("a sub made inside untracked inside a computed's getter throws on read", () => {
@@ -6030,7 +6044,7 @@ describe.if(DEV)("dev checks", () => {
         if (++calls > 2_000_000) throw new Error("runaway");
         set(s, value + 1);
       }),
-    ).toThrow(/^stage1: /u);
+    ).toThrow(/^stage1: cycle: a flush ran effects and subs a million times$/u);
   });
 
   test("after a write loop throws, a later write runs its effects again", () => {

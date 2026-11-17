@@ -11,6 +11,10 @@
 // and `update` make belongs to whatever calls the rows function (on the full tier, the sub, until
 // it is disposed). Rows that own effects opt in through `drop`, which runs for each row the list
 // removes, clears or replaces, while the row is still in the DOM.
+// The list keeps the items array it is given and diffs the next call's against it, so an array it
+// has rendered must not change in place (pass a new one); if it did, a dev build throws at the
+// list's next call (./dev.ts).
+// An item changed in place keeps its row as rendered: `update` runs only for a new object.
 // `create`, `update` and `drop` must not throw (unsupported: the rows no longer match the items,
 // though a connected parent is put back); a dev build says so, wrapping the error. Calling the rows
 // function again while it reconciles is unsupported; a dev build throws. When a stage1 or
@@ -18,8 +22,8 @@
 // reconciles again after it (those subs deliver a write made in a callback after that callback
 // returns). A write delivered at once re-enters: under stage1/ultralite's sub outside a batch, or
 // on any tier when the rows function was called outside every callback and batch. Dev builds also
-// tell a full core when a create or update runs (`told`), so it can warn about what rows make
-// outside a scope.
+// tell a full core when a create or update runs (`watchRows` in ./dev.ts), so it can warn about
+// what rows make outside a scope.
 // Unspecified: duplicate keys; `drop`'s extra arguments on clear and replace; a show call made
 // during a reconcile, as a write to the selection delivered at once makes (it looks up the rows as
 // they were before the reconcile).
@@ -27,37 +31,8 @@
 // oxlint-disable id-length no-bitwise no-continue oxclippy/similar-names
 // oxlint-disable node/no-process-env no-negated-condition unicorn/no-negated-condition
 
+import { checkItems, recheckItems, report, watchRows } from "./dev.ts";
 import { noop } from "./utils.ts";
-
-/**
- * Dev builds only: the list's state, which a full core reads while a create or update runs to warn
- * about what it makes outside a scope (`rowWarn` in ./signal.ts). `o` is this object until the core
- * records the owner the call runs under, `u` says update, `w` holds the warnings given (1 create, 2
- * update).
- */
-interface Told {
-  o: unknown;
-  u: boolean;
-  w: number;
-}
-
-/**
- * Dev builds only: runs `fn` (a create or, with `u`, an update) with the registered global
- * `Symbol.for("stage1.row")` set to `state`; a core without the check ignores it.
- */
-const told = <R>(state: Told, u: boolean, fn: () => R): R => {
-  const global = globalThis as Record<symbol, unknown>;
-  const slot = Symbol.for("stage1.row");
-  const prev = global[slot];
-  state.o = state;
-  state.u = u;
-  global[slot] = state;
-  try {
-    return fn();
-  } finally {
-    global[slot] = prev;
-  }
-};
 
 /** Where `mark` reaches a list: a property of the rows function. */
 const ROWS = Symbol();
@@ -130,19 +105,8 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
   // Dev builds only: a reconcile is running (a write to the items delivered at once re-enters)
   let busy = false;
   if (process.env.NODE_ENV !== "production") {
-    // A list with a drop disposes what its rows own: the create warning is taken as given, so
-    // only the update warning (what update makes belongs to the wiring, never to the row) remains
-    const state: Told = { o: undefined, u: false, w: drop ? 1 : 0 };
-    const plainCreate = create;
-    const plainUpdate = update;
     // oxlint-disable-next-line no-param-reassign
-    create = (item) => told(state, false, () => plainCreate(item));
-    // oxlint-disable-next-line no-param-reassign
-    update = (node, item) => {
-      told(state, true, () => {
-        plainUpdate(node, item);
-      });
-    };
+    [create, update] = watchRows(create, update, drop);
   }
   // An undefined reference node appends, as for null
   const insert = parent.insertBefore.bind(parent) as (node: N, before?: N) => N;
@@ -275,16 +239,23 @@ export const list = <T, K extends keyof T, N extends ChildNode>(
     const prev = rows;
     if (process.env.NODE_ENV !== "production") {
       if (busy) {
-        throw new Error(
-          "stage1: a list's rows were called again during their reconcile (its items were written from create, update, drop or a mark callback and the write was delivered at once: under stage1/ultralite's sub outside a batch, or because the rows function was called outside every callback and batch), which would duplicate rows",
+        report(
+          "critical",
+          "a list's rows were called again during their reconcile: a write to its items from a list callback was delivered at once (stage1/ultralite outside a batch, or rows called outside every callback and batch)",
         );
       }
+      // After the busy check: a call made during a reconcile must not check or replace the guard's
+      // copy, which is of `next` until the reconcile ends
+      const old = checkItems(apply, data, next);
       busy = true;
       try {
         rows = reconcile(next);
       } catch (error) {
-        throw new Error(
-          "stage1: a list's create, update or drop threw; its rows no longer match its items",
+        // The guard's error instead if an items array changed during the reconcile
+        recheckItems(apply, data, next, old, error);
+        report(
+          "critical",
+          "a list's create, update, or drop threw; its rows no longer match its items",
           { cause: error },
         );
       } finally {

@@ -804,10 +804,10 @@ describe.each(TIERS)("on %s", (_tier, w) => {
         rendered.set([ITEMS[0], { id: "bad", label: "" }]);
       }) as Error;
       if (DEV) {
-        expect([
-          caught.message.startsWith("stage1: a list's"),
-          (caught.cause as Error).message,
-        ]).toEqual([true, "create failed"]);
+        expect([caught.message, (caught.cause as Error).message]).toEqual([
+          "stage1: a list's create, update, or drop threw; its rows no longer match its items",
+          "create failed",
+        ]);
       } else expect(caught.message).toBe("create failed");
     });
 
@@ -2319,8 +2319,12 @@ describe("dev row warnings", () => {
       );
       set(source, lettered("abc"));
       dispose(handle);
-      expect(texts(warn).map((text) => text.includes("a list's create"))).toEqual(
-        DEV ? [true] : [],
+      expect(texts(warn)).toEqual(
+        DEV
+          ? [
+              "stage1: a list's create made an effect, sub, computed, or defer outside a scope: the list's wiring owns it, not the row; make it in a scope of the row's own that the list's drop disposes",
+            ]
+          : [],
       );
     },
   );
@@ -2413,8 +2417,12 @@ describe("dev row warnings", () => {
       dispose(handle);
       set(s, 1);
       expect(runs).toEqual(["a1 0", "b1 0", "a2 0", "b2 0"]);
-      expect(texts(warn).map((text) => text.includes("a list's update"))).toEqual(
-        DEV ? [true] : [],
+      expect(texts(warn)).toEqual(
+        DEV
+          ? [
+              "stage1: a list's update made an effect, sub, computed, scope, or defer: the list's wiring owns it, not the row; make it in create instead, in a scope the list's drop disposes",
+            ]
+          : [],
       );
     },
   );

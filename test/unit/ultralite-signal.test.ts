@@ -78,7 +78,7 @@ describe("ultralite signals", () => {
       sub(source, noop);
       expect(() => {
         sub(source, noop);
-      }).toThrow(/stage1: this signal has a sub/u);
+      }).toThrow(/^stage1: sub of a signal that already has a sub; dispose that first$/u);
     });
 
     test.if(DEV)(
@@ -751,7 +751,7 @@ describe("ultralite signals", () => {
           state.on = true;
           set(state.head, 1);
         });
-      }).toThrow(/million/u);
+      }).toThrow(/^stage1: cycle: a batch end called subs a million times$/u);
     });
 
     // The loop stays on, so a later end that inherited its pending writes would loop again

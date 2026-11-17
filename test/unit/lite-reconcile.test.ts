@@ -55,12 +55,6 @@ describe.each([
     const code = await bundle(entry, "{ signal, set, sub, dispose, list, mark }", NODE_ENV);
     expect(/\b(?:effect|scope|refresh|recompute|track|kill|climb)\(/u.exec(code)).toBeNull();
   });
-
-  test("a production app carries none of the dev row check", async () => {
-    expect.assertions(1);
-    const code = await bundle(entry, "{ signal, set, sub, dispose, list, mark }", "production");
-    expect([code.includes("stage1.row"), code.includes("Symbol.for")]).toEqual([false, false]);
-  });
 });
 
 describe("list on stage1/ultralite", () => {
@@ -87,7 +81,9 @@ describe("list on stage1/ultralite", () => {
       } catch (error_) {
         error = error_ as Error & { cause?: Error };
       }
-      expect(error?.cause?.message ?? error?.message).toContain("stage1/ultralite");
+      expect(error?.cause?.message ?? error?.message).toBe(
+        "stage1: a list's rows were called again during their reconcile: a write to its items from a list callback was delivered at once (stage1/ultralite outside a batch, or rows called outside every callback and batch)",
+      );
     },
   );
 

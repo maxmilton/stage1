@@ -64,7 +64,7 @@
 //
 // oxlint-disable no-bitwise no-param-reassign no-use-before-define
 // Short names, `=== undefined` tests and chained assignments are deliberate (bytes; V8 speed), and
-// dev checks read process.env and log to the console.
+// dev checks read process.env.
 // oxlint-disable id-length no-continue no-multi-assign no-negated-condition no-shadow
 // oxlint-disable node/no-process-env unicorn/no-negated-condition unicorn/no-useless-undefined
 // oxlint-disable unicorn/number-literal-case typescript/explicit-member-accessibility
@@ -72,6 +72,8 @@
 // oxlint-disable typescript/prefer-optional-chain
 // The const enums are plain bit flags and numbers:
 // oxlint-disable oxc/bad-bitwise-operator
+
+import { checkCycle, checkReturn, checkRow, report } from "./dev.ts";
 
 /**
  * Bit flags; kinds and states, in `f`. Const enums, not consts: once a module has an import
@@ -180,17 +182,19 @@ export const signal = <T>(value: T): Signal<T> =>
 const create = (f: F, g: (() => unknown) | undefined, v: unknown): Node => {
   const o = owner;
   if (process.env.NODE_ENV !== "production") {
-    if (inGetter()) {
-      diagnostic("critical", "effect, computed, scope, or defer created inside a computed");
+    if (inComputed()) {
+      report("critical", "effect, sub, computed, scope, or defer inside a computed");
     }
     // The owner disposed itself in this run: its end disposes what the rest creates, so only a
     // cleanup (it then runs) is meaningful. A sub's call is exempt, however deep the owner: it may
     // be a list's reconcile that cannot stop when a row's cleanup or effect disposed the sub; the
     // ends of the runs in progress dispose what the rest made, silently
     if (o !== undefined && o.f & F.D && calling === 0 && g !== undefined) {
-      diagnostic("critical", "created under a disposed owner");
+      report("critical", "effect, sub, computed, or scope under a disposed owner");
     }
-    checkCreateRow(o, f, g);
+    // Unscoped: made straight under a re-running wiring (an effect or sub), and not a scope (S with
+    // a fn; a sub, E|S, and a cleanup node, S with none, are not)
+    checkRow(o, o !== undefined && (o.f & F.E) !== 0 && (f !== F.S || g === undefined));
   }
   const n = new Node(f, g, v, o);
   if (o !== undefined) {
@@ -291,7 +295,7 @@ export const scope = (fn: () => void | (() => void)): Scope =>
 /** Calls `fn` when the current owner is disposed or, for an effect, before its next run. */
 export const defer = (fn: () => void): void => {
   if (process.env.NODE_ENV !== "production" && owner === undefined) {
-    diagnostic("warn", "defer outside a scope or effect is never called");
+    report("warn", "defer outside an effect, sub, or scope; its fn is never called");
   }
   create(F.S, undefined, fn);
 };
@@ -313,9 +317,9 @@ export const get = <T>(node: Signal<T> | Computed<T>): T => {
 /** `get` of a computed that is marked (or new) or holds an error. */
 const pull = (n: Node): unknown => {
   if (process.env.NODE_ENV !== "production") {
-    if (n.f & (F.E | F.S)) diagnostic("critical", "get of an effect or scope");
-    if (n.f & F.D) diagnostic("critical", "read of a disposed computed");
-    if (n.f & F.R) diagnostic("critical", "cycle: a computed read itself");
+    if (n.f & (F.E | F.S)) report("critical", "get of an effect, sub, or scope");
+    if (n.f & F.D) report("critical", "get of a disposed computed");
+    if (n.f & F.R) report("critical", "cycle: a computed read itself");
   }
   if (n.f & F.M) refresh(n);
   const t = tracker;
@@ -455,8 +459,8 @@ const mark = (l: Link): void => {
 
 export const set = <T>(signal: Signal<T>, value: T): void => {
   const s = signal as unknown as Node;
-  if (process.env.NODE_ENV !== "production" && inGetter()) {
-    diagnostic("critical", "set inside a computed");
+  if (process.env.NODE_ENV !== "production" && inComputed()) {
+    report("critical", "set inside a computed");
   }
   if (s.v !== value) {
     s.v = value;
@@ -564,8 +568,8 @@ const climb = (e: Node): Node => {
 const run = (e: Node): void => {
   // Dev builds: an endless write loop throws (the bound is far above any loop that settles); the
   // flush's catch then drains the queue, each run left throwing here too
-  if (process.env.NODE_ENV !== "production" && ++ran > 1_000_000) {
-    diagnostic("critical", "cycle: a flush ran effects and subs a million times");
+  if (process.env.NODE_ENV !== "production") {
+    checkCycle(++ran, "cycle: a flush ran effects and subs a million times");
   }
   tracker = owner = e;
   if ((e.s !== undefined || e.v !== undefined) && !(e.f & F.S)) {
@@ -614,7 +618,7 @@ const reset = (n: Node): void => {
       try {
         cleanup();
       } catch (error) {
-        diagnostic("error", "a cleanup threw", error);
+        report("error", "a cleanup threw", error);
       }
     } else {
       try {
@@ -658,10 +662,10 @@ const kill = (n: Node): void => {
 export const dispose = (node: Effect | Scope | Computed<unknown>): void => {
   const n = node as unknown as Node;
   if (process.env.NODE_ENV !== "production") {
-    if (inGetter()) diagnostic("critical", "dispose inside a computed");
-    if (!(n.f & (F.C | F.E | F.S))) diagnostic("critical", "dispose of a signal");
+    if (inComputed()) report("critical", "dispose inside a computed");
+    if (!(n.f & (F.C | F.E | F.S))) report("critical", "dispose of a signal");
     if (n.f & F.C && !(n.f & F.D) && n.s !== undefined) {
-      diagnostic("warn", "disposed a computed that still has readers; its value freezes");
+      report("warn", "dispose of a computed that still has readers; a later get of it throws");
     }
   }
   depth++;
@@ -709,88 +713,12 @@ export const untracked = <T>(fn: () => T): T => {
 
 // ── Dev Builds ───────────────────────────────────────────────────────────────
 
+// The core's own dev state; the checks it shares with the other tiers are in ./dev.ts.
+
 /** Dev builds only: getters running (untracked inside one does not hide them). */
 let evaluating = 0;
-const inGetter = (): boolean => evaluating !== 0;
+const inComputed = (): boolean => evaluating !== 0;
 /** Dev builds only: sub calls in progress (creating under a disposed owner is allowed there). */
 let calling = 0;
 /** Dev builds only: runs in the current flush (an endless write loop throws: `run`). */
 let ran = 0;
-
-function diagnostic(level: "critical", message: string): never;
-function diagnostic(level: "error", message: string, x?: unknown): void;
-function diagnostic(level: "warn" | "info", message: string): void;
-function diagnostic(
-  level: "critical" | "error" | "warn" | "info",
-  message: string,
-  x?: unknown,
-): void {
-  switch (level) {
-    case "critical":
-      throw new Error(`stage1: ${message}`);
-    case "error":
-      // oxlint-disable-next-line no-console
-      console.error(`stage1: ${message}`, x);
-      break;
-    case "warn":
-      // oxlint-disable-next-line no-console
-      console.warn(`stage1: ${message}`);
-      break;
-    case "info":
-      // oxlint-disable-next-line no-console
-      console.log(`stage1: ${message}`);
-      break;
-    default:
-      throw new Error(`Unknown diagnostic level "${String(level)}"`);
-  }
-}
-
-/**
- * Dev builds only: a list's create or update is running. The list (./reconcile.ts, dev) sets this
- * registered global around each call, with `o` = the object itself until the call's first creation
- * records its owner (the owner the call runs under: the list's wiring, or none), `u` true for an
- * update, and `w` the warnings given (1 create, 2 update). Production and lite builds have none of
- * it.
- */
-interface RowCheck {
-  o: unknown;
-  u: boolean;
-  w: number;
-}
-/**
- * Dev builds only: warns once per list with no drop when its create makes an effect, sub, computed
- * or cleanup straight under a re-running wiring (a sub or effect) rather than in a scope of the
- * row's own (a list with a drop sets `w` to 1 up front), and once per list when its update makes
- * anything straight under whatever runs it (never the row's). A scope is S with a fn; a sub (E|S)
- * and a cleanup node (S, no fn) are not.
- */
-const checkCreateRow = (o: Node | undefined, f: F, g: unknown): void => {
-  const c = (globalThis as Record<symbol, RowCheck | undefined>)[Symbol.for("stage1.row")];
-  if (c === undefined) return;
-  if (c.o === c) c.o = o;
-  // Made inside something the call made: that was checked when it was made
-  if (o !== c.o) return;
-  if (c.u) {
-    if (!(c.w & 2)) {
-      c.w |= 2;
-      diagnostic(
-        "warn",
-        "a list's update made an effect, computed, scope or cleanup: it belongs to the list's wiring, not the row, and is never dropped with the row. Make a row's effects in its create (in a scope of the row's own that the list's drop disposes)",
-      );
-    }
-  } else if (!(c.w & 1) && o !== undefined && o.f & F.E && (f !== F.S || g === undefined)) {
-    c.w |= 1;
-    diagnostic(
-      "warn",
-      "a list's create made an effect, computed or cleanup outside a scope: it belongs to the list's wiring, not the row (a sub keeps it until the sub is disposed; an effect disposes it when it re-runs). Make it in a scope of the row's own and pass list a drop that disposes it",
-    );
-  }
-};
-
-/** Dev builds only: an effect or scope returned neither a function nor undefined. */
-const checkReturn = (n: Node): void => {
-  if (n.v !== undefined && typeof n.v !== "function") {
-    n.v = undefined;
-    diagnostic("critical", "an effect or scope returned neither a function nor undefined");
-  }
-};

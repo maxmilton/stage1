@@ -1358,7 +1358,7 @@ describe("lite signals", () => {
         });
         expect(() => {
           set(source, 1);
-        }).toThrow(/million/u);
+        }).toThrow(/^stage1: cycle: a pass called subs a million times$/u);
       },
     );
 

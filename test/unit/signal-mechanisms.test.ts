@@ -1046,11 +1046,12 @@ describe("errors", () => {
 });
 
 describe.skipIf(PROD)("dev checks", () => {
-  const warns = (fn: () => void): number => {
+  /** The first argument of each console.warn call while `fn` runs. */
+  const warned = (fn: () => void): string[] => {
     using warn = spyOn(console, "warn");
     warn.mockImplementation(() => {});
     fn();
-    return warn.mock.calls.length;
+    return warn.mock.calls.map((call) => String(call[0]));
   };
 
   test("a write inside a getter throws", () => {
@@ -1062,7 +1063,7 @@ describe.skipIf(PROD)("dev checks", () => {
           set(s, 1);
         }),
       );
-    }).toThrow("set inside a computed");
+    }).toThrow(/^stage1: set inside a computed$/u);
   });
 
   // Regression: the check read the tracker, which untracked clears
@@ -1080,7 +1081,7 @@ describe.skipIf(PROD)("dev checks", () => {
       );
     }).toThrow("set inside a computed");
     expect(() => get(computed(() => untracked(() => effect(() => {}))))).toThrow(
-      "created inside a computed",
+      "defer inside a computed",
     );
     expect(() => {
       get(
@@ -1095,7 +1096,9 @@ describe.skipIf(PROD)("dev checks", () => {
 
   test("an effect created inside a getter throws", () => {
     expect.assertions(1);
-    expect(() => get(computed(() => effect(() => {})))).toThrow("created inside a computed");
+    expect(() => get(computed(() => effect(() => {})))).toThrow(
+      /^stage1: effect, sub, computed, scope, or defer inside a computed$/u,
+    );
   });
 
   test("dispose inside a getter throws", () => {
@@ -1107,18 +1110,20 @@ describe.skipIf(PROD)("dev checks", () => {
           dispose(e);
         }),
       );
-    }).toThrow("dispose inside a computed");
+    }).toThrow(/^stage1: dispose inside a computed$/u);
   });
 
   test("a computed reading itself throws", () => {
     expect.assertions(1);
     const c: Computed<number> = computed((): number => get(c) + 1);
-    expect(() => get(c)).toThrow("cycle");
+    expect(() => get(c)).toThrow(/^stage1: cycle: a computed read itself$/u);
   });
 
   test("an effect returning a non-function throws", () => {
     expect.assertions(1);
-    expect(() => effect((() => 5) as unknown as () => void)).toThrow("neither a function");
+    expect(() => effect((() => 5) as unknown as () => void)).toThrow(
+      /^stage1: an effect or scope returned neither a function nor undefined$/u,
+    );
   });
 
   test("a read of a computed disposed by its owner's re-run throws", () => {
@@ -1138,7 +1143,7 @@ describe.skipIf(PROD)("dev checks", () => {
     const c = computed(() => 1);
     get(c);
     dispose(c);
-    expect(() => get(c)).toThrow("disposed computed");
+    expect(() => get(c)).toThrow(/^stage1: get of a disposed computed$/u);
   });
 
   test("creating under an effect that disposed itself throws", () => {
@@ -1152,55 +1157,55 @@ describe.skipIf(PROD)("dev checks", () => {
     });
     expect(() => {
       set(s, 1);
-    }).toThrow("created under a disposed owner");
+    }).toThrow(/^stage1: effect, sub, computed, or scope under a disposed owner$/u);
   });
 
   test("dispose of a signal throws", () => {
     expect.assertions(1);
     expect(() => {
       dispose(signal(0) as unknown as Handle);
-    }).toThrow("dispose of a signal");
+    }).toThrow(/^stage1: dispose of a signal$/u);
   });
 
   test("get of an effect throws", () => {
     expect.assertions(1);
     const e = effect(() => {});
-    expect(() => get(e as never)).toThrow("get of an effect or scope");
+    expect(() => get(e as never)).toThrow(/^stage1: get of an effect, sub, or scope$/u);
   });
 
   test("get of a scope throws", () => {
     expect.assertions(1);
     const s = scope(() => {});
-    expect(() => get(s as never)).toThrow("get of an effect or scope");
+    expect(() => get(s as never)).toThrow(/^stage1: get of an effect, sub, or scope$/u);
   });
 
-  test.serial("disposing a computed that has readers warns", () => {
+  test.serial("disposing a computed that has readers warns once, naming the later throw", () => {
     expect.assertions(1);
     const c = computed(() => 1);
     effect(() => {
       get(c);
     });
     expect(
-      warns(() => {
+      warned(() => {
         dispose(c);
       }),
-    ).toBe(1);
+    ).toEqual(["stage1: dispose of a computed that still has readers; a later get of it throws"]);
   });
 
   test.serial("defer without an owner warns, and with one does not", () => {
     expect.assertions(2);
     expect(
-      warns(() => {
+      warned(() => {
         defer(() => {});
       }),
-    ).toBe(1);
+    ).toEqual(["stage1: defer outside an effect, sub, or scope; its fn is never called"]);
     expect(
-      warns(() => {
+      warned(() => {
         scope(() => {
           defer(() => {});
         });
       }),
-    ).toBe(0);
+    ).toEqual([]);
   });
 });
 
@@ -1905,6 +1910,11 @@ const faulty = await (async (): Promise<Faulty> => {
     );
   }
   code += "\nexport const FAULT = { changed: 0, run: 0, update: 0, climb: 0, thrown: 0 };\n";
+  // A blob URL has no directory: its relative imports (./dev.ts) resolve from src/ instead
+  code = code.replaceAll(
+    /(?<= from ")\.\/(?=[^"]+")/gu,
+    `${Bun.pathToFileURL(`${import.meta.dir}/../../src`).href}/`,
+  );
   const js = new Bun.Transpiler({ loader: "ts" }).transformSync(code);
   const url = URL.createObjectURL(new Blob([js], { type: "text/javascript" }));
   try {
