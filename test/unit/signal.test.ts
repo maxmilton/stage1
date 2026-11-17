@@ -1462,6 +1462,11 @@ describe("batch", () => {
     expect(seen.toSorted()).toEqual(["body", "effect 3", "effect 31", "sub 1", "sub 11"]);
   });
 
+  test("returns what its body returns", () => {
+    expect.assertions(1);
+    expect(batch(() => 42)).toBe(42);
+  });
+
   test("a batch body runs before what it deferred", () => {
     expect.assertions(1);
     const source = signal(0);

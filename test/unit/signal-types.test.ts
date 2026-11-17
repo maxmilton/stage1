@@ -200,9 +200,12 @@ describe("batch", () => {
     expect.assertions(0);
     expectTypeOf(batch).not.toBeAny();
     expectTypeOf(batch).toBeFunction();
-    expectTypeOf(batch).parameters.toEqualTypeOf<[fn: () => void]>();
-    expectTypeOf(batch).returns.toBeVoid();
-    expectTypeOf(batch).returns.not.toBeUndefined();
+    // Erased: `T` -> `unknown`.
+    expectTypeOf(batch).parameters.toEqualTypeOf<[fn: () => unknown]>();
+    expectTypeOf(batch).returns.toBeUnknown();
+    expectTypeOf(batch<number>).parameters.toEqualTypeOf<[fn: () => number]>();
+    expectTypeOf(batch<number>).returns.toEqualTypeOf<number>();
+    expectTypeOf((s: Signal<string>) => batch(() => get(s))).returns.toEqualTypeOf<string>();
   });
 });
 

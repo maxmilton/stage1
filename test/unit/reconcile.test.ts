@@ -319,7 +319,7 @@ interface Wiring {
   readonly reentry: "nested" | "after";
   readonly signal: <T>(value: T) => Source<T>;
   readonly set: <T>(source: Source<T>, value: T) => void;
-  readonly batch: (fn: () => void) => void;
+  readonly batch: (fn: () => void) => unknown;
   /** Calls `fn` with the source's value now and after each change; the handle is for `dispose`. */
   readonly sub: <T>(source: Source<T>, fn: (value: T) => void) => unknown;
   readonly dispose: (handle: unknown) => void;

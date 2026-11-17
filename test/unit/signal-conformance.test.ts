@@ -60,6 +60,7 @@ const adapter = (api: typeof source): ReactiveFramework => ({
   run(fn) {
     api.dispose(api.scope(fn));
   },
+  // oxlint-disable-next-line typescript/strict-void-return
   batch: api.batch,
   untracked: api.untracked,
 });
@@ -88,7 +89,8 @@ const BEHAVIOUR: Record<number, string> = {
   29: "===",
   167: "===",
   30: "skips",
-  176: "returns void",
+  // Differs: `batch` returns what its body returns
+  176: "returns value",
   173: "post-write",
   174: "post-write",
   // Differs from alien-signals: an effect whose first run throws is disposed and `effect` rethrows

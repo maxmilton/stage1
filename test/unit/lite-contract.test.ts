@@ -419,6 +419,11 @@ describe("lite signals", () => {
       expect(during).toEqual([0]);
     });
 
+    test("returns what its body returns", () => {
+      expect.assertions(1);
+      expect(batch(() => 42)).toBe(42);
+    });
+
     test("calls each sub of a changed signal once, with the final value", () => {
       expect.assertions(1);
       const source = signal(0);

@@ -657,10 +657,10 @@ export const dispose = (node: Effect | Scope | Computed<unknown>): void => {
   end();
 };
 
-export const batch = (fn: () => void): void => {
+export const batch = <T>(fn: () => T): T => {
   depth++;
   try {
-    fn();
+    return fn();
   } finally {
     end();
   }

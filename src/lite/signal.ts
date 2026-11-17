@@ -144,12 +144,12 @@ export const dispose: (handle: Sub) => void = ((x: Node): void => {
 }) as never;
 
 /** Defers notifications to the end of the outermost batch. */
-export const batch = (fn: () => void): void => {
+export const batch = <T>(fn: () => T): T => {
   // Below `start` are the entries of the batch end this batch runs in, if any: that end pops them
   const start = queue.length;
   depth++;
   try {
-    fn();
+    return fn();
   } finally {
     if (!--depth) {
       let error: unknown = NOOP;
