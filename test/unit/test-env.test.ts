@@ -67,3 +67,32 @@ describe("unawaited .resolves", () => {
     expect(Bun.file("missing").exists()).resolves.toBeTrue();
   });
 });
+
+// Characterization (Bun 1.4.4), behind src/signal.ts's const enums: it imports ./dev.ts
+describe("Bun.build minify of a module's constants", () => {
+  /** Minifies (names kept) a module declaring `decl` and returning `id(n & use)`. */
+  const build = async (decl: string, use: string, imported: boolean): Promise<string> => {
+    const id = imported ? 'import { id } from "./id.ts";' : "const id = (n: number): number => n;";
+    const out = await Bun.build({
+      entrypoints: ["/virtual/entry.ts"],
+      files: {
+        "/virtual/entry.ts": `${id}\n${decl}\nexport const f = (n: number): number => id(n & ${use});\n`,
+        "/virtual/id.ts": "export const id = (n: number): number => n;\n",
+      },
+      minify: { syntax: true, whitespace: true },
+    });
+    return out.outputs[0].text();
+  };
+
+  test("keeps a top-level const as a var once the module has an import", async () => {
+    expect.assertions(2);
+    expect(await build("const M = 8;", "M", true)).toContain("id(n&M)");
+    // Guards the assertion above: without the import, the const is inlined
+    expect(await build("const M = 8;", "M", false)).toContain("id(n&8)");
+  });
+
+  test("inlines a const enum member in a module with an import", async () => {
+    expect.assertions(1);
+    expect(await build("const enum F { M = 8 }", "F.M", true)).toContain("id(n&8)");
+  });
+});
