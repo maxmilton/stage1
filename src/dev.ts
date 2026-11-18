@@ -6,7 +6,7 @@
 //
 // Sections: `report`, which every check reports through; checkers each tier calls with what is
 // private to it (`checkReturn`, `checkCycle`); the row seam, the full core's warning about what a
-// list's create or update makes (`watchRows`, `checkRow`); the list guard (`checkItems`,
+// list's create or update makes (`watchRows`, `checkRow`, `unwatched`); the list guard (`checkItems`,
 // `recheckItems`).
 // `v` is the full core's field name, generics are named as in ./reconcile.ts, and the row seam keeps
 // its warnings as bits:
@@ -60,7 +60,8 @@ export const checkCycle = (count: number, message: string): void => {
 // The full core (./signal.ts) warns about what a list's create or update makes outside a scope of
 // the row's own: the list's wiring owns it, not the row. The list (./reconcile.ts) wraps its create
 // and update with `watchRows`, which sets `watched` around each call, and the core's `create` calls
-// `checkRow` for each node it makes. Lite cores never call `checkRow`.
+// `checkRow` for each node it makes; the core's `within` runs its fn `unwatched`. Lite cores never
+// call `checkRow`.
 
 /**
  * A list's state for the row seam: `owner` is this object until the core records the owner of the
@@ -108,6 +109,20 @@ export const watchRows = <T, N>(
       });
     },
   ];
+};
+
+/**
+ * Full core (`within`): runs `fn` outside any list call: what it makes has the owner its caller
+ * chose, so the row checks skip it.
+ */
+export const unwatched = <R>(fn: () => R): R => {
+  const prev = watched;
+  watched = undefined;
+  try {
+    return fn();
+  } finally {
+    watched = prev;
+  }
 };
 
 /**

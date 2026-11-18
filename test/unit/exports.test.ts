@@ -100,6 +100,8 @@ describe("index", () => {
     ["sub", "Function"],
     ["batch", "Function"],
     ["untracked", "Function"],
+    ["owner", "Function"],
+    ["within", "Function"],
     ["trigger", "Function"],
     ["noop", "Function"],
     ["fragment", "Function"],

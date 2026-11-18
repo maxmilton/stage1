@@ -12,6 +12,7 @@ import {
   type Effect,
   effect,
   get,
+  owner,
   type Scope,
   scope,
   set,
@@ -20,6 +21,7 @@ import {
   sub,
   trigger,
   untracked,
+  within,
 } from "../../src/signal.ts";
 
 describe("signal", () => {
@@ -239,5 +241,51 @@ describe("untracked", () => {
     expectTypeOf(untracked<number>).parameters.toEqualTypeOf<[fn: () => number]>();
     expectTypeOf(untracked<number>).returns.toEqualTypeOf<number>();
     expectTypeOf((s: Signal<string>) => untracked(() => get(s))).returns.toEqualTypeOf<string>();
+  });
+});
+
+describe("owner", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf(owner).not.toBeAny();
+    expectTypeOf(owner).toBeFunction();
+    expectTypeOf(owner).parameters.toEqualTypeOf<[]>();
+    expectTypeOf(owner).returns.not.toBeAny();
+    expectTypeOf(owner).returns.not.toBeNever();
+    // Nothing owns at top level
+    expectTypeOf(owner).returns.toEqualTypeOf<Effect | Scope | undefined>();
+  });
+});
+
+describe("within", () => {
+  test("types", () => {
+    expect.assertions(0);
+    expectTypeOf(within).not.toBeAny();
+    expectTypeOf(within).toBeFunction();
+    // Erased: `T` -> `unknown`.
+    expectTypeOf(within).parameters.toEqualTypeOf<[target: Effect | Scope, fn: () => unknown]>();
+    expectTypeOf(within).returns.not.toBeAny();
+    expectTypeOf(within).returns.not.toBeNever();
+    expectTypeOf(within).returns.toBeUnknown();
+    expectTypeOf(within<number>).parameters.toEqualTypeOf<
+      [target: Effect | Scope, fn: () => number]
+    >();
+    expectTypeOf(within<number>).returns.not.toBeAny();
+    expectTypeOf(within<number>).returns.not.toBeNever();
+    // Undefined: the target was disposed, so fn did not run
+    expectTypeOf(within<number>).returns.toEqualTypeOf<number | undefined>();
+    expectTypeOf((o: Scope, s: Signal<string>) => within(o, () => get(s))).returns.toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf((e: Effect, o: Scope, c: Computed<number>, v: Signal<number>) => {
+      within(e, () => {});
+      within(o, () => {});
+      // @ts-expect-error - a computed owns nothing
+      within(c, () => {});
+      // @ts-expect-error - nor does a signal
+      within(v, () => {});
+      // @ts-expect-error - owner() can be undefined: no owner to create under
+      within(owner(), () => {});
+    }).toBeFunction();
   });
 });

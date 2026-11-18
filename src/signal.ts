@@ -1,7 +1,7 @@
 // Signals, computeds, effects, subs and scopes: an ownership-first intrusive tree over a
 // single-colour, value-recording dependency graph. An effect, sub or scope owns the effects, subs,
-// computeds, scopes and cleanups (`defer`) its run creates: they are disposed, newest first, when it
-// is disposed, and an effect's also before it re-runs.
+// computeds, scopes and cleanups (`defer`) its run, or a `within` it, creates: they are disposed,
+// newest first, when it is disposed, and an effect's also before it re-runs.
 //
 // Dev checks sit behind `process.env.NODE_ENV !== "production"`: a production build (which must
 // define it, e.g. `define: { "process.env.NODE_ENV": '"production"' }` in Bun.build) drops them
@@ -34,11 +34,12 @@
 //   marked instead: its queue entry calls its fn again if the value moved, and what climbs to it
 //   waits for that (`climb`: nothing runs while an effect or sub above it is marked).
 // - I7 `depth` is above 0 while a batch, flush, effect's or sub's first run or disposal is open:
-//   writes then only mark and queue. A scope's body does not hold it (owner scopes): at depth 0 its
-//   writes run what they reach at once. At depth 0 no effect is marked or running (computeds stay
-//   marked until read) and no tracker is set; the owner is none, or the scope whose body runs. A
-//   re-run sets the tracker and owner and leaves them set (its teardown runs as its own); the flush
-//   gives back the owner it found and no tracker.
+//   writes then only mark and queue. A scope's body does not hold it (owner scopes), nor does a
+//   `within`: at depth 0 their writes run what they reach at once. At depth 0 no effect is marked or
+//   running (computeds stay marked until read) and no tracker is set; the owner is none, the scope
+//   whose body runs, or the target of a `within` in progress. A re-run sets the tracker and owner
+//   and leaves them set (its teardown runs as its own); the flush gives back the owner it found and
+//   no tracker.
 // - I8 Teardown: children and cleanup nodes newest first, in one list, then the node's own
 //   cleanup. A node leaves its owner's list only when its teardown is done, so a `dispose` that
 //   re-enters a teardown in progress (a cleanup disposing an ancestor) finishes it first.
@@ -61,7 +62,11 @@
 //   re-running (I7). Under a disposed owner, that owner: the end of its run disposes it, but a
 //   teardown that disposed its own effect ends no run, so what a cleanup creates after that lives
 //   on. Dev builds throw for it, except during a sub's call. Between runs of a flush the owner is
-//   the last run's: computed getters validated there must not create (dev error).
+//   the last run's: computed getters validated there must not create (dev error). `owner()` returns
+//   that owner too (in a getter: a dev error).
+// - A `within` whose target is disposed during its fn: what fn then makes under it lives on until
+//   the target is disposed again (dev builds throw at the creation or when fn returns, even where
+//   an open run of the target, or of an owner above it, would dispose it).
 // - A trigger, then a set back to the value its readers read, before they run (in a batch or a
 //   run) still runs them: an extra run, never a missed one. A sub that triggers its source on every
 //   call is an endless write loop.
@@ -80,7 +85,7 @@
 // The const enums are plain bit flags and numbers:
 // oxlint-disable oxc/bad-bitwise-operator
 
-import { checkCycle, checkReturn, checkRow, report } from "./dev.ts";
+import { checkCycle, checkReturn, checkRow, report, unwatched } from "./dev.ts";
 
 /**
  * Bit flags; kinds and states, in `f`. Const enums, not consts: once a module has an import
@@ -195,7 +200,8 @@ const create = (f: F, g: (() => unknown) | undefined, v: unknown): Node => {
     // The owner disposed itself in this run: its end disposes what the rest creates, so only a
     // cleanup (it then runs) is meaningful. A sub's call is exempt, however deep the owner: it may
     // be a list's reconcile that cannot stop when a row's cleanup or effect disposed the sub; the
-    // ends of the runs in progress dispose what the rest made, silently
+    // ends of the runs in progress dispose what the rest made, silently (a `within` target that
+    // died during its fn may have no such end: `within` checks it when fn returns)
     if (o !== undefined && o.f & F.D && calling === 0 && g !== undefined) {
       report("critical", "effect, sub, computed, or scope under a disposed owner");
     }
@@ -239,8 +245,8 @@ const start = (n: Node): Node => {
   try {
     n.v = (n.g as () => unknown)();
     tracker = pt;
-    runs = pr;
     owner = po;
+    runs = pr;
     if (process.env.NODE_ENV !== "production") checkReturn(n);
     // Disposed during its run: dispose what the rest of it linked and made, and its cleanup
     if (n.f & F.D) kill(n);
@@ -250,8 +256,8 @@ const start = (n: Node): Node => {
     else n.g = undefined;
   } catch (error) {
     tracker = pt;
-    runs = pr;
     owner = po;
+    runs = pr;
     depth = d;
     dispose(n as unknown as Effect);
     throw error;
@@ -531,9 +537,9 @@ const flush = (e?: Node): void => {
       error = thrown;
     }
   }
-  depth = 0;
   tracker = undefined;
   owner = o;
+  depth = 0;
   if (error !== queue) throw error;
 };
 
@@ -697,6 +703,58 @@ export const untracked = <T>(fn: () => T): T => {
     return fn();
   } finally {
     tracker = prev;
+  }
+};
+
+/**
+ * The effect, sub or scope that owns what is created now, if any: keep it to create under it later
+ * (an event, timer or promise callback) with `within`.
+ */
+const getOwner = (): Effect | Scope | undefined => {
+  if (process.env.NODE_ENV !== "production" && inComputed()) {
+    report("critical", "owner inside a computed");
+  }
+  return owner as unknown as Effect | Scope | undefined;
+};
+export { getOwner as owner };
+
+/**
+ * Runs `fn` untracked as the owner `target`: what it creates belongs to `target`, as if its run had
+ * created it (an effect disposes it before its next run). Not batched, as a scope's body. Gives
+ * back the owner and tracker it found, even if `fn` throws, and returns what `fn` returns. A
+ * disposed `target`: does not call `fn` and returns undefined. Only `fn`'s synchronous part runs as
+ * the owner: after an `await`, nothing owns.
+ */
+export const within = <T>(target: Effect | Scope, fn: () => T): T | undefined => {
+  if (process.env.NODE_ENV !== "production") {
+    if (inComputed()) report("critical", "within inside a computed");
+    if (!((target as unknown as Node).f & (F.E | F.S))) {
+      report("critical", "within of a signal or computed");
+    }
+  }
+  if ((target as unknown as Node).f & F.D) return undefined;
+  const pt = tracker;
+  const po = owner;
+  tracker = undefined;
+  owner = target as unknown as Node;
+  try {
+    if (process.env.NODE_ENV !== "production") {
+      // Its caller chose the owner: no list's row check applies to what fn makes
+      const value = unwatched(fn);
+      // Disposed during fn, which made something under it after: unless a run of it (or of an
+      // owner above it) is open, nothing disposes that; the check does not tell the cases apart
+      if ((target as unknown as Node).f & F.D && (target as unknown as Node).s !== undefined) {
+        report(
+          "critical",
+          "effect, sub, computed, scope, or defer under a within target disposed during its fn",
+        );
+      }
+      return value;
+    }
+    return fn();
+  } finally {
+    tracker = pt;
+    owner = po;
   }
 };
 

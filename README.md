@@ -21,7 +21,7 @@ An app imports its signals from one of three tiers, each with its own core:
 <!-- prettier-ignore -->
 | import | available functions | for |
 | --- | --- | --- |
-| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked`, `trigger` | apps with computeds, effects and owners |
+| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked`, `trigger`, `owner`, `within` | apps with computeds, effects and owners |
 | `stage1/lite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch`, `trigger` | small apps: subs, no owners |
 | `stage1/ultralite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch` | the smallest apps: one sub per signal, no owners |
 
@@ -75,6 +75,25 @@ set(selected, 2); // row 2 gets "danger"
 ### Owners (`stage1`)
 
 An effect, sub or scope owns the effects, subs, computeds, scopes and `defer` cleanups its run creates; disposing it disposes them, newest first. An effect also disposes them before each re-run; a sub keeps them across calls. `scope(fn)` runs `fn` once, untracked, as an owner, and does not batch: at top level a write in `fn` runs the effects it reaches before `set` returns (`scope(() => batch(() => …))` runs them once, after the body). A scope made where nothing owns it is a root: keep it and dispose it.
+
+Code that runs later (an event handler, a timer, a promise callback) runs with no owner, so a scope made there is a root. To make it the component's, keep `const parent = owner()` while the component's body runs and create inside `within(parent, fn)` later:
+
+```ts
+import { defer, owner, scope, within } from "stage1";
+
+scope(() => {
+  const parent = owner()!;
+  const onClick = () => {
+    within(parent, () => {
+      scope(() => mountDialog());
+    });
+  };
+  button.addEventListener("click", onClick);
+  defer(() => button.removeEventListener("click", onClick));
+});
+```
+
+`within(target, fn)` runs `fn` untracked as the target's own code, and returns what it returns: what `fn` creates belongs to the target and goes when the target is disposed (an effect disposes it before its next run). Like a scope's body, it does not batch. On a disposed target it does not call `fn` and returns `undefined`, so a callback that arrives after its component was disposed does nothing. Only `fn`'s synchronous part runs as the owner: after an `await`, nothing owns. Keep `owner()` rather than the component's own handle (`const root = scope(() => … within(root, …))`): a handler that runs during the body (a synchronous `click()` or `focus()`) would find `root` not yet assigned.
 
 Rows own nothing: what `create` makes belongs to the sub that calls the rows function and lives until that sub is disposed (a development build warns once when the `create` of a list without `drop` makes an effect, sub, computed or cleanup outside a scope). A row opts in through `drop`:
 
@@ -157,7 +176,7 @@ Setting a placeholder first (`set(s, undefined); set(s, x)`) is not a notificati
 | `stage1`: rows own what `create` makes | rows own nothing unless `drop` disposes it (see "Owners") |
 | `stage1`: `effect(() => { const v = get(s); untracked(() => fn(v)); })` | `sub(s, fn)`: batched, run after its owners; keeps what `fn` makes; a write to `s` in `fn` calls it again after `fn` |
 | `scope(fn)` batched its body | not batched: `scope(() => batch(() => …))` keeps the old timing |
-| `within(owner, fn)` (e.g. in an async callback) | removed: the callback makes a root `scope` and keeps it; the component disposes it from a `defer` |
+| `within(owner, fn, a?, b?)` (e.g. in an async callback) | `within(parent, fn)`, with `parent = owner()` kept from the component's body: `fn` takes no arguments, the owner is required (no `undefined`), and on a disposed owner `fn` is not called (see "Owners") |
 | `holder`, `own`, `owns`, type `Holder` | removed: create in place with `scope` and keep the handle (`Scope`, `Effect`) |
 | `release(h)` | `batch(() => { for (let i = hs.length; i--; ) dispose(hs[i]); })` over the kept handles |
 | sibling effects ran newest first | creation order (unspecified: do not rely on either) |

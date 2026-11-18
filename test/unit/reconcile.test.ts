@@ -27,6 +27,7 @@ import {
   type Signal,
   signal,
   sub,
+  within,
 } from "../../src/signal.ts";
 import * as ultralite from "../../src/ultralite/signal.ts";
 
@@ -2496,6 +2497,109 @@ describe("dev row warnings", () => {
       );
     },
   );
+
+  // within: its caller chose the owner, so the row checks skip what fn makes
+  test.serial("a create that makes an effect within another effect warns nothing", () => {
+    expect.assertions(1);
+    using warn = spyOn(console, "warn").mockImplementation(() => {});
+    const other = effect(() => {});
+    const source = signal<readonly Item[]>(lettered("ab"));
+    const handle = sub(
+      source,
+      list(document.createElement("div"), "id", (item: Item) => {
+        within(other, () => {
+          effect(() => {});
+        });
+        return createItemNode(item);
+      }),
+    );
+    set(source, lettered("abc"));
+    dispose(handle);
+    dispose(other);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  test.serial(
+    "a create whose first creation is within another owner still warns about a later effect straight under its sub wiring",
+    () => {
+      expect.assertions(1);
+      using warn = spyOn(console, "warn").mockImplementation(() => {});
+      const other = scope(() => {});
+      const source = signal<readonly Item[]>(lettered("ab"));
+      const handle = sub(
+        source,
+        list(document.createElement("div"), "id", (item: Item) => {
+          within(other, () => {
+            effect(() => {});
+          });
+          effect(() => {});
+          return createItemNode(item);
+        }),
+      );
+      set(source, lettered("abc"));
+      dispose(handle);
+      dispose(other);
+      expect(texts(warn)).toHaveLength(DEV ? 1 : 0);
+    },
+  );
+
+  test.serial(
+    "a create whose within threw still warns about a later effect straight under its sub wiring",
+    () => {
+      expect.assertions(1);
+      using warn = spyOn(console, "warn").mockImplementation(() => {});
+      const other = scope(() => {});
+      const source = signal<readonly Item[]>(lettered("ab"));
+      const handle = sub(
+        source,
+        list(document.createElement("div"), "id", (item: Item) => {
+          try {
+            within(other, () => {
+              throw new Error("fn");
+            });
+          } catch {
+            // The throw under test
+          }
+          effect(() => {});
+          return createItemNode(item);
+        }),
+      );
+      set(source, lettered("abc"));
+      dispose(handle);
+      dispose(other);
+      expect(texts(warn)).toHaveLength(DEV ? 1 : 0);
+    },
+  );
+
+  test.serial("an update that makes an effect within the row's own scope warns nothing", () => {
+    expect.assertions(1);
+    using warn = spyOn(console, "warn").mockImplementation(() => {});
+    type Row = HTMLSpanElement & { s: Scope };
+    const items = signal<readonly Item[]>(lettered("ab"));
+    const handle = sub(
+      items,
+      list(
+        document.createElement("div"),
+        "id",
+        (item: Item) => {
+          const row = createItemNode(item) as Row;
+          row.s = scope(() => {});
+          return row;
+        },
+        (row) => {
+          within(row.s, () => {
+            effect(() => {});
+          });
+        },
+        (row) => {
+          dispose(row.s);
+        },
+      ),
+    );
+    set(items, lettered("ab"));
+    dispose(handle);
+    expect(warn).not.toHaveBeenCalled();
+  });
 
   test.serial("an update that makes nothing warns nothing", () => {
     expect.assertions(1);

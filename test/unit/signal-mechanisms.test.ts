@@ -16,6 +16,7 @@ import {
   dispose,
   effect,
   get,
+  owner,
   type Scope,
   scope,
   set,
@@ -23,6 +24,7 @@ import {
   signal,
   sub,
   untracked,
+  within,
 } from "../../src/signal.ts";
 
 // oxlint-disable-next-line node/no-process-env
@@ -613,7 +615,7 @@ describe("dispose", () => {
     expect.assertions(1);
     const s = signal(0);
     let runs = 0;
-    const owner = scope(() => {
+    const parent = scope(() => {
       effect(() => {
         get(s);
         runs++;
@@ -623,7 +625,7 @@ describe("dispose", () => {
         set(s, 1);
       });
     });
-    dispose(owner);
+    dispose(parent);
     expect(runs).toBe(1);
   });
 
@@ -678,14 +680,14 @@ describe("dispose during a teardown", () => {
     expect.assertions(1);
     const order: string[] = [];
     let child!: Handle;
-    const owner = scope(() => {
+    const parent = scope(() => {
       child = scope(() => {
         effect(() => () => {
           order.push("older grandchild");
         });
         defer(() => {
           order.push("cleanup");
-          dispose(owner);
+          dispose(parent);
           order.push("cleanup done");
         });
         return () => {
@@ -1177,6 +1179,112 @@ describe.skipIf(PROD)("dev checks", () => {
     expect.assertions(1);
     const s = scope(() => {});
     expect(() => get(s as never)).toThrow(/^stage1: get of an effect, sub, or scope$/u);
+  });
+
+  test("owner inside a getter throws", () => {
+    expect.assertions(1);
+    expect(() => get(computed(() => owner()))).toThrow(/^stage1: owner inside a computed$/u);
+  });
+
+  test("within inside a getter throws", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    expect(() => get(computed(() => within(root, () => 0)))).toThrow(
+      /^stage1: within inside a computed$/u,
+    );
+  });
+
+  test("within of a computed throws", () => {
+    expect.assertions(1);
+    expect(() => {
+      within(computed(() => 0) as unknown as Scope, () => {});
+    }).toThrow(/^stage1: within of a signal or computed$/u);
+  });
+
+  test("within of a signal throws", () => {
+    expect.assertions(1);
+    expect(() => {
+      within(signal(0) as unknown as Scope, () => {});
+    }).toThrow(/^stage1: within of a signal or computed$/u);
+  });
+
+  test("a defer within made after fn disposed its target throws when fn returns", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    expect(() => {
+      within(root, () => {
+        dispose(root);
+        defer(() => {});
+      });
+    }).toThrow(
+      /^stage1: effect, sub, computed, scope, or defer under a within target disposed during its fn$/u,
+    );
+  });
+
+  test("an effect within made after fn disposed its target throws at the creation", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    expect(() => {
+      within(root, () => {
+        dispose(root);
+        effect(() => {});
+      });
+    }).toThrow(/^stage1: effect, sub, computed, or scope under a disposed owner$/u);
+  });
+
+  test("a within whose fn disposes its target and makes nothing after throws nothing", () => {
+    expect.assertions(1);
+    const root = scope(() => {
+      defer(() => {});
+    });
+    expect(() => {
+      within(root, () => {
+        dispose(root);
+      });
+    }).not.toThrow();
+  });
+
+  test("a within whose fn throws after a defer under its disposed target rethrows fn's error", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    expect(() => {
+      within(root, () => {
+        dispose(root);
+        defer(() => {});
+        throw new Error("fn");
+      });
+    }).toThrow(/^fn$/u);
+  });
+
+  test.serial("within on a disposed target warns nothing", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    dispose(root);
+    expect(
+      warned(() => {
+        within(root, () => {});
+      }),
+    ).toEqual([]);
+  });
+
+  // A sub's call exempts creation under a disposed owner from create's own check
+  test("an effect within made in a sub's call after fn disposed its target throws when fn returns", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    const s = signal(0);
+    sub(s, (value) => {
+      if (value === 1) {
+        within(root, () => {
+          dispose(root);
+          effect(() => {});
+        });
+      }
+    });
+    expect(() => {
+      set(s, 1);
+    }).toThrow(
+      /^stage1: effect, sub, computed, scope, or defer under a within target disposed during its fn$/u,
+    );
   });
 
   test.serial("disposing a computed that has readers warns once, naming the later throw", () => {
@@ -1728,18 +1836,18 @@ describe("mechanisms", () => {
       expect.assertions(5);
       let first: unknown;
       let second: unknown;
-      const owner = scope(() => {
+      const parent = scope(() => {
         first = effect(() => {});
         defer(() => {});
         second = computed(() => 1);
       });
-      expect(raw(owner).s).toBe(raw(second));
-      expect(raw(second).p).toBe(raw(owner));
+      expect(raw(parent).s).toBe(raw(second));
+      expect(raw(second).p).toBe(raw(parent));
       expect(raw(first).p).toBe(raw(raw(second).n));
       // Disposing the newest makes the next one the owner's newest
       dispose(second as Computed<number>);
-      expect(raw(owner).s).toBe(raw(raw(first).p));
-      expect(raw(raw(owner).s).p).toBe(raw(owner));
+      expect(raw(parent).s).toBe(raw(raw(first).p));
+      expect(raw(raw(parent).s).p).toBe(raw(parent));
     });
 
     test("disposing a child twice, a newer sibling made in between, leaves its owner's lists alone", () => {

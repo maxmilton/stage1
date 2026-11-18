@@ -1,7 +1,8 @@
 // The signal core's contract: ordering, ownership, teardown order, keep-alive computeds,
-// consistency, batches, writes in effects, errors, disposal, subs, scope bodies, depth, memory and
-// dev checks. Run in both modes: `bun test` (dev checks on) and `NODE_ENV=production bun test` (the
-// dev checks group skips; the cleanup-error tests expect each mode's own outcome).
+// consistency, batches, writes in effects, errors, disposal, subs, scope bodies, owner and within,
+// depth, memory and dev checks. Run in both modes: `bun test` (dev checks on) and
+// `NODE_ENV=production bun test` (the dev checks group skips; the cleanup-error tests expect each
+// mode's own outcome).
 // Callbacks under test branch on the value they receive.
 // oxlint-disable vitest/no-conditional-in-test
 
@@ -16,6 +17,7 @@ import {
   type Effect,
   effect,
   get,
+  owner,
   type Scope,
   scope,
   set,
@@ -24,6 +26,7 @@ import {
   sub,
   trigger,
   untracked,
+  within,
 } from "../../src/signal.ts";
 
 // oxlint-disable-next-line node/no-process-env
@@ -669,12 +672,12 @@ describe("ownership", () => {
       const handle = effect(() => {
         get(node);
       });
-      const owner = scope(() => {
+      const parent = scope(() => {
         get(computed(() => 1));
       });
       set(source, 1);
       dispose(handle);
-      dispose(owner);
+      dispose(parent);
     });
     expect(calls).toBe(0);
   });
@@ -2915,10 +2918,10 @@ describe("disposal", () => {
     expect.assertions(1);
     const a = signal(0);
     const log: string[] = [];
-    const owner: Effect = effect(() => {
+    const parent: Effect = effect(() => {
       const value = get(a);
       scope(() => {
-        if (value === 1) dispose(owner);
+        if (value === 1) dispose(parent);
         log.push(`body ${value}`);
         defer(() => {
           log.push(`defer ${value}`);
@@ -2952,11 +2955,11 @@ describe("disposal", () => {
     const s = signal(0);
     const log: string[] = [];
     let runs = 0;
-    const owner: Effect = effect(() => {
+    const parent: Effect = effect(() => {
       runs++;
       if (get(s) === 1) {
         scope(() => {
-          dispose(owner);
+          dispose(parent);
           defer(() => {
             log.push("defer after dispose");
           });
@@ -2972,10 +2975,10 @@ describe("disposal", () => {
     expect.assertions(1);
     const s = signal(0);
     const log: string[] = [];
-    const owner: Effect = effect(() => {
+    const parent: Effect = effect(() => {
       if (get(s) === 1) {
         scope(() => {
-          dispose(owner);
+          dispose(parent);
           defer(() => {
             log.push("defer");
           });
@@ -4595,7 +4598,7 @@ describe("sub disposal and re-entrancy", () => {
     const a = signal(0);
     const s = signal(0);
     const log: string[] = [];
-    const owner: Effect = effect(() => {
+    const parent: Effect = effect(() => {
       get(a);
       sub(s, (value) => {
         log.push(`sub ${value}`);
@@ -4604,7 +4607,7 @@ describe("sub disposal and re-entrancy", () => {
         });
         if (value === 1) {
           set(s, 2);
-          dispose(owner);
+          dispose(parent);
         }
       });
       return () => {
@@ -4621,7 +4624,7 @@ describe("sub disposal and re-entrancy", () => {
     expect.assertions(1);
     const s = signal(0);
     const log: string[] = [];
-    const owner: Effect = effect(() => {
+    const parent: Effect = effect(() => {
       sub(s, (value) => {
         log.push(`call ${value}`);
         if (value === 0) {
@@ -4629,7 +4632,7 @@ describe("sub disposal and re-entrancy", () => {
             log.push("child");
           });
         }
-        if (value === 1) dispose(owner);
+        if (value === 1) dispose(parent);
       });
       return () => {
         log.push("owner");
@@ -5471,6 +5474,439 @@ describe("components and async callbacks", () => {
     await Promise.resolve();
     expect(body.innerHTML).toBe("");
   });
+
+  /** A component that renders a counter once `load` resolves, as its owner's, through `within`. */
+  const detailsWithin = (
+    parent: Element,
+    load: () => Promise<string>,
+    ticks: (() => void)[],
+  ): void => {
+    const self = owner() as Scope;
+    // oxlint-disable-next-line promise/prefer-await-to-then -- a callback nothing awaits
+    void load().then((tag) => {
+      within(self, () => {
+        counter(parent.appendChild(document.createElement(tag)), ticks);
+      });
+    });
+  };
+
+  test("an async callback's within renders under the component's owner and follows its signals", async () => {
+    expect.assertions(1);
+    const ticks: (() => void)[] = [];
+    const body = document.createElement("div");
+    const app = scope(() => {
+      counter(body, ticks);
+      detailsWithin(body, () => Promise.resolve("p"), ticks);
+    });
+    await Promise.resolve();
+    ticks[1]();
+    expect(body.innerHTML).toBe("0<p>2</p>");
+    dispose(app);
+  });
+
+  test("disposing the app disposes what the async callback made within it", async () => {
+    expect.assertions(2);
+    const ticks: (() => void)[] = [];
+    const body = document.createElement("div");
+    const app = scope(() => {
+      counter(body, ticks);
+      detailsWithin(body, () => Promise.resolve("p"), ticks);
+    });
+    await Promise.resolve();
+    dispose(app);
+    // The <p> is the async callback's own DOM, not a component's: only the texts go
+    expect(body.innerHTML).toBe("<p></p>");
+    expect(ticks).toEqual([]);
+  });
+
+  test("an app disposed before the data arrives: the callback's within makes nothing", async () => {
+    expect.assertions(1);
+    const body = document.createElement("div");
+    const data = Promise.withResolvers<string>();
+    const app = scope(() => {
+      detailsWithin(body, () => data.promise, []);
+    });
+    dispose(app);
+    data.resolve("p");
+    await Promise.resolve();
+    expect(body.innerHTML).toBe("");
+  });
+});
+
+describe("owner and within", () => {
+  test("owner is undefined where nothing owns", () => {
+    expect.assertions(1);
+    expect(owner()).toBeUndefined();
+  });
+
+  test("owner in a scope's body is the scope", () => {
+    expect.assertions(1);
+    let seen: Effect | Scope | undefined;
+    const handle = scope(() => {
+      seen = owner();
+    });
+    expect(seen).toBe(handle);
+  });
+
+  test("owner in an effect's first run and re-run is the effect", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: (Effect | Scope | undefined)[] = [];
+    const handle = effect(() => {
+      get(s);
+      seen.push(owner());
+    });
+    set(s, 1);
+    expect(seen.map((node) => node === handle)).toEqual([true, true]);
+  });
+
+  test("owner in a sub's first and later calls is the sub", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const seen: (Effect | Scope | undefined)[] = [];
+    const handle = sub(s, () => {
+      seen.push(owner());
+    });
+    set(s, 1);
+    expect(seen.map((node) => node === handle)).toEqual([true, true]);
+  });
+
+  test("owner inside untracked in an effect's run is the effect", () => {
+    expect.assertions(1);
+    let seen: Effect | Scope | undefined;
+    const handle = effect(() => {
+      untracked(() => {
+        seen = owner();
+      });
+    });
+    expect(seen).toBe(handle);
+  });
+
+  test("owner in a scope's body is still the scope after a write there ran an effect", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    effect(() => {
+      get(s);
+    });
+    let seen: Effect | Scope | undefined;
+    const handle = scope(() => {
+      set(s, 1);
+      seen = owner();
+    });
+    expect(seen).toBe(handle);
+  });
+
+  test("owner inside within is its target", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    let seen: Effect | Scope | undefined;
+    within(root, () => {
+      seen = owner();
+    });
+    expect(seen).toBe(root);
+  });
+
+  test("what within makes belongs to its target: disposing the target disposes it", () => {
+    expect.assertions(1);
+    const log: string[] = [];
+    const root = scope(() => {});
+    within(root, () => {
+      defer(() => {
+        log.push("made");
+      });
+    });
+    dispose(root);
+    expect(log).toEqual(["made"]);
+  });
+
+  test("what within makes in a scope's body belongs to the target, not to that scope", () => {
+    expect.assertions(2);
+    const log: string[] = [];
+    const root = scope(() => {});
+    const body = scope(() => {
+      within(root, () => {
+        defer(() => {
+          log.push("made");
+        });
+      });
+    });
+    dispose(body);
+    expect(log).toEqual([]);
+    dispose(root);
+    expect(log).toEqual(["made"]);
+  });
+
+  test("a target disposes what within made and its own children, newest first", () => {
+    expect.assertions(1);
+    const log: string[] = [];
+    const root = scope(() => {
+      defer(() => {
+        log.push("own");
+      });
+    });
+    within(root, () => {
+      defer(() => {
+        log.push("first within");
+      });
+    });
+    within(root, () => {
+      defer(() => {
+        log.push("second within");
+      });
+    });
+    dispose(root);
+    expect(log).toEqual(["second within", "first within", "own"]);
+  });
+
+  test("what within makes after a write that ran an effect still belongs to its target", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    effect(() => {
+      get(s);
+    });
+    const log: string[] = [];
+    const root = scope(() => {});
+    within(root, () => {
+      set(s, 1);
+      defer(() => {
+        log.push("made");
+      });
+    });
+    dispose(root);
+    expect(log).toEqual(["made"]);
+  });
+
+  test("a nested within gives back the outer within's target", () => {
+    expect.assertions(1);
+    const outer = scope(() => {});
+    const inner = scope(() => {});
+    let seen: Effect | Scope | undefined;
+    within(outer, () => {
+      within(inner, () => {});
+      seen = owner();
+    });
+    expect(seen).toBe(outer);
+  });
+
+  test("a within whose fn throws gives back the owner it found", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    let seen: Effect | Scope | undefined;
+    const body = scope(() => {
+      try {
+        within(root, () => {
+          throw new Error("fn");
+        });
+      } catch {
+        // The throw under test
+      }
+      seen = owner();
+    });
+    expect(seen).toBe(body);
+  });
+
+  test("reads after a within whose fn threw still subscribe the running effect", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    const s = signal(0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      try {
+        within(root, () => {
+          throw new Error("fn");
+        });
+      } catch {
+        // The throw under test
+      }
+      get(s);
+    });
+    set(s, 1);
+    expect(runs).toBe(2);
+  });
+
+  test("reads inside within do not subscribe its effect target", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    let runs = 0;
+    const handle = effect(() => {
+      runs++;
+    });
+    within(handle, () => get(s));
+    set(s, 1);
+    expect(runs).toBe(1);
+  });
+
+  test("a write in fn runs the effects it reaches before within returns (not batched)", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      log.push(`effect ${get(s)}`);
+    });
+    const root = scope(() => {});
+    within(root, () => {
+      set(s, 1);
+      log.push("fn");
+    });
+    expect(log).toEqual(["effect 0", "effect 1", "fn"]);
+  });
+
+  test("reads inside within do not subscribe the running effect", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    const s = signal(0);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      within(root, () => get(s));
+    });
+    set(s, 1);
+    expect(runs).toBe(1);
+  });
+
+  test("within returns what fn returns", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    expect(within(root, () => 5)).toBe(5);
+  });
+
+  test("within on a disposed target does not call fn", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    dispose(root);
+    let called = false;
+    within(root, () => {
+      called = true;
+    });
+    expect(called).toBe(false);
+  });
+
+  test("within on a disposed target returns undefined", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    dispose(root);
+    expect(within(root, () => 5)).toBeUndefined();
+  });
+
+  test("within on a disposed target gives back the owner it found", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    dispose(root);
+    let seen: Effect | Scope | undefined;
+    const body = scope(() => {
+      within(root, () => {});
+      seen = owner();
+    });
+    expect(seen).toBe(body);
+  });
+
+  test("a within whose fn makes an effect that disposes the target returns what fn returns", () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    const x = signal(false);
+    expect(
+      within(root, () => {
+        effect(() => {
+          if (get(x)) dispose(root);
+        });
+        set(x, true);
+        return 1;
+      }),
+    ).toBe(1);
+  });
+
+  test("what within makes under an effect is disposed before the effect's next run", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handle = effect(() => {
+      get(s);
+    });
+    within(handle, () => {
+      defer(() => {
+        log.push("made");
+      });
+    });
+    set(s, 1);
+    expect(log).toEqual(["made"]);
+  });
+
+  test("what within makes under a sub outlives the sub's later calls", () => {
+    expect.assertions(1);
+    const s = signal(0);
+    const log: string[] = [];
+    const handle = sub(s, () => {});
+    within(handle, () => {
+      defer(() => {
+        log.push("made");
+      });
+    });
+    set(s, 1);
+    expect(log).toEqual([]);
+    dispose(handle);
+  });
+
+  test.each([
+    ["the parent's signal written first", true],
+    ["the child's signal written first", false],
+  ] as const)(
+    "an effect within made under a scope an effect owns does not run in a batch whose re-run of that effect disposes it (%s)",
+    (_label, parentFirst) => {
+      expect.assertions(1);
+      const x = signal(0);
+      const y = signal(0);
+      const inners: Scope[] = [];
+      effect(() => {
+        get(x);
+        inners.push(scope(() => {}));
+      });
+      let runs = 0;
+      within(inners[0], () => {
+        effect(() => {
+          get(y);
+          runs++;
+        });
+      });
+      batch(() => {
+        if (parentFirst) set(x, 1);
+        set(y, 1);
+        if (!parentFirst) set(x, 1);
+      });
+      expect(runs).toBe(1);
+    },
+  );
+
+  test("after an await inside within's fn, nothing owns", async () => {
+    expect.assertions(1);
+    const root = scope(() => {});
+    let seen: Effect | Scope | undefined = root;
+    await within(root, async () => {
+      await Promise.resolve();
+      seen = owner();
+    });
+    expect(seen).toBeUndefined();
+  });
+
+  test.skipIf(DEV)(
+    "Accepted tradeoff: what within makes after fn disposed its target lives on (production)",
+    () => {
+      expect.assertions(1);
+      const s = signal(0);
+      let runs = 0;
+      const root = scope(() => {});
+      within(root, () => {
+        dispose(root);
+        effect(() => {
+          get(s);
+          runs++;
+        });
+      });
+      set(s, 1);
+      expect(runs).toBe(2);
+      dispose(root);
+    },
+  );
 });
 
 describe("first runs give back the context they found", () => {

@@ -65,12 +65,14 @@ const ROOT_EXPORTS = [
   "get",
   "list",
   "mark",
+  "owner",
   "scope",
   "set",
   "signal",
   "sub",
   "trigger",
   "untracked",
+  "within",
 ];
 /** stage1/ultralite's; stage1/lite also has `trigger`. */
 const ULTRALITE_EXPORTS = [
