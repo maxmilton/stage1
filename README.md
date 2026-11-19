@@ -21,7 +21,7 @@ An app imports its signals from one of three tiers, each with its own core:
 <!-- prettier-ignore -->
 | import | available functions | for |
 | --- | --- | --- |
-| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked`, `trigger`, `owner`, `within`, `task` (experimental) | apps with computeds, effects and owners |
+| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked`, `trigger`, `owner`, `within`, `task` (experimental), `reactive` (experimental) | apps with computeds, effects and owners |
 | `stage1/lite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch`, `trigger` | small apps: subs, no owners |
 | `stage1/ultralite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch` | the smallest apps: one sub per signal, no owners |
 
@@ -163,6 +163,60 @@ Writes notify by value: `set` compares with `===`, and a reader runs again only 
 - **`trigger(s)`** (`stage1` and `stage1/lite`), for data that must stay in its signal: `s.v.push(x); trigger(s)` runs the signal's readers as a `set` of a value they have not seen would, passing the same object. Shallow: a computed that returns the same object stops it there, as for any unchanged value. Never use it for a list's items. A sub that triggers its own signal on every call never settles (an endless write loop).
 
 Setting a placeholder first (`set(s, undefined); set(s, x)`) is not a notification: in a batch the readers find `x` again and do not run; outside one they run twice, once with the placeholder.
+
+### State patterns
+
+State lives in signals; what differs is how code reaches them:
+
+- **Signals, alone or in records** (every tier): module-level signals, or a record of them per object, `const pager = { offset: signal(0), limit: signal(10) }`, read with `get(pager.offset)` and written with `set(pager.offset, 20)`. The fastest form at every V8 tier and on JSC.
+- **A class with accessors** (every tier): a public `$key` signal field and a `get`/`set` pair per key, so that `pager.offset` is `get(pager.$offset)` and `pager.offset = 20` is `set(pager.$offset, 20)`. Never `return set(…)` from a setter: on JSC that tail call makes optimized writes recompile (writes 2–4× slower). A class of four keys costs about 40 B (brotli) more than a record of signals.
+- **`reactive(C)`** (`stage1`; experimental: it may change or be removed in any release) writes those accessors for you: about 100 B (brotli) once, then about 4 B more per class than records of signals.
+
+```ts
+import { batch, computed, effect, reactive, signal, sub } from "stage1";
+
+class Pager {
+  declare offset: number; // a key's type: `declare` emits no field
+  declare limit: number;
+  declare readonly page: number; // a computed's key: read only
+  readonly $offset = signal(0);
+  readonly $limit = signal(10);
+  readonly $page = computed(() => Math.floor(this.offset / this.limit));
+  next(): void {
+    this.offset += this.limit;
+  }
+}
+reactive(Pager); // once per class, at module level
+
+const pager = new Pager();
+effect(() => {
+  show(pager.offset, pager.limit, pager.page); // tracked: get(pager.$offset), …
+});
+pager.next(); // set(pager.$offset, get(pager.$offset) + get(pager.$limit))
+batch(() => {
+  pager.offset = 0;
+  pager.limit = 20;
+}); // one run, after both writes
+sub(pager.$limit, (limit) => {
+  save("limit", limit);
+});
+```
+
+`reactive(C)` makes one instance, `new C()`, and gives each `$key` field it owns that holds a signal or a computed an accessor pair `key` on `C.prototype`. It returns `C` itself, so statics, `instanceof`, `#private` and instances made before are kept, and an instance costs what its constructor does.
+
+- **The constructor runs once more, at the call, with no arguments**: every parameter needs a default (the types require one), and its side effects happen once more (a counter sees one more instance). Make effects, subs, scopes and tasks (a `task` makes an effect) in a method the app calls, not in the constructor (development builds throw). That instance has no accessors yet, so `this.key = v` in the constructor, or in what it calls, gives it an own `key` that nothing reads (development builds then make one more instance, after installing the accessors, to tell it from a field). A subclass with `$` fields of its own is passed to `reactive` too.
+- **`declare key: V;`** types each key: a field (`key!: V`, `key = …`) is an own property that hides the accessor (development builds throw). The types reject a missing or mismatched declaration (one narrower than the value type included) and a `$` field, method, or getter that is neither a signal nor a computed.
+- **A computed field** reads as `get` does. Declare its key `declare readonly key: V;`: writing it is an error (development builds throw). Like any computed, it belongs to the owner the instance is made under.
+- **`pager.$key` is the key's exact signal** (a computed field's computed), for `sub`, `trigger`, `.v` (a signal's untracked read), and `get` and `set` on hot paths; `sub(pager.$items, rows)` wires a list.
+- **A key that is already a member** (a method, an accessor, `toString`, a base class's) is overwritten on `C.prototype`; development builds throw.
+- **The accessors are enumerable**: `for…in` lists the keys after the `$` fields. `Object.keys`, spread, `JSON.stringify` and `structuredClone` see the `$` fields (the last two throw once a key has a reader, and `structuredClone` at once for a computed field).
+- **Shallow**: `pager.items.push(item)` notifies nothing (see "Mutable data").
+- **Several keys: batch.** Outside a batch each write runs what it reaches before the next one.
+- **A read is the value now**: `const { offset } = pager` is a snapshot that later writes do not change; pass `pager` or `pager.$offset` to code that should follow it. In an effect, `pager.offset++` is a tracked read and a write: its own write does not run the effect again, but every later write does, and it counts up again. `pager.offset = pager.$offset.v + 1` writes without following.
+
+The cost, against explicit `get` and `set` in optimized code (V8's TurboFan and Turbolev, JSC): hand-written accessors are within about 10–15%. `reactive`'s share one accessor pair among every key, so code that reads many keys (16 in one loop, or 4 after other classes' keys ran) reads about 1.6–2.1× slower on TurboFan and 2.5–2.8× on JSC, where it also writes 2.4× slower (geomeans over the benchmark: TurboFan 1.08, Turbolev 1.00, JSC 1.46). Code that stays in V8's mid tier (Maglev; much real-world code never leaves it) pays about 1.4× (reads about 2×) for any property form, hand-written included. On hot paths, use `get` and `set` on `pager.$key`.
+
+Example (tested, not exported): [`examples/reactive.ts`](examples/reactive.ts), a pager's view model. The header of [`src/composables.ts`](src/composables.ts) has the rest (what development builds check).
 
 ### Async data (`stage1`)
 

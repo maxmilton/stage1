@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "bun:test";
 import * as browserExports from "../../src/browser/index.ts";
+import type { ReactiveKeys } from "../../src/composables.ts";
 import * as indexExports from "../../src/index.ts";
 import * as legacyExports from "../../src/legacy/index.ts";
 import * as keyedExports from "../../src/legacy/reconcile/keyed.ts";
@@ -84,6 +85,9 @@ describe("index", () => {
       TaskState<number, string>
     >();
     expectTypeOf<indexExports.TaskStatus>().toEqualTypeOf<TaskStatus>();
+    expectTypeOf<indexExports.ReactiveKeys<{ $a: Signal<number> }>>().toEqualTypeOf<
+      ReactiveKeys<{ $a: Signal<number> }>
+    >();
   });
 
   const publicExports = [
@@ -113,6 +117,7 @@ describe("index", () => {
     // A const enum, yet an object at runtime: Bun emits it (and inlines the members code reads)
     ["TaskStatus", "Object"],
     ["WAIT", "Object"],
+    ["reactive", "Function"],
     ["noop", "Function"],
     ["fragment", "Function"],
     ["text", "Function"],

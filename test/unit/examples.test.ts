@@ -1,15 +1,17 @@
-// What the examples promise (examples/*.ts: header comments and JSDoc; README "Async data"), one
-// describe per example. Loads are settled by hand; `after` waits for the callbacks chained on a
-// load's promise; timers are faked (`clock`). bun test fails the running test on an unhandled
-// rejection (Bun 1.4.4), so every test also checks that it leaves none; whether a reader's throw is
-// reported as one is observed in a subprocess (test/fixtures/reader-error.ts). Run in both modes:
-// `bun test` and `NODE_ENV=production bun test`.
+// What the examples promise (examples/*.ts: header comments and JSDoc; README "Async data" and
+// "State patterns"), one describe per example. Loads are settled by hand; `after` waits for the
+// callbacks chained on a load's promise; timers are faked (`clock`). bun test fails the running
+// test on an unhandled rejection (Bun 1.4.4), so every test also checks that it leaves none;
+// whether a reader's throw is reported as one is observed in a subprocess
+// (test/fixtures/reader-error.ts). Run in both modes: `bun test` and `NODE_ENV=production bun
+// test`.
 
 import { beforeAll, describe, expect, spyOn, test } from "bun:test";
-import { dispose, get, set, type Signal, signal } from "stage1";
+import { dispose, effect, get, set, type Signal, signal, sub } from "stage1";
 import { Profile, type User } from "../../examples/once.ts";
 import { type User as Author, type Post, Posts } from "../../examples/posts.ts";
 import { Profile as KeyedProfile } from "../../examples/profile.ts";
+import { Pager } from "../../examples/reactive.ts";
 import { type Hit, Search } from "../../examples/search.ts";
 import { type Todo, Todos } from "../../examples/todos.ts";
 import { Validate } from "../../examples/validate.ts";
@@ -1160,5 +1162,157 @@ describe("examples/validate.ts: Validate", () => {
     Bun.gc(true);
     // A bound, not 0: a conservative stack scan can keep a few
     expect(refs.filter((ref) => ref.deref() !== undefined).length).toBeLessThan(10);
+  });
+});
+
+describe("examples/reactive.ts: Pager", () => {
+  /** Runs `fn` in an effect; disposed at the end of the block (`using`). */
+  const follow = (fn: () => void): Disposable => {
+    const fx = effect(fn);
+    return {
+      [Symbol.dispose]: () => {
+        dispose(fx);
+      },
+    };
+  };
+
+  /** A pager of `limit` items per page over `total` items. */
+  const pager = (limit: number, total: number): Pager => {
+    const p = new Pager(limit);
+    p.total = total;
+    return p;
+  };
+
+  test("starts on the first page", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    expect([p.offset, p.page, p.pages]).toEqual([0, 0, 3]);
+  });
+
+  test("shows 10 items per page by default", () => {
+    expect.assertions(1);
+    expect(new Pager().limit).toBe(10);
+  });
+
+  test("next shows the next page", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    p.next();
+    expect([p.offset, p.page]).toEqual([10, 1]);
+  });
+
+  test("next on the last page stays there", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    p.go(2);
+    p.next();
+    expect(p.page).toBe(2);
+  });
+
+  test("prev on the first page stays there", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    p.prev();
+    expect(p.offset).toBe(0);
+  });
+
+  test("go clamps to the pages there are", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    p.go(9);
+    expect(p.page).toBe(2);
+  });
+
+  test("with no items there is one page", () => {
+    expect.assertions(1);
+    expect(pager(10, 0).pages).toBe(1);
+  });
+
+  test("an effect that reads the page runs again when it changes", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    const seen: number[] = [];
+    using _ = follow(() => {
+      seen.push(p.page);
+    });
+    p.next();
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test("an effect that reads the pages runs again when their count changes", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    const seen: number[] = [];
+    using _ = follow(() => {
+      seen.push(p.pages);
+    });
+    p.total = 40;
+    expect(seen).toEqual([3, 4]);
+  });
+
+  test("an effect that reads the pages does not run again for a total on the same count", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    const seen: number[] = [];
+    using _ = follow(() => {
+      seen.push(p.pages);
+    });
+    p.total = 28;
+    expect(seen).toEqual([3]);
+  });
+
+  test("resize keeps the first item shown in view", () => {
+    expect.assertions(1);
+    const p = pager(10, 100);
+    p.go(3);
+    p.resize(20);
+    expect([p.offset, p.limit]).toEqual([20, 20]);
+  });
+
+  test("resize runs what reads the offset and the limit once, with both written", () => {
+    expect.assertions(1);
+    const p = pager(10, 100);
+    p.go(3);
+    const seen: number[][] = [];
+    using _ = follow(() => {
+      seen.push([p.offset, p.limit]);
+    });
+    p.resize(20);
+    expect(seen).toEqual([
+      [30, 10],
+      [20, 20],
+    ]);
+  });
+
+  test("$offset is the offset's signal", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    const seen: number[] = [];
+    const s = sub(p.$offset, (offset) => {
+      seen.push(offset);
+    });
+    p.next();
+    dispose(s);
+    expect(seen).toEqual([0, 10]);
+  });
+
+  test("$page is the page's computed", () => {
+    expect.assertions(1);
+    const p = pager(10, 25);
+    const seen: number[] = [];
+    const s = sub(p.$page, (page) => {
+      seen.push(page);
+    });
+    p.next();
+    dispose(s);
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test("each pager keeps its own state", () => {
+    expect.assertions(1);
+    const a = pager(10, 25);
+    const b = pager(10, 25);
+    a.next();
+    expect(b.offset).toBe(0);
   });
 });

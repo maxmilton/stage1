@@ -68,6 +68,7 @@ const ROOT_EXPORTS = [
   "list",
   "mark",
   "owner",
+  "reactive",
   "scope",
   "set",
   "signal",

@@ -4,10 +4,10 @@
 // still change the names in Bun's minified output (and in swc's, which keeps some of them): Bun
 // picks its names from the characters of all the code it bundles, dead code too.
 //
-// Sections: `report`, which every check reports through; checkers each tier calls with what is
-// private to it (`checkReturn`, `checkCycle`); the row seam, the full core's warning about what a
-// list's create or update makes (`watchRows`, `checkRow`, `unwatched`); the list guard (`checkItems`,
-// `recheckItems`).
+// Sections: `report`, which every check reports through; the sample, reactive()'s view of the runs
+// a call makes (`sampled`); checkers each tier calls with what is private to it (`checkReturn`,
+// `checkCycle`); the row seam, the full core's warning about what a list's create or update makes
+// (`watchRows`, `checkRow`, `unwatched`); the list guard (`checkItems`, `recheckItems`).
 // `v` is the full core's field name, generics are named as in ./reconcile.ts, and the row seam keeps
 // its warnings as bits:
 // oxlint-disable id-length no-bitwise
@@ -34,13 +34,35 @@ export function report(
   else console.warn(text);
 }
 
+// ── Sample ───────────────────────────────────────────────────────────────────
+// reactive() (./composables.ts) makes one instance of a class to find its $ fields, and nothing
+// disposes what that instance makes. `checkReturn`, which the full core calls after each run of an
+// effect, sub, or scope, tells it whether the construction ran one. A computed (a field may hold
+// one: harmless) does not count, nor does a `defer` (the core warns of one outside an owner).
+
+/** While `sampled` runs its fn: whether an effect, sub, or scope ran. */
+let sampling: { ran: boolean } | undefined;
+
+/** Runs `fn`; returns what it returns and whether an effect, sub, or scope ran (or was made) in it. */
+export const sampled = <R>(fn: () => R): [R, boolean] => {
+  const prev = sampling;
+  const state = { ran: false };
+  sampling = state;
+  try {
+    return [fn(), state.ran];
+  } finally {
+    sampling = prev;
+  }
+};
+
 // ── Checkers ─────────────────────────────────────────────────────────────────
 
 /**
  * Full core (`start`, `run`): throws if a runner's fn (an effect's or scope's) returned neither a
- * function, its cleanup, nor undefined; clears that value first.
+ * function, its cleanup, nor undefined; clears that value first. Tells `sampled` a runner ran.
  */
 export const checkReturn = (runner: { v: unknown }): void => {
+  if (sampling !== undefined) sampling.ran = true;
   if (runner.v !== undefined && typeof runner.v !== "function") {
     runner.v = undefined;
     report("critical", "an effect or scope returned neither a function nor undefined");
