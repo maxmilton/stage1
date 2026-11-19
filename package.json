@@ -1,7 +1,7 @@
 {
   "name": "stage1",
   "version": "0.12.1",
-  "description": "High-performance JavaScript micro framework",
+  "description": "Tiny, fast, composable primitives. Build your own web framework.",
   "bugs": "https://github.com/maxmilton/stage1/issues",
   "license": "MIT",
   "author": "Max Milton <max@2okki.com>",

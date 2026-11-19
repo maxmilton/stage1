@@ -6,11 +6,11 @@
 [![Minified size](https://badgen.net/bundlephobia/minzip/stage1)](https://bundlephobia.com/package/stage1)
 ![Dependency count](https://badgen.net/bundlephobia/dependency-count/stage1)
 
-![Status](https://badgen.net/badge/status/beta/blue)
+![Status](https://badgen.net/badge/status/alpha/blue)
 
 # stage1
 
-High-performance JavaScript micro framework.
+Tiny, fast, composable primitives. Build your own web framework.
 
 - zero runtime dependencies
 
