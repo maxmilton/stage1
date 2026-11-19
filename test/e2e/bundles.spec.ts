@@ -57,6 +57,8 @@ const DOM_EXPORTS = [
 ];
 const ROOT_EXPORTS = [
   ...DOM_EXPORTS,
+  "TaskStatus",
+  "WAIT",
   "batch",
   "computed",
   "defer",
@@ -70,6 +72,7 @@ const ROOT_EXPORTS = [
   "set",
   "signal",
   "sub",
+  "task",
   "trigger",
   "untracked",
   "within",

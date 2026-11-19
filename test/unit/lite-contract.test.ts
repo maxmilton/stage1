@@ -33,19 +33,6 @@ interface Tier {
 
 const TIERS: readonly (readonly [name: string, tier: Tier])[] = [
   [
-    "stage1/lite",
-    {
-      owns: false,
-      subs: "many",
-      signal: lite.signal,
-      get: lite.get as Tier["get"],
-      set: lite.set as Tier["set"],
-      sub: lite.sub as Tier["sub"],
-      dispose: lite.dispose as Tier["dispose"],
-      batch: lite.batch,
-    },
-  ],
-  [
     "stage1",
     {
       owns: true,
@@ -56,6 +43,19 @@ const TIERS: readonly (readonly [name: string, tier: Tier])[] = [
       sub: full.sub as Tier["sub"],
       dispose: full.dispose as Tier["dispose"],
       batch: full.batch,
+    },
+  ],
+  [
+    "stage1/lite",
+    {
+      owns: false,
+      subs: "many",
+      signal: lite.signal,
+      get: lite.get as Tier["get"],
+      set: lite.set as Tier["set"],
+      sub: lite.sub as Tier["sub"],
+      dispose: lite.dispose as Tier["dispose"],
+      batch: lite.batch,
     },
   ],
   [

@@ -780,24 +780,6 @@ export const trigger = <T>(signal: Signal<T>): void => {
   set(signal, value as T);
 };
 
-// TODO: Consider supporting auto grouped batch via microtask scheduling. Needs to be tested for performance and correctness (especially reentrantcy and execution ordering!).
-// let scheduled = false;
-// const schedule = () => {
-//   if (--depth === 0 && tail !== 0 && !scheduled) {
-//     scheduled = true;
-//     queueMicrotask(flush);
-//   }
-// }
-//
-// export const autobatch = (fn: () => void): void => {
-//   depth++;
-//   try {
-//     fn();
-//   } finally {
-//     schedule();
-//   }
-// };
-
 // ── Dev Builds ───────────────────────────────────────────────────────────────
 
 // The core's own dev state; the checks it shares with the other tiers are in ./dev.ts.

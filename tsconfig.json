@@ -28,5 +28,5 @@
 
     "types": ["bun"]
   },
-  "include": ["*.config.js", "build.ts", "src", "test"]
+  "include": ["*.config.js", "build.ts", "examples", "src", "test"]
 }

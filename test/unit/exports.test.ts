@@ -11,6 +11,7 @@ import type { Effect as LiteEffect, Signal as LiteSignal } from "../../src/lite/
 import * as macroExports from "../../src/macro.ts";
 import type { Marked, Rows } from "../../src/reconcile.ts";
 import type { Computed, Effect, Scope, Signal } from "../../src/signal.ts";
+import type { Task, TaskState, TaskStatus } from "../../src/task.ts";
 import type { FlatRefs, InferRefs, RefKeys, Refs } from "../../src/types.ts";
 import * as ultraliteExports from "../../src/ultralite/index.ts";
 import type {
@@ -78,6 +79,11 @@ describe("index", () => {
       Rows<number, string, Element>
     >();
     expectTypeOf<indexExports.Marked<string, Element>>().toEqualTypeOf<Marked<string, Element>>();
+    expectTypeOf<indexExports.Task<number, string>>().toEqualTypeOf<Task<number, string>>();
+    expectTypeOf<indexExports.TaskState<number, string>>().toEqualTypeOf<
+      TaskState<number, string>
+    >();
+    expectTypeOf<indexExports.TaskStatus>().toEqualTypeOf<TaskStatus>();
   });
 
   const publicExports = [
@@ -103,6 +109,10 @@ describe("index", () => {
     ["owner", "Function"],
     ["within", "Function"],
     ["trigger", "Function"],
+    ["task", "Function"],
+    // A const enum, yet an object at runtime: Bun emits it (and inlines the members code reads)
+    ["TaskStatus", "Object"],
+    ["WAIT", "Object"],
     ["noop", "Function"],
     ["fragment", "Function"],
     ["text", "Function"],

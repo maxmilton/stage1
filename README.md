@@ -21,7 +21,7 @@ An app imports its signals from one of three tiers, each with its own core:
 <!-- prettier-ignore -->
 | import | available functions | for |
 | --- | --- | --- |
-| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked`, `trigger`, `owner`, `within` | apps with computeds, effects and owners |
+| `stage1` | `signal`, `computed`, `get`, `set`, `effect`, `scope`, `sub`, `defer`, `dispose`, `batch`, `untracked`, `trigger`, `owner`, `within`, `task` (experimental) | apps with computeds, effects and owners |
 | `stage1/lite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch`, `trigger` | small apps: subs, no owners |
 | `stage1/ultralite` | `signal`, `get`, `set`, `sub`, `dispose`, `batch` | the smallest apps: one sub per signal, no owners |
 
@@ -163,6 +163,60 @@ Writes notify by value: `set` compares with `===`, and a reader runs again only 
 - **`trigger(s)`** (`stage1` and `stage1/lite`), for data that must stay in its signal: `s.v.push(x); trigger(s)` runs the signal's readers as a `set` of a value they have not seen would, passing the same object. Shallow: a computed that returns the same object stops it there, as for any unchanged value. Never use it for a list's items. A sub that triggers its own signal on every call never settles (an endless write loop).
 
 Setting a placeholder first (`set(s, undefined); set(s, x)`) is not a notification: in a batch the readers find `x` again and do not run; outside one they run twice, once with the placeholder.
+
+### Async data (`stage1`)
+
+An effect's or scope's cleanup already gives async work what it needs, and writing it out as below is the recommended way: it gives the most control and clarity. A promise callback runs after the run that started it has ended, so it tracks nothing (a read after an `await` subscribes nothing: read the inputs first) and nothing owns what it creates. So write the outcome into signals or the DOM there; a `set` runs what it reaches before it returns, and the effects that read the signal create under their own owners. Guard the callbacks with a flag the run's cleanup clears:
+
+```ts
+import { effect, get, signal, untracked } from "stage1";
+
+async function loadData(key: number, signal: AbortSignal) {
+  // ... your async code e.g. fetch
+}
+
+const id = signal(1);
+const out = document.createElement("p");
+effect(() => {
+  const key = get(id);
+  const ac = new AbortController();
+  let live = true; // this run's load is current and has not settled
+  const show = (text: string): void => {
+    // Check live in case DOM was removed by the time we got here e.g. parent scope was disposed
+    if (live) {
+      live = false;
+      out.textContent = text;
+    }
+  };
+  try {
+    untracked(() => loadData(key, ac.signal)).then(
+      show, // loadData ok
+      (error: unknown) => {
+        show(`error: ${String(error)}`); // loadData error
+      },
+    );
+  } catch (error) {
+    show(`error: ${String(error)}`); // error from somewhere other than loadData
+  }
+  // Before the next run and on disposal: drop the load and abort if still in flight
+  return () => {
+    if (live) {
+      live = false;
+      ac.abort();
+    }
+  };
+});
+```
+
+- **The flag** drops a superseded load's outcome (latest wins) and a disposed component's, rejections included. (`within` skips a disposed owner too, but an effect's re-run is not a disposal: it does not drop a superseded load.) Keep it in an effect's or scope's cleanup, never in a sub's callback: a sub keeps its cleanups until it is disposed, so its next call would not drop this one. Abort only while the flag is set: aborting a settled request still costs an event and a `DOMException`.
+- **`then(ok, err)`**, not `.catch` or `try { await … }`: with those, an error a reader throws during `ok`'s `set` reaches the error handler, which shows it as the load's error or, the flag being cleared, drops it. Here it is reported as an unhandled rejection.
+- **`try` around the call**: a synchronous throw from the loader otherwise disposes a new effect or scope (the creating call throws) or reaches whoever wrote the input.
+- **`untracked`**: what the loader reads synchronously would otherwise subscribe the effect.
+- Never `effect(async () => …)`: an effect returns its cleanup or nothing (development builds throw). Read a signal the effect itself writes with `.v`, not `get`, or a landing that writes a value other than the one the effect read runs it again. Refresh with a tick the effect reads (see "Mutable data").
+
+Examples (tested, not exported; copy them): [`examples/once.ts`](examples/once.ts) loads once when a component is created (no helper needed); [`examples/search.ts`](examples/search.ts) is search as you type with abort and list rows. With `task` (below): [`examples/profile.ts`](examples/profile.ts) is a keyed load with abort and refresh, [`examples/todos.ts`](examples/todos.ts) a list with an optimistic add, [`examples/posts.ts`](examples/posts.ts) one task waiting for another, and [`examples/validate.ts`](examples/validate.ts) a debounced check.
+
+**`task(fn)` (experimental: it may change or be removed in any release)** runs `fn` in an effect and holds its outcome in a signal: `const user = task(() => fetchUser(get(id)))` gives `{ status, value, error }` records, `status` being `TaskStatus.Pending`, `TaskStatus.Ready` or `TaskStatus.Error` (a const enum), and keeps the last value while pending and after an error. `task(fn, fallback)` holds `fallback` as the value until the first one lands (an empty list, say), and `fn` returns `WAIT` to stay pending (while another task's value is not there yet). It applies the flag, `then(ok, err)` and the `try` for you, and development builds check for the loops it can see; calling the loader `untracked` and aborting stay with you. What stays with you (inputs, reading it, lifetime, lists, writes) and its recipes are in the header of [`src/task.ts`](src/task.ts).
 
 ### Migrating from the previous API
 

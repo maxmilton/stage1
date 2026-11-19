@@ -76,6 +76,18 @@
       },
     },
     {
+      "files": ["examples/**"],
+      "rules": {
+        // then(ok, err) is deliberate: with .catch or try/await, an error a reader throws during
+        // the outcome's `set` would be handled as the load's error (README "Async data")
+        "promise/prefer-await-to-callbacks": "off",
+        "promise/prefer-await-to-then": "off",
+        "promise/prefer-catch": "off",
+        // an effect that returns a cleanup on one path returns `undefined` on the others
+        "unicorn/no-useless-undefined": "off",
+      },
+    },
+    {
       "files": ["test/fixtures/**"],
       "rules": {
         "unicorn/filename-case": "off",
